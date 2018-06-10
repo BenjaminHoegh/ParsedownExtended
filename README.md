@@ -2,6 +2,7 @@
 
 ParsedownExtreme is a extension to ParsedownExtra to add even more functions to the libery
 
+---
 
 ### Task list
 
@@ -22,6 +23,17 @@ Superscript: 19^th^
 Subscript: H~2~O
 ```  
 <img src='https://github.com/BenjaminHoegh/ParsedownExtreme/blob/master/docs/img/supandsub.png' height='100px'>
+
+
+### Insert and mark
+```
+++Inserted text++
+
+==Marked text==
+```  
+<img src='https://github.com/BenjaminHoegh/ParsedownExtreme/blob/master/docs/img/insertandmark.png' height='100px'>
+
+
 
 
 ### Typograpic shurtcodes
