@@ -52,6 +52,7 @@ $$
 
 ### Mermaid
 ```
+%%
 sequenceDiagram
     participant Alice
     participant Bob
@@ -63,5 +64,6 @@ sequenceDiagram
     John-->>Alice: Great!
     John->>Bob: How about you?
     Bob-->>John: Jolly good!
+%%
 ```  
 <img src='https://github.com/BenjaminHoegh/ParsedownExtreme/blob/master/docs/img/mermaid.png' height='250px'>
