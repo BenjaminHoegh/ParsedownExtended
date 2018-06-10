@@ -6,7 +6,7 @@ ParsedownExtreme is a extension to ParsedownExtra to add even more functions to 
 
 ### Task list
 
-```
+```markdown
 - [ ] ToDos
   - [x] Buy some salad
   - [ ] Brush teeth
@@ -17,7 +17,7 @@ ParsedownExtreme is a extension to ParsedownExtra to add even more functions to 
 
 
 ### Superscript & Subscript
-```
+```markdown
 Superscript: 19^th^
 
 Subscript: H~2~O
@@ -26,7 +26,7 @@ Subscript: H~2~O
 
 
 ### Insert and mark
-```
+```markdown
 ++Inserted text++
 
 ==Marked text==
@@ -42,7 +42,7 @@ Subscript: H~2~O
 
 ### KaTeX
 
-```
+```Latex
 $$
     x = {-b \pm \sqrt{b^2-4ac} \over 2a}.
 $$
@@ -51,7 +51,8 @@ $$
 
 
 ### Mermaid
-```
+```Mermaid
+%%
 sequenceDiagram
     participant Alice
     participant Bob
@@ -63,5 +64,6 @@ sequenceDiagram
     John-->>Alice: Great!
     John->>Bob: How about you?
     Bob-->>John: Jolly good!
+%%
 ```  
 <img src='https://github.com/BenjaminHoegh/ParsedownExtreme/blob/master/docs/img/mermaid.png' height='250px'>
