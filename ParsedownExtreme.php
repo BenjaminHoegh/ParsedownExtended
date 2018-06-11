@@ -1,5 +1,4 @@
 <?php
-asdasdasdasdsadasd
 class ParsedownExtreme extends ParsedownExtra
 {
     const VERSION = '0.1.0-Alpha';
