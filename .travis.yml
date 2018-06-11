@@ -25,5 +25,5 @@ install:
 
 script:
   - vendor/bin/phpunit
-  - vendor/bin/phpunit vendor/BenjaminHoegh/ParsedownExtreme/test/CommonMarkTestWeak.php || true
-  - '[ -z "$TRAVIS_TAG" ] || [ "$TRAVIS_TAG" == "$(php -r "require(\"vendor/autoload.php\"); echo ParsedownExtreme::version;")" ]'
+  - vendor/bin/phpunit vendor/benjaminhoegh/parsedown-extreme/test/CommonMarkTestWeak.php || true
+  - '[ -z "$TRAVIS_TAG" ] || [ "$TRAVIS_TAG" == "$(php -r "require(\"vendor/autoload.php\"); echo parsedown-extreme::version;")" ]'

@@ -1,14 +1,14 @@
 {
-    "name": "benjaminhoegh/ParsedownExtreme",
+    "name": "benjaminhoegh/parsedown-extreme",
     "description": "An extension of Parsedown.",
     "keywords": ["markdown", "markdown extra", "parser", "parsedown"],
-    "homepage": "https://github.com/BenjaminHoegh/ParsedownExtreme",
+    "homepage": "https://github.com/benjaminhoegh/parsedown-extreme",
     "type": "library",
     "license": "MIT",
     "authors": [
         {
             "name": "Benjamin Hoegh",
-            "homepage": "https://github.com/BenjaminHoegh"
+            "homepage": "https://github.com/benjaminhoegh"
         }
     ],
     "require": {
@@ -22,15 +22,15 @@
         "phpunit/phpunit": "^4.8.35"
     },
     "autoload": {
-        "psr-0": {"ParsedownExtreme": ""}
+        "psr-0": {"parsedown-extreme": ""}
     },
     "autoload-dev": {
         "psr-0": {
             "TestParsedown": "test/",
             "ParsedownExtraTest": "test/",
-            "ParsedownTest": "vendor/BenjaminHoegh/parsedown/test/",
-            "CommonMarkTest": "vendor/BenjaminHoegh/parsedown/test/",
-            "CommonMarkTestWeak": "vendor/BenjaminHoegh/parsedown/test/"
+            "ParsedownTest": "vendor/benjaminhoegh/parsedown/test/",
+            "CommonMarkTest": "vendor/benjaminhoegh/parsedown/test/",
+            "CommonMarkTestWeak": "vendor/benjaminhoegh/parsedown/test/"
         }
     }
 }
