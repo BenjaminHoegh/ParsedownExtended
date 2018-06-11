@@ -291,7 +291,7 @@ class ParsedownExtreme extends ParsedownExtra
             return;
         }
 
-        if (preg_match('/(?:~([^ ]*)~)/', $excerpt['text'], $matches)) {
+        if (preg_match('/(~(?!~)([^~ ]*)~(?!~))/', $excerpt['text'], $matches)) {
             return array(
 
                 // How many characters to advance the Parsedown's
