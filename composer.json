@@ -12,8 +12,7 @@
         }
     ],
     "require": {
-        "erusev/parsedown-extra": "^0.8.0-beta-1",
-        "php": ">=5.3",
+        "php": ">=5.3.6",
         "ext-dom": "*",
         "ext-mbstring": "*"
     },
