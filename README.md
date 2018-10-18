@@ -1,13 +1,32 @@
 # ParsedownExtreme 
 ![Release](	https://img.shields.io/github/release/BenjaminHoegh/ParsedownExtreme.svg?style=flat-square) ![GitHub (pre-)release](https://img.shields.io/github/release/BenjaminHoegh/ParsedownExtreme/all.svg?style=flat-square&label=pre-release) ![Github All Releases](https://img.shields.io/github/downloads/BenjaminHoegh/ParsedownExtreme/total.svg?style=flat-square)
 
-ParsedownExtreme is a extension to ParsedownExtra to add even more functions to the libery.
+ParsedownExtreme is a extension to ParsedownExtra to add even more functions to the library.
 
-> more details comming soon
+### Installation
 
----
+* Download the "Source code" from the [latest release](https://github.com/BenjaminHoegh/ParsedownExtreme/releases/latest)
+* Include `ParsedownExtreme.php`
+* You must include `parsedown.php` and `parsedownExtra.php` too.
 
-### Task list
+
+### Example
+
+    $ParsedownExtreme = new ParsedownExtreme();
+
+    echo $ParsedownExtreme->text('Hello _Parsedown_!'); # prints: <p>Hello <em>Parsedown</em>!</p>
+    // you can also parse inline markdown only
+    echo $ParsedownExtreme->line('Hello _Parsedown_!'); # prints: Hello <em>Parsedown</em>!
+
+
+## New Features
+
+See all new features below
+
+#### Task list
+
+Default `enabled`
+
 
 ```markdown
 - [ ] ToDos
@@ -16,10 +35,17 @@ ParsedownExtreme is a extension to ParsedownExtra to add even more functions to 
   - [x] Drink some water
 ```  
 
-<img src='https://github.com/BenjaminHoegh/ParsedownExtreme/blob/master/docs/img/tasklist.png' height='150px'>
+- [ ] ToDos
+  - [x] Buy some salad
+  - [ ] Brush teeth
+  - [x] Drink some water
 
+#### Superscript & Subscript
 
-### Superscript & Subscript
+To enable Superscript & Subscript you most call `$ParsedownExtreme->enableSuperscript()`
+
+Default `disabled`
+
 ```markdown
 Superscript: 19^th^
 
@@ -28,7 +54,13 @@ Subscript: H~2~O
 <img src='https://github.com/BenjaminHoegh/ParsedownExtreme/blob/master/docs/img/supandsub.png' height='100px'>
 
 
-### Insert and mark
+#### Insert and mark
+
+To enable Superscript & Subscript you most call `$ParsedownExtreme->enableSuperscript()`
+
+Default `enabled`
+
+
 ```markdown
 ++Inserted text++
 
@@ -39,11 +71,21 @@ Subscript: H~2~O
 
 
 
-### Typograpic shurtcodes
+#### Typograpic shurtcodes
+
+To enable Superscript & Subscript you most call `$ParsedownExtreme->enableTypography()`
+
+Default `disabled`
+
 `(c) (C) (r) (R) (tm) (TM)`  
 <img src='https://github.com/BenjaminHoegh/ParsedownExtreme/blob/master/docs/img/typography.png' height='50px'>
 
-### KaTeX
+#### KaTeX
+
+Default `disabled`
+
+
+To enable KaTeX [download](https://katex.org) and then set `$ParsedownExtreme->enableKaTeX()` to enable it.
 
 ```Latex
 $$
@@ -53,7 +95,13 @@ $$
 <img src='https://github.com/BenjaminHoegh/ParsedownExtreme/blob/master/docs/img/katex.png' height='100px'>
 
 
-### Mermaid
+#### Mermaid
+
+To enable Mermaid [download Mermaid](https://mermaidjs.github.io) and then set `$ParsedownExtreme->enableMermaid()` to enable it.
+
+Default `disabled`
+
+
 ```Mermaid
 %%
 sequenceDiagram
