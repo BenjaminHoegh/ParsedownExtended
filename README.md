@@ -12,12 +12,13 @@ ParsedownExtreme is a extension to ParsedownExtra to add even more functions to 
 
 ### Example
 
-    $ParsedownExtreme = new ParsedownExtreme();
+```php
+$ParsedownExtreme = new ParsedownExtreme();
 
-    echo $ParsedownExtreme->text('Hello _Parsedown_!'); # prints: <p>Hello <em>Parsedown</em>!</p>
-    // you can also parse inline markdown only
-    echo $ParsedownExtreme->line('Hello _Parsedown_!'); # prints: Hello <em>Parsedown</em>!
-
+echo $ParsedownExtreme->text('Hello _Parsedown_!'); # prints: <p>Hello <em>Parsedown</em>!</p>
+// you can also parse inline markdown only
+echo $ParsedownExtreme->line('Hello _Parsedown_!'); # prints: Hello <em>Parsedown</em>!
+```
 
 ## New Features
 
