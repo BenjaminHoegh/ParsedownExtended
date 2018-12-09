@@ -56,10 +56,7 @@ Subscript: H~2~O
 
 #### Insert and mark
 
-To enable Superscript & Subscript you most call `$ParsedownExtreme->enableSuperscript()`
-
 Default `enabled`
-
 
 ```markdown
 ++Inserted text++
