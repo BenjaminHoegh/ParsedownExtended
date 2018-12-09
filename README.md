@@ -84,11 +84,6 @@ To toggle Video embeding you most call `$ParsedownExtreme->embeding('true'|'fals
 
 **Default:** `true`
 
-**Optional parameters**
-
-- allowfullscreen
-- autoplay
-
 **Example**
 
 ```markdown
@@ -103,10 +98,6 @@ To toggle Video embeding you most call `$ParsedownExtreme->embeding('true'|'fals
 
 <!-- Dailymotion -->
 [video src="//www.dailymotion.com/embed/video/x6nbzp4"]
-
-
-<!-- Optional parameters -->
-[video src="https://www.youtube.com/embed/dWO9uP_VJV8" allowfullscreen autoplay]
 ```
 
 <img src='https://github.com/BenjaminHoegh/ParsedownExtreme/blob/master/docs/img/videoembeding.png' height='300px'>
