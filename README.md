@@ -109,7 +109,7 @@ To toggle Video embeding you most call `$ParsedownExtreme->embeding('true'|'fals
 [video src="https://www.youtube.com/embed/dWO9uP_VJV8" allowfullscreen autoplay]
 ```
 
-<img src='https://github.com/BenjaminHoegh/ParsedownExtreme/blob/master/docs/img/videoembeding.png' height='100px'>
+<img src='https://github.com/BenjaminHoegh/ParsedownExtreme/blob/master/docs/img/videoembeding.png' height='300px'>
 
 
 #### Typograpic shurtcodes
