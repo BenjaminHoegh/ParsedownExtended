@@ -28,6 +28,7 @@ See all new features below
 
 Default `enabled`
 
+**Example**
 
 ```markdown
 - [ ] ToDos
@@ -43,9 +44,11 @@ Default `enabled`
 
 #### Superscript & Subscript
 
-To enable Superscript & Subscript you most call `$ParsedownExtreme->enableSuperscript()`
+To toggle Superscript & Subscript you most call `$ParsedownExtreme->superscript('true'|'false')`
 
-Default `disabled`
+**Default:** `disabled`
+
+**Example**
 
 ```markdown
 Superscript: 19^th^
@@ -57,35 +60,79 @@ Subscript: H~2~O
 
 #### Insert and mark
 
-Default `enabled`
+To toggle insert you most call `$ParsedownExtreme->insert('true'|'false')`
+and `$ParsedownExtreme->mark('true'|'false')` for mark
+
+**Default:** `enabled`
+
+**Example**
 
 ```markdown
 ++Inserted text++
 
 ==Marked text==
 ```  
+
 <img src='https://github.com/BenjaminHoegh/ParsedownExtreme/blob/master/docs/img/insertandmark.png' height='100px'>
 
 
+#### Video embeding
+
+Video embeding support Youtube, Vimeo and Dailtmotion
+
+To toggle Video embeding you most call `$ParsedownExtreme->embeding('true'|'false')`
+
+**Default:** `true`
+
+**Optional parameters**
+
+- allowfullscreen
+- autoplay
+
+**Example**
+
+```markdown
+<!-- Also works with normal URL -->
+[video src="https://www.youtube.com/watch?v=dWO9uP_VJV8"]
+
+<!-- And with embed URL -->
+[video src="https://www.youtube.com/embed/dWO9uP_VJV8"]
+
+<!-- Vimeo -->
+[video src="https://player.vimeo.com/video/262117047"]
+
+<!-- Dailymotion -->
+[video src="//www.dailymotion.com/embed/video/x6nbzp4"]
+
+
+<!-- Optional parameters -->
+[video src="https://www.youtube.com/embed/dWO9uP_VJV8" allowfullscreen autoplay]
+```
+
+<img src='https://github.com/BenjaminHoegh/ParsedownExtreme/blob/master/docs/img/videoembeding.png' height='100px'>
 
 
 #### Typograpic shurtcodes
 
-To enable Superscript & Subscript you most call `$ParsedownExtreme->enableTypography()`
+To toggle Typograpic shurtcodes you most call `$ParsedownExtreme->typography('true'|'false')`
 
-Default `disabled`
+**Default:** `disabled`
+
+**Example**
 
 `(c) (C) (r) (R) (tm) (TM)`  
 <img src='https://github.com/BenjaminHoegh/ParsedownExtreme/blob/master/docs/img/typography.png' height='50px'>
 
-#### KaTeX
 
-About: KaTeX is fastest math typesetting library for the web.
+#### (La)KaTeX
 
-Default: `disabled`
+To enable KaTeX you must [download katex](https://katex.org)
 
+To toggle KaTeX you most call `$ParsedownExtreme->katex('true'|'false')`
 
-To enable KaTeX [download](https://katex.org) and then set `$ParsedownExtreme->enableKaTeX()` to enable it.
+**Default:** `disabled`
+
+**Example**
 
 ```Latex
 $$
@@ -99,8 +146,12 @@ $$
 
 To enable Mermaid [download Mermaid](https://mermaidjs.github.io) and then set `$ParsedownExtreme->enableMermaid()` to enable it.
 
-Default `disabled`
+To toggle Mermaid you most call `$ParsedownExtreme->mermaid('true'|'false')`
 
+
+**Default:** `disabled`
+
+**Example**
 
 ```Mermaid
 %%
