@@ -80,7 +80,9 @@ Default `disabled`
 
 #### KaTeX
 
-Default `disabled`
+About: KaTeX is fastest math typesetting library for the web.
+
+Default: `disabled`
 
 
 To enable KaTeX [download](https://katex.org) and then set `$ParsedownExtreme->enableKaTeX()` to enable it.
