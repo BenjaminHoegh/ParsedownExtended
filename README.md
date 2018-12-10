@@ -3,6 +3,8 @@
 
 ParsedownExtreme is a extension to ParsedownExtra to add even more functions to the library.
 
+---
+
 ### Installation
 
 * Download the "Source code" from the [latest release](https://github.com/BenjaminHoegh/ParsedownExtreme/releases/latest)
@@ -19,6 +21,8 @@ echo $ParsedownExtreme->text('Hello _Parsedown_!'); # prints: <p>Hello <em>Parse
 // you can also parse inline markdown only
 echo $ParsedownExtreme->line('Hello _Parsedown_!'); # prints: Hello <em>Parsedown</em>!
 ```
+
+---
 
 ## New Features
 
