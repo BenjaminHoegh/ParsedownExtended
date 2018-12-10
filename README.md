@@ -135,9 +135,7 @@ $$
 
 #### Mermaid
 
-To enable Mermaid [download Mermaid](https://mermaidjs.github.io) and then set `$ParsedownExtreme->enableMermaid()` to enable it.
-
-To toggle Mermaid you most call `$ParsedownExtreme->mermaid('true'|'false')`
+To enable Mermaid [download Mermaid](https://mermaidjs.github.io) and use `$ParsedownExtreme->mermaid('true'|'false')` to enable it
 
 
 **Default:** `disabled`
