@@ -24,7 +24,7 @@ echo $ParsedownExtreme->line('Hello _Parsedown_!'); # prints: Hello <em>Parsedow
 
 See all new features below
 
-#### Task list
+### Task list
 
 Default `enabled`
 
@@ -42,7 +42,7 @@ Default `enabled`
   - [ ] Brush teeth
   - [x] Drink some water
 
-#### Superscript & Subscript
+### Superscript & Subscript
 
 To toggle Superscript & Subscript you most call `$ParsedownExtreme->superscript('true'|'false')`
 
@@ -58,7 +58,7 @@ Subscript: H~2~O
 <img src='https://github.com/BenjaminHoegh/ParsedownExtreme/blob/master/docs/img/supandsub.png' height='100px'>
 
 
-#### Insert and mark
+### Insert and mark
 
 To toggle insert you most call `$ParsedownExtreme->insert('true'|'false')`
 and `$ParsedownExtreme->mark('true'|'false')` for mark
@@ -76,7 +76,7 @@ and `$ParsedownExtreme->mark('true'|'false')` for mark
 <img src='https://github.com/BenjaminHoegh/ParsedownExtreme/blob/master/docs/img/insertandmark.png' height='100px'>
 
 
-#### Video embeding
+### Video embeding
 
 Video embeding support Youtube, Vimeo and Dailtmotion
 
@@ -103,7 +103,7 @@ To toggle Video embeding you most call `$ParsedownExtreme->embeding('true'|'fals
 <img src='https://github.com/BenjaminHoegh/ParsedownExtreme/blob/master/docs/img/videoembeding.png' height='300px'>
 
 
-#### Typograpic shurtcodes
+### Typograpic shurtcodes
 
 To toggle Typograpic shurtcodes you most call `$ParsedownExtreme->typography('true'|'false')`
 
@@ -115,7 +115,7 @@ To toggle Typograpic shurtcodes you most call `$ParsedownExtreme->typography('tr
 <img src='https://github.com/BenjaminHoegh/ParsedownExtreme/blob/master/docs/img/typography.png' height='50px'>
 
 
-#### (La)KaTeX
+### (La)KaTeX
 
 To enable KaTeX you must [download katex](https://katex.org)
 
@@ -133,7 +133,7 @@ $$
 <img src='https://github.com/BenjaminHoegh/ParsedownExtreme/blob/master/docs/img/katex.png' height='100px'>
 
 
-#### Mermaid
+### Mermaid
 
 To enable Mermaid [download Mermaid](https://mermaidjs.github.io) and use `$ParsedownExtreme->mermaid('true'|'false')` to enable it
 
