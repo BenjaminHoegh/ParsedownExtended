@@ -3,6 +3,12 @@
 
 Parsedown Extreme is a extension to [Parsedown Extra](https://github.com/erusev/parsedown-extra) to add even more functions to the library.
 
+### Extentions included in ParsedownExtreme
+
+- [ParsedownMath](https://github.com/BenjaminHoegh/ParsedownMath)
+- [Parsedown-Toc](https://github.com/BenjaminHoegh/parsedown-toc)
+
+
 ---
 
 ### Installation
