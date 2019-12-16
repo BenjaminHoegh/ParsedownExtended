@@ -1,170 +1,274 @@
-# Parsedown Extreme 
-![Release](	https://img.shields.io/github/release/BenjaminHoegh/ParsedownExtreme.svg?style=flat-square) ![GitHub (pre-)release](https://img.shields.io/github/release/BenjaminHoegh/ParsedownExtreme/all.svg?style=flat-square&label=pre-release) ![Github All Releases](https://img.shields.io/github/downloads/BenjaminHoegh/ParsedownExtreme/total.svg?style=flat-square)
+# Parsedown Extended
+![Release](	https://img.shields.io/github/release/BenjaminHoegh/ParsedownExtended.svg?style=flat-square) ![License](https://img.shields.io/github/license/BenjaminHoegh/ParsedownExtended?style=flat-square)
 
-Parsedown Extreme is a extension to [Parsedown Extra](https://github.com/erusev/parsedown-extra) to add even more functions to the library.
+Parsedown Extended is a extension to [Parsedown](https://github.com/erusev/parsedown) to add even more functions to the library. It also work with [ParsedownExtra](https://github.com/erusev/parsedown-extra)
 
-### Extentions included in ParsedownExtreme
+### Extentions included in ParsedownExtended
 
 - [ParsedownMath](https://github.com/BenjaminHoegh/ParsedownMath)
-- [Parsedown-Toc](https://github.com/BenjaminHoegh/parsedown-toc)
+- [ParsedownToc](https://github.com/BenjaminHoegh/parsedownToc)
 
 
 ---
 
 ### Installation
 
-* Download the "Source code" from the [latest release](https://github.com/BenjaminHoegh/ParsedownExtreme/releases/latest)
-* Include `ParsedownExtreme.php`
-* You must include `parsedown.php` and `parsedownExtra.php` too.
+1. Download the "Source code" from the [latest release](https://github.com/BenjaminHoegh/ParsedownExtended/releases/latest)
+2. You must include `parsedown.php` or `parsedownExtra.php` too.
+3. Include `ParsedownExtended.php`
 
 
-### Example
+##### Example
 
 ```php
-$ParsedownExtreme = new ParsedownExtreme();
+$ParsedownExtended = new ParsedownExtended();
 
-echo $ParsedownExtreme->text('Hello _Parsedown_!'); # prints: <p>Hello <em>Parsedown</em>!</p>
+echo $ParsedownExtended->text('Hello _Parsedown_!'); # prints: <p>Hello <em>Parsedown</em>!</p>
 // you can also parse inline markdown only
-echo $ParsedownExtreme->line('Hello _Parsedown_!'); # prints: Hello <em>Parsedown</em>!
+echo $ParsedownExtended->line('Hello _Parsedown_!'); # prints: Hello <em>Parsedown</em>!
 ```
 
 ---
 
-## New Features
 
-See all new features below
+### Added features
 
-### Task list
+#### Table of contents
 
-Default `enabled`
+- **Inline Example:**
 
-**Example**
+  **PHP**
+  ```php
+  $contents = file_get_contents('example.md');
+
+  $Parsedown = new ParsedownExtended([
+    "toc" => [
+      "enable" => true,
+      "inline" => true,
+    ]
+  ]);
+
+  echo $Parsedown->text($contents);
+  ```
+
+  **Markdown**
+  ```markdown
+  [toc]
+  ```
+
+- **Outside Markdown Example:**
+
+  **PHP**
+  ```php
+  $contents = file_get_contents('example.md');
+
+  $Parsedown = new ParsedownExtended([
+    "toc" => [
+      "enable" => true
+    ]
+  ]);
+
+  echo $Parsedown->text($contents);
+  ```
+
+  Then use where you want to execute the TOC
+  ```
+  echo $Parsedown->toc($contents);
+  ```
+
+
+#### Typography
+
+- **Insert and Mark**
+
+  ```php
+  $Parsedown = new ParsedownExtended([
+      "mark" => true,
+      "insert" => true,
+  ]);
+  ```
+
+  | Type                | To get            |
+  | ------------------- | ----------------- |
+  | \==Mark\==          | \<mark>Mark\</mark>          |
+  | \++Insert\++        | \<ins>Insert\</ins>        |
+
+- **Auto replace**
+
+  ```php
+  $Parsedown = new ParsedownExtended([
+      "smartTypography" => true,
+  ]);
+  ```
+
+  | Type        | Or    | Get      |
+  | ----------- | ----- | -------- |
+  | \(c)        | \(C)  | &copy;   |
+  | \(r)        | \(R)  | &reg;    |
+  | \(tm)       | \(TM) | &trade;  |
+  | \...        |       | &hellip; |
+  | \--         |       | &ndash;  |
+  | -\--        |       | &mdash;  |
+  | \>>         |       | &raquo;  |
+  | \<<         |       | &laquo;  |
+
+- **Subscript and superscript**
+
+  ```php
+  $Parsedown = new ParsedownExtended([
+      "scripts" => true,
+  ]);
+  ```
+
+  Superscript
+  ```
+  19^th^
+  ```
+
+  Subscript:
+  ```
+  H~2~O
+  ```
+
+- **KBD**
+
+  ```php
+  $Parsedown = new ParsedownExtended([
+      "kbd" => true,
+  ]);
+  ```
+
+  ```
+  Press [[Shift]] + [[Alt]] + [[G]] to open
+  ```
+
+  Press <kbd>Shift</kbd> + <kbd>Alt</kbd> + <kbd>G</kbd> to open
+
+#### Task
+
+```php
+$Parsedown = new ParsedownExtended([
+    "task" => true,
+]);
+```
+
 
 ```markdown
+- [ ] ToDos
+- [x] Buy some salad
+- [ ] Brush teeth
+- [x] Drink some water
+```
+
 - [ ] ToDos
   - [x] Buy some salad
   - [ ] Brush teeth
   - [x] Drink some water
-```  
-
-- [ ] ToDos
-  - [x] Buy some salad
-  - [ ] Brush teeth
-  - [x] Drink some water
-
-### Superscript & Subscript
-
-To toggle Superscript & Subscript you most call `$ParsedownExtreme->superscript('true'|'false')`
-
-**Default:** `disabled`
-
-**Example**
-
-```markdown
-Superscript: 19^th^
-
-Subscript: H~2~O
-```  
-<img src='https://github.com/BenjaminHoegh/ParsedownExtreme/blob/master/docs/img/supandsub.png' height='100px'>
 
 
-### Insert and mark
-
-To toggle insert you most call `$ParsedownExtreme->insert('true'|'false')`
-and `$ParsedownExtreme->mark('true'|'false')` for mark
-
-**Default:** `enabled`
-
-**Example**
-
-```markdown
-++Inserted text++
-
-==Marked text==
-```  
-
-<img src='https://github.com/BenjaminHoegh/ParsedownExtreme/blob/master/docs/img/insertandmark.png' height='100px'>
+#### LaTeX
+LaTeX syntax support for both [MathJax](https://www.mathjax.org) and [KaTeX](https://katex.org) by using [MathJax standard](https://docs.mathjax.org/en/latest/basic/mathematics.html) delimiters `$$...$$`, `\\[...\\]` and `\\(...\\)`
 
 
-### Video embeding
-
-Video embeding support Youtube, Vimeo and Dailtmotion
-
-To toggle Video embeding you most call `$ParsedownExtreme->embeding('true'|'false')`
-
-**Default:** `true`
-
-**Example**
-
-```markdown
-<!-- Also works with normal URL -->
-[video src="https://www.youtube.com/watch?v=dWO9uP_VJV8"]
-
-<!-- And with embed URL -->
-[video src="https://www.youtube.com/embed/dWO9uP_VJV8"]
-
-<!-- Vimeo -->
-[video src="https://player.vimeo.com/video/262117047"]
-
-<!-- Dailymotion -->
-[video src="//www.dailymotion.com/embed/video/x6nbzp4"]
+```php
+$Parsedown = new ParsedownExtended([
+    "math" => true,
+]);
 ```
 
-<img src='https://github.com/BenjaminHoegh/ParsedownExtreme/blob/master/docs/img/videoembeding.png' height='300px'>
+
+- **Inline Example**
+  ```
+  This is some \(ax^2 + bx + c = 0\) inline LaTeX
+  ```
 
 
-### Typograpic shurtcodes
+- **Block Example**
+  ```
+  \[
+      x = {-b \pm \sqrt{b^2-4ac} \over 2a}.
+  \]
+  ```
 
-To toggle Typograpic shurtcodes you most call `$ParsedownExtreme->typography('true'|'false')`
+  ```
+  $$
+      x = {-b \pm \sqrt{b^2-4ac} \over 2a}.
+  $$
+  ```
 
-**Default:** `disabled`
+#### Diagrams
+Support for [Mermaid](https://mermaid-js.github.io/mermaid/#/) and [ChartJS](https://www.chartjs.org).
 
-**Example**
-
-`(c) (C) (r) (R) (tm) (TM)`  
-<img src='https://github.com/BenjaminHoegh/ParsedownExtreme/blob/master/docs/img/typography.png' height='50px'>
-
-
-### (La)KaTeX
-
-To enable KaTeX you must [download katex](https://katex.org)
-
-To toggle KaTeX you most call `$ParsedownExtreme->katex('true'|'false')`
-
-**Default:** `disabled`
-
-**Example**
-
-```Latex
-$$
-    x = {-b \pm \sqrt{b^2-4ac} \over 2a}.
-$$
+```php
+$Parsedown = new ParsedownExtended([
+    "diagrams" => true,
+]);
 ```
-<img src='https://github.com/BenjaminHoegh/ParsedownExtreme/blob/master/docs/img/katex.png' height='100px'>
 
+- **Mermaid Example**
 
-### Mermaid
+      ```mermaid
+      sequenceDiagram
+          participant Alice
+          participant Bob
+          Alice->>John: Hello John, how are you?
+          loop Healthcheck
+              John->>John: Fight against hypochondria
+          end
+          Note right of John: Rational thoughts<br/>prevail...
+          John-->>Alice: Great!
+          John->>Bob: How about you?
+          Bob-->>John: Jolly good!
+      ```
 
-To enable Mermaid [download Mermaid](https://mermaidjs.github.io) and use `$ParsedownExtreme->mermaid('true'|'false')` to enable it
+- **ChartJS Example**
 
-
-**Default:** `disabled`
-
-**Example**
-
-```Mermaid
-%%
-sequenceDiagram
-    participant Alice
-    participant Bob
-    Alice->>John: Hello John, how are you?
-    loop Healthcheck
-        John->>John: Fight against hypochondria
-    end
-    Note right of John: Rational thoughts<br/>prevail...
-    John-->>Alice: Great!
-    John->>Bob: How about you?
-    Bob-->>John: Jolly good!
-%%
-```  
-<img src='https://github.com/BenjaminHoegh/ParsedownExtreme/blob/master/docs/img/mermaid.png' height='250px'>
+      ```chart
+      {
+        "type": "line",
+        "data": {
+          "labels": [
+            "January",
+            "February",
+            "March",
+            "April",
+            "May",
+            "June",
+            "July"
+          ],
+          "datasets": [
+            {
+              "label": "# of bugs",
+              "fill": false,
+              "lineTension": 0.1,
+              "backgroundColor": "rgba(75,192,192,0.4)",
+              "borderColor": "rgba(75,192,192,1)",
+              "borderCapStyle": "butt",
+              "borderDash": [],
+              "borderDashOffset": 0,
+              "borderJoinStyle": "miter",
+              "pointBorderColor": "rgba(75,192,192,1)",
+              "pointBackgroundColor": "#fff",
+              "pointBorderWidth": 1,
+              "pointHoverRadius": 5,
+              "pointHoverBackgroundColor": "rgba(75,192,192,1)",
+              "pointHoverBorderColor": "rgba(220,220,220,1)",
+              "pointHoverBorderWidth": 2,
+              "pointRadius": 1,
+              "pointHitRadius": 10,
+              "data": [
+                65,
+                59,
+                80,
+                81,
+                56,
+                55,
+                40
+              ],
+              "spanGaps": false
+            }
+          ]
+        },
+        "options": {}
+      }
+      ```
