@@ -1,5 +1,5 @@
 <!-- ![ParsedownExtended](docs/img/parsedownExtended.png) -->
-<p align="center"><img alt="Parsedown" src="docs/img/parsedownExtended.png" width="240" /></p>
+<p align="center"><img alt="Parsedown" src="docs/img/parsedownExtended.png" height="330" /></p>
 
 
 
