@@ -37,7 +37,6 @@ class ParsedownExtended extends DynamicParent
         // Blocks
         $this->BlockTypes['\\'][] = 'Math';
         $this->BlockTypes['$'][] = 'Math';
-        $this->BlockTypes['%'][] = 'Mermaid';
         $this->BlockTypes['['][] = 'Toc';
 
         // Inline
@@ -59,7 +58,6 @@ class ParsedownExtended extends DynamicParent
         $this->InlineTypes['['][] = 'Kbd';
         $this->inlineMarkerList .= '[';
     }
-
 
     // Default Settings
     private $config = [
@@ -84,12 +82,11 @@ class ParsedownExtended extends DynamicParent
         }
 
         if (is_array($configurations)) {
-
             $configurations = array_change_key_case($configurations, CASE_LOWER);
 
             // Math
             if (isset($configurations['math'])) {
-                if(is_array($configurations['math'])) {
+                if (is_array($configurations['math'])) {
                     throw new Exception("Selector must be a boolean");
                 }
                 $this->config['math'] = $configurations['math'];
@@ -97,7 +94,7 @@ class ParsedownExtended extends DynamicParent
 
             // Diagrams
             if (isset($configurations['diagrams'])) {
-                if(is_array($configurations['diagrams'])) {
+                if (is_array($configurations['diagrams'])) {
                     throw new Exception("Selector must be a boolean");
                 }
                 $this->config['diagrams'] = $configurations['diagrams'];
@@ -105,7 +102,7 @@ class ParsedownExtended extends DynamicParent
 
             // kbd
             if (isset($configurations['kbd'])) {
-                if(is_array($configurations['kbd'])) {
+                if (is_array($configurations['kbd'])) {
                     throw new Exception("Selector must be a boolean");
                 }
                 $this->config['kbd'] = $configurations['kbd'];
@@ -113,7 +110,7 @@ class ParsedownExtended extends DynamicParent
 
             // Mark
             if (isset($configurations['mark'])) {
-                if(is_array($configurations['mark'])) {
+                if (is_array($configurations['mark'])) {
                     throw new Exception("Selector must be a boolean");
                 }
                 $this->config['mark'] = $configurations['mark'];
@@ -121,7 +118,7 @@ class ParsedownExtended extends DynamicParent
 
             // insert
             if (isset($configurations['insert'])) {
-                if(is_array($configurations['insert'])) {
+                if (is_array($configurations['insert'])) {
                     throw new Exception("Selector must be a boolean");
                 }
                 $this->config['insert'] = $configurations['insert'];
@@ -129,7 +126,7 @@ class ParsedownExtended extends DynamicParent
 
             // superscript and suberscript
             if (isset($configurations['scripts'])) {
-                if(is_array($configurations['scripts'])) {
+                if (is_array($configurations['scripts'])) {
                     throw new Exception("Selector must be a boolean");
                 }
                 $this->config['scripts'] = $configurations['scripts'];
@@ -137,7 +134,7 @@ class ParsedownExtended extends DynamicParent
 
             // smartTypography
             if (isset($configurations['smarttypography'])) {
-                if(is_array($configurations['smarttypography'])) {
+                if (is_array($configurations['smarttypography'])) {
                     throw new Exception("Selector must be a boolean");
                 }
                 $this->config['smarttypography'] = $configurations['smarttypography'];
@@ -145,7 +142,7 @@ class ParsedownExtended extends DynamicParent
 
             // Task
             if (isset($configurations['task'])) {
-                if(is_array($configurations['task'])) {
+                if (is_array($configurations['task'])) {
                     throw new Exception("Selector must be a boolean");
                 }
                 $this->config['task'] = $configurations['task'];
@@ -153,7 +150,7 @@ class ParsedownExtended extends DynamicParent
 
             // TOC
             if (isset($configurations['toc'])) {
-                if(!is_array($configurations['toc'])) {
+                if (!is_array($configurations['toc'])) {
                     throw new Exception("Selector must be a array");
                 }
                 $this->config['toc'] = $configurations['toc'];
@@ -163,7 +160,6 @@ class ParsedownExtended extends DynamicParent
         // echo "<pre>";
         // print_r($this->config);
         // echo "</pre>";
-
     }
 
     // -------------------------------------------------------------------------
@@ -309,7 +305,6 @@ class ParsedownExtended extends DynamicParent
                 if ($this->config['smarttypography'] && $Block['math'] != true) {
                     $Line = $this->smartTypographyReplace($Line);
                 }
-
 
                 $CurrentBlock = $this->paragraph($Line);
 
@@ -570,6 +565,7 @@ class ParsedownExtended extends DynamicParent
     protected function blockSetextHeader($Line, array $Block = null)
     {
         $Block = parent::blockSetextHeader($Line, $Block);
+
         if (preg_match('/[ ]*{('.$this->regexAttribute.'+)}[ ]*$/', $Block['element']['handler']['argument'], $matches, PREG_OFFSET_CAPTURE)) {
             $attributeString = $matches[1][0];
             $Block['element']['attributes'] = $this->parseAttributeData($attributeString);
@@ -586,6 +582,7 @@ class ParsedownExtended extends DynamicParent
             $Block['element']['handler']['argument'] = $Block['element']['handler']['argument']."<a class='heading-link' href='{$link}'> <i class='fas fa-link'></i></a>";
         }
 
+
         // ~
 
         return $Block;
@@ -598,7 +595,6 @@ class ParsedownExtended extends DynamicParent
 
     public function toc($input = null)
     {
-
         if (!$this->config['toc']['enable']) {
             return;
         }
