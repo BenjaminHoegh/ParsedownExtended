@@ -1,8 +1,5 @@
 <!-- ![ParsedownExtended](docs/img/parsedownExtended.png) -->
-<p align="center"><img alt="Parsedown" src="docs/img/parsedownExtended.png" height="330" /></p>
-
-
-
+<p align="center"><img alt="ParsedownExtended" src="docs/img/parsedownExtended.png" height="330" /></p>
 
 # Parsedown Extended
 ![Release](	https://img.shields.io/github/release/BenjaminHoegh/ParsedownExtended.svg?style=flat-square) ![License](https://img.shields.io/github/license/BenjaminHoegh/ParsedownExtended?style=flat-square)
