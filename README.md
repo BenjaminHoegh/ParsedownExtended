@@ -1,3 +1,9 @@
+<!-- ![ParsedownExtended](docs/img/parsedownExtended.png) -->
+<p align="center"><img alt="Parsedown" src="docs/img/parsedownExtended.png" width="240" /></p>
+
+
+
+
 # Parsedown Extended
 ![Release](	https://img.shields.io/github/release/BenjaminHoegh/ParsedownExtended.svg?style=flat-square) ![License](https://img.shields.io/github/license/BenjaminHoegh/ParsedownExtended?style=flat-square)
 
@@ -17,7 +23,7 @@ Parsedown Extended is a extension to [Parsedown](https://github.com/erusev/parse
 2. You must include `parsedown.php` or `parsedownExtra.php` too.
 3. Include `ParsedownExtended.php`
 
-> **Important:** Parsedown and ParsedownExtra don't work with PHP 7.4+ at the moment and it will throw some errors on ParsedownExtended. Use PHP 7.3 until Parsedown have been updated 
+> **Important:** Parsedown and ParsedownExtra don't work with PHP 7.4+ at the moment and it will throw some errors on ParsedownExtended. Use PHP 7.3 until Parsedown have been updated
 
 
 ##### Example
