@@ -2,3 +2,6 @@ vendor/
 test/
 composer.lock
 notes.md
+.nova/
+debug/
+options.json

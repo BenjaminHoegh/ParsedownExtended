@@ -2,7 +2,8 @@
 <p align="center"><img alt="ParsedownExtended" src="docs/img/parsedownExtended.png" height="330" /></p>
 
 # Parsedown Extended
-![Release](	https://img.shields.io/github/release/BenjaminHoegh/ParsedownExtended.svg?style=flat-square) ![License](https://img.shields.io/github/license/BenjaminHoegh/ParsedownExtended?style=flat-square)
+
+![Release](https://img.shields.io/github/release/BenjaminHoegh/ParsedownExtended.svg?style=flat-square) ![License](https://img.shields.io/github/license/BenjaminHoegh/ParsedownExtended?style=flat-square)
 
 Parsedown Extended is a extension to [Parsedown](https://github.com/erusev/parsedown) to add even more functions to the library. It also work with [ParsedownExtra](https://github.com/erusev/parsedown-extra)
 
@@ -10,7 +11,6 @@ Parsedown Extended is a extension to [Parsedown](https://github.com/erusev/parse
 
 - [ParsedownMath](https://github.com/BenjaminHoegh/ParsedownMath)
 - [ParsedownToc](https://github.com/BenjaminHoegh/parsedownToc)
-
 
 ---
 
@@ -21,7 +21,6 @@ Parsedown Extended is a extension to [Parsedown](https://github.com/erusev/parse
 3. Include `ParsedownExtended.php`
 
 > **Important:** Parsedown and ParsedownExtra don't work with PHP 7.4+ at the moment and it will throw some errors on ParsedownExtended. Use PHP 7.3 until Parsedown have been updated
-
 
 ##### Example
 
@@ -35,7 +34,6 @@ echo $ParsedownExtended->line('Hello _Parsedown_!'); # prints: Hello <em>Parsedo
 
 ---
 
-
 ### Added features
 
 #### Table of contents
@@ -43,6 +41,7 @@ echo $ParsedownExtended->line('Hello _Parsedown_!'); # prints: Hello <em>Parsedo
 - **Inline Example:**
 
   **PHP**
+
   ```php
   $contents = file_get_contents('example.md');
 
@@ -57,6 +56,7 @@ echo $ParsedownExtended->line('Hello _Parsedown_!'); # prints: Hello <em>Parsedo
   ```
 
   **Markdown**
+
   ```markdown
   [toc]
   ```
@@ -64,6 +64,7 @@ echo $ParsedownExtended->line('Hello _Parsedown_!'); # prints: Hello <em>Parsedo
 - **Outside Markdown Example:**
 
   **PHP**
+
   ```php
   $contents = file_get_contents('example.md');
 
@@ -77,10 +78,10 @@ echo $ParsedownExtended->line('Hello _Parsedown_!'); # prints: Hello <em>Parsedo
   ```
 
   Then use where you want to execute the TOC
+
   ```
   echo $Parsedown->toc($contents);
   ```
-
 
 #### Typography
 
@@ -93,10 +94,10 @@ echo $ParsedownExtended->line('Hello _Parsedown_!'); # prints: Hello <em>Parsedo
   ]);
   ```
 
-  | Type                | To get            |
-  | ------------------- | ----------------- |
-  | \==Mark\==          | \<mark>Mark\</mark>          |
-  | \++Insert\++        | \<ins>Insert\</ins>        |
+  | Type         | To get              |
+  | ------------ | ------------------- |
+  | \==Mark\==   | \<mark>Mark\</mark> |
+  | \++Insert\++ | \<ins>Insert\</ins> |
 
 - **Auto replace**
 
@@ -106,16 +107,16 @@ echo $ParsedownExtended->line('Hello _Parsedown_!'); # prints: Hello <em>Parsedo
   ]);
   ```
 
-  | Type        | Or    | Get      |
-  | ----------- | ----- | -------- |
-  | \(c)        | \(C)  | &copy;   |
-  | \(r)        | \(R)  | &reg;    |
-  | \(tm)       | \(TM) | &trade;  |
-  | \...        |       | &hellip; |
-  | \--         |       | &ndash;  |
-  | -\--        |       | &mdash;  |
-  | \>>         |       | &raquo;  |
-  | \<<         |       | &laquo;  |
+  | Type  | Or    | Get      |
+  | ----- | ----- | -------- |
+  | \(c)  | \(C)  | &copy;   |
+  | \(r)  | \(R)  | &reg;    |
+  | \(tm) | \(TM) | &trade;  |
+  | \...  |       | &hellip; |
+  | \--   |       | &ndash;  |
+  | -\--  |       | &mdash;  |
+  | \>>   |       | &raquo;  |
+  | \<<   |       | &laquo;  |
 
 - **Subscript and superscript**
 
@@ -126,11 +127,13 @@ echo $ParsedownExtended->line('Hello _Parsedown_!'); # prints: Hello <em>Parsedo
   ```
 
   Superscript
+
   ```
   19^th^
   ```
 
   Subscript:
+
   ```
   H~2~O
   ```
@@ -157,7 +160,6 @@ $Parsedown = new ParsedownExtended([
 ]);
 ```
 
-
 ```markdown
 - [ ] ToDos
 - [x] Buy some salad
@@ -170,10 +172,9 @@ $Parsedown = new ParsedownExtended([
   - [ ] Brush teeth
   - [x] Drink some water
 
-
 #### LaTeX
-LaTeX syntax support for both [MathJax](https://www.mathjax.org) and [KaTeX](https://katex.org) by using [MathJax standard](https://docs.mathjax.org/en/latest/basic/mathematics.html) delimiters `$$...$$`, `\\[...\\]` and `\\(...\\)`
 
+LaTeX syntax support for both [MathJax](https://www.mathjax.org) and [KaTeX](https://katex.org) by using [MathJax standard](https://docs.mathjax.org/en/latest/basic/mathematics.html) delimiters `$$...$$`, `\\[...\\]` and `\\(...\\)`
 
 ```php
 $Parsedown = new ParsedownExtended([
@@ -181,14 +182,13 @@ $Parsedown = new ParsedownExtended([
 ]);
 ```
 
-
 - **Inline Example**
   ```
   This is some \(ax^2 + bx + c = 0\) inline LaTeX
   ```
 
+* **Block Example**
 
-- **Block Example**
   ```
   \[
       x = {-b \pm \sqrt{b^2-4ac} \over 2a}.
@@ -202,6 +202,7 @@ $Parsedown = new ParsedownExtended([
   ```
 
 #### Diagrams
+
 Support for [Mermaid](https://mermaid-js.github.io/mermaid/#/) and [ChartJS](https://www.chartjs.org).
 
 ```php

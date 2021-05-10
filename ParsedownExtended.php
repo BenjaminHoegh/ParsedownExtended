@@ -1,959 +1,780 @@
 <?php
 
 if (class_exists('ParsedownExtra')) {
-    class DynamicParent extends ParsedownExtra
+    class DynamicParent extends \ParsedownExtra
     {
         public function __construct()
         {
-            if (version_compare(parent::version, '0.8.0-beta-1') < 0) {
-                throw new Exception('ParsedownExtended requires a later version of ParsedownExtra');
-            }
             parent::__construct();
         }
     }
 } else {
-    class DynamicParent extends Parsedown
+    class DynamicParent extends \Parsedown
     {
         public function __construct()
         {
-            if (version_compare(parent::version, '1.8.0-beta-6') < 0) {
-                throw new Exception('ParsedownExtended requires a later version of Parsedown');
-            }
+            //
         }
     }
 }
 
-
 class ParsedownExtended extends DynamicParent
 {
-    const VERSION = '1.0-beta-4';
+    /**
+     * ------------------------------------------------------------------------
+     *  Constants.
+     * ------------------------------------------------------------------------
+     */
+    const VERSION = '1.3';
+    const VERSION_PARSEDOWN_REQUIRED = '1.7';
+    const TAG_TOC_DEFAULT = '[toc]';
+    const ID_ATTRIBUTE_DEFAULT = 'toc';
 
-    public function __construct(array $configurations = null)
+    /**
+     * Version requirement check.
+     */
+    public function __construct(array $params = null)
     {
-        $this->configurationsHandler($configurations);
+        if (version_compare(\Parsedown::version, self::VERSION_PARSEDOWN_REQUIRED) < 0) {
+            $msg_error = 'Version Error.' . PHP_EOL;
+            $msg_error .= '  ParsedownToc requires a later version of Parsedown.' . PHP_EOL;
+            $msg_error .= '  - Current version : ' . \Parsedown::version . PHP_EOL;
+            $msg_error .= '  - Required version: ' . self::VERSION_PARSEDOWN_REQUIRED .' and later' .PHP_EOL;
+            throw new Exception($msg_error);
+        }
 
         parent::__construct();
 
-        // Blocks
+        if (!empty($params)) {
+            $this->options = $params;
+        }
+
+        /**
+        * ------------------------------------------------------------------------
+        * Inline
+        * ------------------------------------------------------------------------
+        */
+
+        // Highlight
+        $state = isset($this->options['extensions']['highlights']) ? $this->options['extensions']['highlights'] : true;
+        if ($state !== false) {
+            $this->InlineTypes['='][] = 'Highlight';
+            $this->inlineMarkerList .= '=';
+        }
+
+        // Keystrokes
+        $state = isset($this->options['extensions']['keystrokes']) ? $this->options['extensions']['keystrokes'] : true;
+        if ($state !== false) {
+            $this->InlineTypes['['][] = 'Keystrokes';
+            $this->inlineMarkerList .= '[';
+        }
+
+        // Inline Math
+        $state = isset($this->options['extensions']['math']) ? $this->options['extensions']['math'] : true;
+        if ($state !== false) {
+            $this->InlineTypes['\\'][] = 'Math';
+            $this->inlineMarkerList .= '\\';
+            $this->InlineTypes['$'][] = 'Math';
+            $this->inlineMarkerList .= '$';
+        }
+
+        // Superscript
+        $state = isset($this->options['extensions']['superscripts']) ? $this->options['extensions']['superscripts'] : true;
+        if ($state !== false) {
+            $this->InlineTypes['^'][] = 'Superscript';
+            $this->inlineMarkerList .= '^';
+        }
+
+        // Subscript
+        $state = isset($this->options['extensions']['subscripts']) ? $this->options['extensions']['subscripts'] : true;
+        if ($state !== false) {
+            $this->InlineTypes['~'][] = 'Subscript';
+        }
+
+        // Emojis
+        $state = isset($this->options['extensions']['emojis']) ? $this->options['extensions']['emojis'] : true;
+        if ($state !== false) {
+            $this->InlineTypes[':'][] = 'Emojis';
+            $this->inlineMarkerList .= ':';
+        }
+
+        /**
+        * ------------------------------------------------------------------------
+        * Blocks
+        * ------------------------------------------------------------------------
+        */
+
+        // Block Math
         $this->BlockTypes['\\'][] = 'Math';
         $this->BlockTypes['$'][] = 'Math';
-        $this->BlockTypes['['][] = 'Toc';
 
-        // Inline
-
-        $this->InlineTypes['\\'][] = 'Math';
-        $this->inlineMarkerList .= '\\';
-
-        $this->InlineTypes['='][] = 'MarkText';
-        $this->inlineMarkerList .= '=';
-
-        $this->InlineTypes['+'][] = 'InsertText';
-        $this->inlineMarkerList .= '+';
-
-        $this->InlineTypes['^'][] = 'SuperText';
-        $this->inlineMarkerList .= '^';
-
-        $this->InlineTypes['~'][] = 'SubText';
-
-        $this->InlineTypes['['][] = 'Kbd';
-        $this->inlineMarkerList .= '[';
+        // Subscript
+        $state = isset($this->options['lists']['task_list']) ? $this->options['lists']['task_list'] : true;
+        if ($state !== false) {
+            $this->BlockTypes['['][] = 'Checkbox';
+        }
     }
 
-    // Default Settings
-    private $config = [
-        "math" => false,
-        "diagrams" => false,
-        "kbd" => false,
-        "mark" => false,
-        "insert" => false,
-        "task" => false,
-        "scripts" => false,
-        "smarttypography" => false,
-        "toc" => [
-            "enable" => false,
-        ]
-    ];
+    /**
+     * ------------------------------------------------------------------------
+     * Blocks
+     * ------------------------------------------------------------------------
+     */
 
-
-    private function configurationsHandler($configurations)
+    protected function blockCode($Line, $Block = null)
     {
-        if (empty($configurations)) {
+        $state = isset($this->options['code_block']) ? $this->options['code_block'] : true;
+        if ($state) {
+            return DynamicParent::blockCode($Line, $Block);
+        }
+    }
+
+    protected function blockComment($Line)
+    {
+        $state = isset($this->options['comments']) ? $this->options['comments'] : true;
+        if ($state) {
+            return DynamicParent::blockComment($Line);
+        }
+    }
+
+    protected function blockHeader($Line)
+    {
+        $state = isset($this->options['headers']) ? $this->options['headers'] : true;
+        if (!$state) {
             return;
         }
 
-        if (is_array($configurations)) {
-            $configurations = array_change_key_case($configurations, CASE_LOWER);
-
-            // Math
-            if (isset($configurations['math'])) {
-                if (is_array($configurations['math'])) {
-                    throw new Exception("Selector must be a boolean");
-                }
-                $this->config['math'] = $configurations['math'];
+        $Block = DynamicParent::blockHeader($Line);
+        if (!empty($Block)) {
+            // Get the text of the heading
+            if (isset($Block['element']['handler']['argument'])) {
+                $text = $Block['element']['handler']['argument'];
             }
 
-            // Diagrams
-            if (isset($configurations['diagrams'])) {
-                if (is_array($configurations['diagrams'])) {
-                    throw new Exception("Selector must be a boolean");
-                }
-                $this->config['diagrams'] = $configurations['diagrams'];
-            }
-
-            // kbd
-            if (isset($configurations['kbd'])) {
-                if (is_array($configurations['kbd'])) {
-                    throw new Exception("Selector must be a boolean");
-                }
-                $this->config['kbd'] = $configurations['kbd'];
-            }
-
-            // Mark
-            if (isset($configurations['mark'])) {
-                if (is_array($configurations['mark'])) {
-                    throw new Exception("Selector must be a boolean");
-                }
-                $this->config['mark'] = $configurations['mark'];
-            }
-
-            // insert
-            if (isset($configurations['insert'])) {
-                if (is_array($configurations['insert'])) {
-                    throw new Exception("Selector must be a boolean");
-                }
-                $this->config['insert'] = $configurations['insert'];
-            }
-
-            // superscript and suberscript
-            if (isset($configurations['scripts'])) {
-                if (is_array($configurations['scripts'])) {
-                    throw new Exception("Selector must be a boolean");
-                }
-                $this->config['scripts'] = $configurations['scripts'];
-            }
-
-            // smartTypography
-            if (isset($configurations['smarttypography'])) {
-                if (is_array($configurations['smarttypography'])) {
-                    throw new Exception("Selector must be a boolean");
-                }
-                $this->config['smarttypography'] = $configurations['smarttypography'];
-            }
-
-            // Task
-            if (isset($configurations['task'])) {
-                if (is_array($configurations['task'])) {
-                    throw new Exception("Selector must be a boolean");
-                }
-                $this->config['task'] = $configurations['task'];
-            }
-
-            // TOC
-            if (isset($configurations['toc'])) {
-                if (!is_array($configurations['toc'])) {
-                    throw new Exception("Selector must be a array");
-                }
-                $this->config['toc'] = $configurations['toc'];
-            }
-        }
-
-        // echo "<pre>";
-        // print_r($this->config);
-        // echo "</pre>";
-    }
-
-    // -------------------------------------------------------------------------
-    // -----------------------    Need to be first    --------------------------
-    // -------------------------------------------------------------------------
+            // Get the heading level. Levels are h1, h2, ..., h6
+            $level = $Block['element']['name'];
 
 
-    private $fullDocument;
+            // Checks if auto generated anchors is allowed
+            $autoAnchors = isset($this->options['headers']['auto_anchors']) ? $this->options['headers']['auto_anchors'] : true;
 
-    protected function textElements($text)
-    {
-        // make sure no definitions are set
-        $this->DefinitionData = array();
+            if($autoAnchors) {
+                // Get the anchor of the heading to link from the ToC list
+                $id = isset($Block['element']['attributes']['id']) ? $Block['element']['attributes']['id'] : $this->createAnchorID($text);
 
-        // standardize line breaks
-        $text = str_replace(array("\r\n", "\r"), "\n", $text);
-
-        // remove surrounding line breaks
-        $text = trim($text, "\n");
-
-        // Save a copy of the document
-        $this->fullDocument = $text;
-
-        $cleanDoc = preg_replace('/(?>!\`)<!--(.|\s)*?-->/', '', $text);
-
-        // split text into lines
-        $lines = explode("\n", $cleanDoc);
-        // iterate through lines to identify blocks
-        return $this->linesElements($lines);
-    }
-
-
-
-    // -------------------------------------------------------------------------
-    // -----------------------         Inline         --------------------------
-    // -------------------------------------------------------------------------
-
-    //
-    // Typography Replacer
-    // -------------------------------------------------------------------------
-
-    protected function linesElements(array $Lines)
-    {
-        $Elements = array();
-        $CurrentBlock = null;
-
-        foreach ($Lines as $Line) {
-            if (chop($Line) === '') {
-                if (isset($CurrentBlock)) {
-                    $CurrentBlock['interrupted'] = (
-                        isset($CurrentBlock['interrupted'])
-                        ? $CurrentBlock['interrupted'] + 1 : 1
-                    );
-                }
-
-                continue;
-            }
-
-            while (($beforeTab = strstr($Line, "\t", true)) !== false) {
-                $shortage = 4 - mb_strlen($beforeTab, 'utf-8') % 4;
-
-                $Line = $beforeTab.str_repeat(' ', $shortage).substr($Line, strlen($beforeTab) + 1);
-            }
-
-            $indent = strspn($Line, ' ');
-
-            $text = $indent > 0 ? substr($Line, $indent) : $Line;
-
-            // ~
-
-            $Line = array('body' => $Line, 'indent' => $indent, 'text' => $text);
-
-            // ~
-
-            if (isset($CurrentBlock['continuable'])) {
-                $methodName = 'block' . $CurrentBlock['type'] . 'Continue';
-                $Block = $this->$methodName($Line, $CurrentBlock);
-
-                if (isset($Block)) {
-                    $CurrentBlock = $Block;
-
-                    continue;
-                } else {
-                    if ($this->isBlockCompletable($CurrentBlock['type'])) {
-                        $methodName = 'block' . $CurrentBlock['type'] . 'Complete';
-                        $CurrentBlock = $this->$methodName($CurrentBlock);
-                    }
-                }
-            }
-
-            // ~
-
-            $marker = $text[0];
-
-            // ~
-
-            $BlockTypes = $this->unmarkedBlockTypes;
-
-            if (isset($this->BlockTypes[$marker])) {
-                foreach ($this->BlockTypes[$marker] as $BlockType) {
-                    $BlockTypes []= $BlockType;
-                }
-            }
-
-            // ~
-
-            foreach ($BlockTypes as $BlockType) {
-                $Block = $this->{"block$BlockType"}($Line, $CurrentBlock);
-
-                if (isset($Block)) {
-                    $Block['type'] = $BlockType;
-
-                    if (! isset($Block['identified'])) {
-                        if (isset($CurrentBlock)) {
-                            $Elements[] = $this->extractElement($CurrentBlock);
-                        }
-
-                        $Block['identified'] = true;
-                    }
-
-                    if ($this->isBlockContinuable($BlockType)) {
-                        $Block['continuable'] = true;
-                    }
-
-                    $CurrentBlock = $Block;
-
-                    continue 2;
-                }
-            }
-
-            // ~
-            if (isset($CurrentBlock) && $CurrentBlock['type'] === 'Paragraph') {
-                $Block = $this->paragraphContinue($Line, $CurrentBlock);
-            }
-
-            if (isset($Block)) {
-                $CurrentBlock = $Block;
             } else {
-                if (isset($CurrentBlock)) {
-                    $Elements[] = $this->extractElement($CurrentBlock);
-                }
-
-                if ($this->config['smarttypography'] && $Block['math'] != true) {
-                    $Line = $this->smartTypographyReplace($Line);
-                }
-
-                $CurrentBlock = $this->paragraph($Line);
-
-                $CurrentBlock['identified'] = true;
+                // Get the anchor of the heading to link from the ToC list
+                $id = isset($Block['element']['attributes']['id']) ? $Block['element']['attributes']['id'] : null;
             }
+
+            // Set attributes to head tags
+            $Block['element']['attributes']['id'] = $id;
+
+            // Check if level are defined as a heading
+            if (in_array($level, $this->options['headers']['allowed'])) {
+
+                // Add/stores the heading element info to the ToC list
+                $this->setContentsList(array(
+                    'text'  => $text,
+                    'id'    => $id,
+                    'level' => $level
+                ));
+            }
+
+            return $Block;
         }
 
-        // ~
-
-        if (isset($CurrentBlock['continuable']) && $this->isBlockCompletable($CurrentBlock['type'])) {
-            $methodName = 'block' . $CurrentBlock['type'] . 'Complete';
-            $CurrentBlock = $this->$methodName($CurrentBlock);
-        }
-
-        // ~
-
-        if (isset($CurrentBlock)) {
-            $Elements[] = $this->extractElement($CurrentBlock);
-        }
-
-        // ~
-
-        return $Elements;
     }
 
-
-    //
-    // Inline Mark
-    // -------------------------------------------------------------------------
-
-    protected function inlineMarkText($Excerpt)
+    protected function blockList($Line, array $CurrentBlock = null)
     {
-        if (!$this->config['mark']) {
-            return;
+        $state = isset($this->options['lists']) ? $this->options['lists'] : true;
+        if ($state) {
+            return DynamicParent::blockList($Line, $CurrentBlock);
         }
+    }
 
-        if (preg_match('/^(==)([^=]*?)(==)/', $Excerpt['text'], $matches)) {
-            return array(
-                'extent' => strlen($matches[0]),
-                'element' => array(
-                    'name' => 'mark',
-                    'text' => $matches[2]
-                ),
-            );
+    protected function blockQuote($Line)
+    {
+        $state = isset($this->options['blockqoutes']) ? $this->options['blockqoutes'] : true;
+        if ($state) {
+            return DynamicParent::blockQuote($Line);
+        }
+    }
+
+    protected function blockRule($Line)
+    {
+        $state = isset($this->options['thematic_breaks']) ? $this->options['thematic_breaks'] : true;
+        if ($state) {
+            return DynamicParent::blockRule($Line);
+        }
+    }
+
+    protected function blockSetextHeader($Line, $Block = null)
+    {
+        $state = isset($this->options['headers']) ? $this->options['headers'] : true;
+        if (!$state) {
+            return;
+            // return DynamicParent::blockSetextHeader($Line, $Block);
+        }
+        $Block = DynamicParent::blockSetextHeader($Line, $Block);
+        if (!empty($Block)) {
+            // Get the text of the heading
+            if (isset($Block['element']['handler']['argument'])) {
+                $text = $Block['element']['handler']['argument'];
+            }
+
+            // Get the heading level. Levels are h1, h2, ..., h6
+            $level = $Block['element']['name'];
+
+            // Checks if auto generated anchors is allowed
+            $autoAnchors = isset($this->options['headers']['auto_anchors']) ? $this->options['headers']['auto_anchors'] : true;
+
+            if($autoAnchors) {
+                // Get the anchor of the heading to link from the ToC list
+                $id = isset($Block['element']['attributes']['id']) ? $Block['element']['attributes']['id'] : $this->createAnchorID($text);
+
+            } else {
+                // Get the anchor of the heading to link from the ToC list
+                $id = isset($Block['element']['attributes']['id']) ? $Block['element']['attributes']['id'] : null;
+            }
+
+
+            // Set attributes to head tags
+            $Block['element']['attributes']['id'] = $id;
+
+            // Check if level are defined as a heading
+            if (in_array($level, $this->options['headers']['allowed'])) {
+
+                // Add/stores the heading element info to the ToC list
+                $this->setContentsList(array(
+                    'text'  => $text,
+                    'id'    => $id,
+                    'level' => $level
+                ));
+            }
+        return $Block;
+        }
+    }
+
+    protected function blockMarkup($Line)
+    {
+        $state = isset($this->options['markup']) ? $this->options['markup'] : true;
+        if ($state) {
+            return DynamicParent::blockMarkup($Line);
+        }
+    }
+
+    protected function blockReference($Line)
+    {
+        $state = isset($this->options['references']) ? $this->options['references'] : true;
+        if ($state) {
+            return DynamicParent::blockReference($Line);
+        }
+    }
+
+    protected function blockTable($Line, $Block = null)
+    {
+        $state = isset($this->options['tables']) ? $this->options['tables'] : true;
+        if ($state) {
+            return DynamicParent::blockTable($Line, $Block);
         }
     }
 
 
-    //
-    // Inline Math
-    // -------------------------------------------------------------------------
+    protected function blockAbbreviation($Line)
+    {
+        $state = isset($this->options['abbreviations']) ? $this->options['abbreviations'] : true;
+        if ($state) {
+            return DynamicParent::blockAbbreviation($Line);
+        }
+    }
+
+    protected function inlineText($text)
+    {
+        $Inline = array(
+            'extent' => strlen($text),
+            'element' => array(),
+        );
+
+        $Inline['element']['elements'] = self::pregReplaceElements(
+            $this->breaksEnabled ? '/[ ]*+\n/' : '/(?:[ ]*+\\\\|[ ]{2,}+)\n/',
+            array(
+                array('name' => 'br'),
+                array('text' => "\n"),
+            ),
+            $text
+        );
+
+
+        return $Inline;
+    }
+
+    protected function blockFootnote($Line)
+    {
+        $state = isset($this->options['footnotes']) ? $this->options['footnotes'] : true;
+        if ($state) {
+            return DynamicParent::blockFootnote($Line);
+        }
+    }
+    protected function blockDefinitionList($Line, $Block)
+    {
+        $state = isset($this->options['definition_lists']) ? $this->options['definition_lists'] : true;
+        if ($state) {
+            return DynamicParent::blockDefinitionList($Line, $Block);
+        }
+    }
+
+    /**
+     * ------------------------------------------------------------------------
+     * Inline
+     * ------------------------------------------------------------------------
+     */
+
+    // inlineCode
+    protected function inlineCode($Excerpt)
+    {
+        $state = isset($this->options['inline_code']) ? $this->options['inline_code'] : true;
+        if ($state) {
+            return DynamicParent::inlineCode($Excerpt);
+        }
+    }
+
+    protected function inlineEmailTag($Excerpt)
+    {
+        // TODO: Find a name for this setting.
+        $state = isset($this->options['auto_mark_emails']) ? $this->options['emails'] : true;
+        if ($state) {
+            return DynamicParent::inlineEmailTag($Excerpt);
+        }
+    }
+
+    protected function inlineEmphasis($Excerpt)
+    {
+        $state = isset($this->options['emphasis']) ? $this->options['emphasis'] : true;
+        if ($state) {
+            return DynamicParent::inlineEmphasis($Excerpt);
+        }
+    }
+
+    protected function inlineImage($Excerpt)
+    {
+        // TODO: Add a external link option
+        $state = isset($this->options['images']) ? $this->options['images'] : true;
+        if ($state) {
+            return DynamicParent::inlineImage($Excerpt);
+        }
+    }
+
+    protected function inlineLink($Excerpt)
+    {
+        // TODO: Add link options
+        $state = isset($this->options['links']) ? $this->options['links'] : true;
+        if ($state) {
+            return DynamicParent::inlineLink($Excerpt);
+        }
+    }
+
+    protected function inlineMarkup($Excerpt)
+    {
+        $state = isset($this->options['markup']) ? $this->options['markup'] : true;
+        if ($state) {
+            return DynamicParent::inlineMarkup($Excerpt);
+        }
+    }
+
+    protected function inlineStrikethrough($Excerpt)
+    {
+        $state = isset($this->options['strikethroughs']) ? $this->options['strikethroughs'] : true;
+        if ($state) {
+            return DynamicParent::inlineStrikethrough($Excerpt);
+        }
+    }
+
+    protected function inlineUrl($Excerpt)
+    {
+        $state = isset($this->options['links']) ? $this->options['links'] : true;
+        if ($state) {
+            return DynamicParent::inlineUrl($Excerpt);
+        }
+    }
+
+    /**
+     * ------------------------------------------------------------------------
+     * ParsedownExtended
+     * ------------------------------------------------------------------------
+     */
+
+    protected function inlineEmojis($Excerpt)
+    {
+        // TODO: Create a module there allow for emoji extentions
+        $emoji_map = [
+            ':smile:' => '😄', ':laughing:' => '😆', ':blush:' => '😊', ':smiley:' => '😃',
+            ':relaxed:' => '☺️', ':smirk:' => '😏', ':heart_eyes:' => '😍', ':kissing_heart:' => '😘',
+            ':kissing_closed_eyes:' => '😚', ':flushed:' => '😳', ':relieved:' => '😌', ':satisfied:' => '😆',
+            ':grin:' => '😁', ':wink:' => '😉', ':stuck_out_tongue_winking_eye:' => '😜', ':stuck_out_tongue_closed_eyes:' => '😝',
+            ':grinning:' => '😀', ':kissing:' => '😗', ':kissing_smiling_eyes:' => '😙', ':stuck_out_tongue:' => '😛',
+            ':sleeping:' => '😴', ':worried:' => '😟', ':frowning:' => '😦', ':anguished:' => '😧',
+            ':open_mouth:' => '😮', ':grimacing:' => '😬', ':confused:' => '😕', ':hushed:' => '😯',
+            ':expressionless:' => '😑', ':unamused:' => '😒', ':sweat_smile:' => '😅', ':sweat:' => '😓',
+            ':disappointed_relieved:' => '😥', ':weary:' => '😩', ':pensive:' => '😔', ':disappointed:' => '😞',
+            ':confounded:' => '😖', ':fearful:' => '😨', ':cold_sweat:' => '😰', ':persevere:' => '😣',
+            ':cry:' => '😢', ':sob:' => '😭', ':joy:' => '😂', ':astonished:' => '😲',
+            ':scream:' => '😱', ':tired_face:' => '😫', ':angry:' => '😠', ':rage:' => '😡',
+            ':triumph:' => '😤', ':sleepy:' => '😪', ':yum:' => '😋', ':mask:' => '😷',
+            ':sunglasses:' => '😎', ':dizzy_face:' => '😵', ':imp:' => '👿', ':smiling_imp:' => '😈',
+            ':neutral_face:' => '😐', ':no_mouth:' => '😶', ':innocent:' => '😇', ':alien:' => '👽',
+            ':yellow_heart:' => '💛', ':blue_heart:' => '💙', ':purple_heart:' => '💜', ':heart:' => '❤️',
+            ':green_heart:' => '💚', ':broken_heart:' => '💔', ':heartbeat:' => '💓', ':heartpulse:' => '💗',
+            ':two_hearts:' => '💕', ':revolving_hearts:' => '💞', ':cupid:' => '💘', ':sparkling_heart:' => '💖',
+            ':sparkles:' => '✨', ':star:' => '⭐️', ':star2:' => '🌟', ':dizzy:' => '💫',
+            ':boom:' => '💥', ':collision:' => '💥', ':anger:' => '💢', ':exclamation:' => '❗️',
+            ':question:' => '❓', ':grey_exclamation:' => '❕', ':grey_question:' => '❔', ':zzz:' => '💤',
+            ':dash:' => '💨', ':sweat_drops:' => '💦', ':notes:' => '🎶', ':musical_note:' => '🎵',
+            ':fire:' => '🔥', ':hankey:' => '💩', ':poop:' => '💩', ':shit:' => '💩',
+            ':+1:' => '👍', ':thumbsup:' => '👍', ':-1:' => '👎', ':thumbsdown:' => '👎',
+            ':ok_hand:' => '👌', ':punch:' => '👊', ':facepunch:' => '👊', ':fist:' => '✊',
+            ':v:' => '✌️', ':wave:' => '👋', ':hand:' => '✋', ':raised_hand:' => '✋',
+            ':open_hands:' => '👐', ':point_up:' => '☝️', ':point_down:' => '👇', ':point_left:' => '👈',
+            ':point_right:' => '👉', ':raised_hands:' => '🙌', ':pray:' => '🙏', ':point_up_2:' => '👆',
+            ':clap:' => '👏', ':muscle:' => '💪', ':metal:' => '🤘', ':fu:' => '🖕',
+            ':walking:' => '🚶', ':runner:' => '🏃', ':running:' => '🏃', ':couple:' => '👫',
+            ':family:' => '👪', ':two_men_holding_hands:' => '👬', ':two_women_holding_hands:' => '👭', ':dancer:' => '💃',
+            ':dancers:' => '👯', ':ok_woman:' => '🙆', ':no_good:' => '🙅', ':information_desk_person:' => '💁',
+            ':raising_hand:' => '🙋', ':bride_with_veil:' => '👰', ':person_with_pouting_face:' => '🙎', ':person_frowning:' => '🙍',
+            ':bow:' => '🙇', ':couple_with_heart:' => '💑', ':massage:' => '💆', ':haircut:' => '💇',
+            ':nail_care:' => '💅', ':boy:' => '👦', ':girl:' => '👧', ':woman:' => '👩',
+            ':man:' => '👨', ':baby:' => '👶', ':older_woman:' => '👵', ':older_man:' => '👴',
+            ':person_with_blond_hair:' => '👱', ':man_with_gua_pi_mao:' => '👲', ':man_with_turban:' => '👳', ':construction_worker:' => '👷',
+            ':cop:' => '👮', ':angel:' => '👼', ':princess:' => '👸', ':smiley_cat:' => '😺',
+            ':smile_cat:' => '😸', ':heart_eyes_cat:' => '😻', ':kissing_cat:' => '😽', ':smirk_cat:' => '😼',
+            ':scream_cat:' => '🙀', ':crying_cat_face:' => '😿', ':joy_cat:' => '😹', ':pouting_cat:' => '😾',
+            ':japanese_ogre:' => '👹', ':japanese_goblin:' => '👺', ':see_no_evil:' => '🙈', ':hear_no_evil:' => '🙉',
+            ':speak_no_evil:' => '🙊', ':guardsman:' => '💂', ':skull:' => '💀', ':feet:' => '🐾',
+            ':lips:' => '👄', ':kiss:' => '💋', ':droplet:' => '💧', ':ear:' => '👂',
+            ':eyes:' => '👀', ':nose:' => '👃', ':tongue:' => '👅', ':love_letter:' => '💌',
+            ':bust_in_silhouette:' => '👤', ':busts_in_silhouette:' => '👥', ':speech_balloon:' => '💬', ':thought_balloon:' => '💭',
+            ':sunny:' => '☀️', ':umbrella:' => '☔️', ':cloud:' => '☁️', ':snowflake:' => '❄️',
+            ':snowman:' => '⛄️', ':zap:' => '⚡️', ':cyclone:' => '🌀', ':foggy:' => '🌁',
+            ':ocean:' => '🌊', ':cat:' => '🐱', ':dog:' => '🐶', ':mouse:' => '🐭',
+            ':hamster:' => '🐹', ':rabbit:' => '🐰', ':wolf:' => '🐺', ':frog:' => '🐸',
+            ':tiger:' => '🐯', ':koala:' => '🐨', ':bear:' => '🐻', ':pig:' => '🐷',
+            ':pig_nose:' => '🐽', ':cow:' => '🐮', ':boar:' => '🐗', ':monkey_face:' => '🐵',
+            ':monkey:' => '🐒', ':horse:' => '🐴', ':racehorse:' => '🐎', ':camel:' => '🐫',
+            ':sheep:' => '🐑', ':elephant:' => '🐘', ':panda_face:' => '🐼', ':snake:' => '🐍',
+            ':bird:' => '🐦', ':baby_chick:' => '🐤', ':hatched_chick:' => '🐥', ':hatching_chick:' => '🐣',
+            ':chicken:' => '🐔', ':penguin:' => '🐧', ':turtle:' => '🐢', ':bug:' => '🐛',
+            ':honeybee:' => '🐝', ':ant:' => '🐜', ':beetle:' => '🐞', ':snail:' => '🐌',
+            ':octopus:' => '🐙', ':tropical_fish:' => '🐠', ':fish:' => '🐟', ':whale:' => '🐳',
+            ':whale2:' => '🐋', ':dolphin:' => '🐬', ':cow2:' => '🐄', ':ram:' => '🐏',
+            ':rat:' => '🐀', ':water_buffalo:' => '🐃', ':tiger2:' => '🐅', ':rabbit2:' => '🐇',
+            ':dragon:' => '🐉', ':goat:' => '🐐', ':rooster:' => '🐓', ':dog2:' => '🐕',
+            ':pig2:' => '🐖', ':mouse2:' => '🐁', ':ox:' => '🐂', ':dragon_face:' => '🐲',
+            ':blowfish:' => '🐡', ':crocodile:' => '🐊', ':dromedary_camel:' => '🐪', ':leopard:' => '🐆',
+            ':cat2:' => '🐈', ':poodle:' => '🐩', ':crab' => '🦀', ':paw_prints:' => '🐾', ':bouquet:' => '💐',
+            ':cherry_blossom:' => '🌸', ':tulip:' => '🌷', ':four_leaf_clover:' => '🍀', ':rose:' => '🌹',
+            ':sunflower:' => '🌻', ':hibiscus:' => '🌺', ':maple_leaf:' => '🍁', ':leaves:' => '🍃',
+            ':fallen_leaf:' => '🍂', ':herb:' => '🌿', ':mushroom:' => '🍄', ':cactus:' => '🌵',
+            ':palm_tree:' => '🌴', ':evergreen_tree:' => '🌲', ':deciduous_tree:' => '🌳', ':chestnut:' => '🌰',
+            ':seedling:' => '🌱', ':blossom:' => '🌼', ':ear_of_rice:' => '🌾', ':shell:' => '🐚',
+            ':globe_with_meridians:' => '🌐', ':sun_with_face:' => '🌞', ':full_moon_with_face:' => '🌝', ':new_moon_with_face:' => '🌚',
+            ':new_moon:' => '🌑', ':waxing_crescent_moon:' => '🌒', ':first_quarter_moon:' => '🌓', ':waxing_gibbous_moon:' => '🌔',
+            ':full_moon:' => '🌕', ':waning_gibbous_moon:' => '🌖', ':last_quarter_moon:' => '🌗', ':waning_crescent_moon:' => '🌘',
+            ':last_quarter_moon_with_face:' => '🌜', ':first_quarter_moon_with_face:' => '🌛', ':moon:' => '🌔', ':earth_africa:' => '🌍',
+            ':earth_americas:' => '🌎', ':earth_asia:' => '🌏', ':volcano:' => '🌋', ':milky_way:' => '🌌',
+            ':partly_sunny:' => '⛅️', ':bamboo:' => '🎍', ':gift_heart:' => '💝', ':dolls:' => '🎎',
+            ':school_satchel:' => '🎒', ':mortar_board:' => '🎓', ':flags:' => '🎏', ':fireworks:' => '🎆',
+            ':sparkler:' => '🎇', ':wind_chime:' => '🎐', ':rice_scene:' => '🎑', ':jack_o_lantern:' => '🎃',
+            ':ghost:' => '👻', ':santa:' => '🎅', ':christmas_tree:' => '🎄', ':gift:' => '🎁',
+            ':bell:' => '🔔', ':no_bell:' => '🔕', ':tanabata_tree:' => '🎋', ':tada:' => '🎉',
+            ':confetti_ball:' => '🎊', ':balloon:' => '🎈', ':crystal_ball:' => '🔮', ':cd:' => '💿',
+            ':dvd:' => '📀', ':floppy_disk:' => '💾', ':camera:' => '📷', ':video_camera:' => '📹',
+            ':movie_camera:' => '🎥', ':computer:' => '💻', ':tv:' => '📺', ':iphone:' => '📱',
+            ':phone:' => '☎️', ':telephone:' => '☎️', ':telephone_receiver:' => '📞', ':pager:' => '📟',
+            ':fax:' => '📠', ':minidisc:' => '💽', ':vhs:' => '📼', ':sound:' => '🔉',
+            ':speaker:' => '🔈', ':mute:' => '🔇', ':loudspeaker:' => '📢', ':mega:' => '📣',
+            ':hourglass:' => '⌛️', ':hourglass_flowing_sand:' => '⏳', ':alarm_clock:' => '⏰', ':watch:' => '⌚️',
+            ':radio:' => '📻', ':satellite:' => '📡', ':loop:' => '➿', ':mag:' => '🔍',
+            ':mag_right:' => '🔎', ':unlock:' => '🔓', ':lock:' => '🔒', ':lock_with_ink_pen:' => '🔏',
+            ':closed_lock_with_key:' => '🔐', ':key:' => '🔑', ':bulb:' => '💡', ':flashlight:' => '🔦',
+            ':high_brightness:' => '🔆', ':low_brightness:' => '🔅', ':electric_plug:' => '🔌', ':battery:' => '🔋',
+            ':calling:' => '📲', ':email:' => '✉️', ':mailbox:' => '📫', ':postbox:' => '📮',
+            ':bath:' => '🛀', ':bathtub:' => '🛁', ':shower:' => '🚿', ':toilet:' => '🚽',
+            ':wrench:' => '🔧', ':nut_and_bolt:' => '🔩', ':hammer:' => '🔨', ':seat:' => '💺',
+            ':moneybag:' => '💰', ':yen:' => '💴', ':dollar:' => '💵', ':pound:' => '💷',
+            ':euro:' => '💶', ':credit_card:' => '💳', ':money_with_wings:' => '💸', ':e-mail:' => '📧',
+            ':inbox_tray:' => '📥', ':outbox_tray:' => '📤', ':envelope:' => '✉️', ':incoming_envelope:' => '📨',
+            ':postal_horn:' => '📯', ':mailbox_closed:' => '📪', ':mailbox_with_mail:' => '📬', ':mailbox_with_no_mail:' => '📭',
+            ':door:' => '🚪', ':smoking:' => '🚬', ':bomb:' => '💣', ':gun:' => '🔫',
+            ':hocho:' => '🔪', ':pill:' => '💊', ':syringe:' => '💉', ':page_facing_up:' => '📄',
+            ':page_with_curl:' => '📃', ':bookmark_tabs:' => '📑', ':bar_chart:' => '📊', ':chart_with_upwards_trend:' => '📈',
+            ':chart_with_downwards_trend:' => '📉', ':scroll:' => '📜', ':clipboard:' => '📋', ':calendar:' => '📆',
+            ':date:' => '📅', ':card_index:' => '📇', ':file_folder:' => '📁', ':open_file_folder:' => '📂',
+            ':scissors:' => '✂️', ':pushpin:' => '📌', ':paperclip:' => '📎', ':black_nib:' => '✒️',
+            ':pencil2:' => '✏️', ':straight_ruler:' => '📏', ':triangular_ruler:' => '📐', ':closed_book:' => '📕',
+            ':green_book:' => '📗', ':blue_book:' => '📘', ':orange_book:' => '📙', ':notebook:' => '📓',
+            ':notebook_with_decorative_cover:' => '📔', ':ledger:' => '📒', ':books:' => '📚', ':bookmark:' => '🔖',
+            ':name_badge:' => '📛', ':microscope:' => '🔬', ':telescope:' => '🔭', ':newspaper:' => '📰',
+            ':football:' => '🏈', ':basketball:' => '🏀', ':soccer:' => '⚽️', ':baseball:' => '⚾️',
+            ':tennis:' => '🎾', ':8ball:' => '🎱', ':rugby_football:' => '🏉', ':bowling:' => '🎳',
+            ':golf:' => '⛳️', ':mountain_bicyclist:' => '🚵', ':bicyclist:' => '🚴', ':horse_racing:' => '🏇',
+            ':snowboarder:' => '🏂', ':swimmer:' => '🏊', ':surfer:' => '🏄', ':ski:' => '🎿',
+            ':spades:' => '♠️', ':hearts:' => '♥️', ':clubs:' => '♣️', ':diamonds:' => '♦️',
+            ':gem:' => '💎', ':ring:' => '💍', ':trophy:' => '🏆', ':musical_score:' => '🎼',
+            ':musical_keyboard:' => '🎹', ':violin:' => '🎻', ':space_invader:' => '👾', ':video_game:' => '🎮',
+            ':black_joker:' => '🃏', ':flower_playing_cards:' => '🎴', ':game_die:' => '🎲', ':dart:' => '🎯',
+            ':mahjong:' => '🀄️', ':clapper:' => '🎬', ':memo:' => '📝', ':pencil:' => '📝',
+            ':book:' => '📖', ':art:' => '🎨', ':microphone:' => '🎤', ':headphones:' => '🎧',
+            ':trumpet:' => '🎺', ':saxophone:' => '🎷', ':guitar:' => '🎸', ':shoe:' => '👞',
+            ':sandal:' => '👡', ':high_heel:' => '👠', ':lipstick:' => '💄', ':boot:' => '👢',
+            ':shirt:' => '👕', ':tshirt:' => '👕', ':necktie:' => '👔', ':womans_clothes:' => '👚',
+            ':dress:' => '👗', ':running_shirt_with_sash:' => '🎽', ':jeans:' => '👖', ':kimono:' => '👘',
+            ':bikini:' => '👙', ':ribbon:' => '🎀', ':tophat:' => '🎩', ':crown:' => '👑',
+            ':womans_hat:' => '👒', ':mans_shoe:' => '👞', ':closed_umbrella:' => '🌂', ':briefcase:' => '💼',
+            ':handbag:' => '👜', ':pouch:' => '👝', ':purse:' => '👛', ':eyeglasses:' => '👓',
+            ':fishing_pole_and_fish:' => '🎣', ':coffee:' => '☕️', ':tea:' => '🍵', ':sake:' => '🍶',
+            ':baby_bottle:' => '🍼', ':beer:' => '🍺', ':beers:' => '🍻', ':cocktail:' => '🍸',
+            ':tropical_drink:' => '🍹', ':wine_glass:' => '🍷', ':fork_and_knife:' => '🍴', ':pizza:' => '🍕',
+            ':hamburger:' => '🍔', ':fries:' => '🍟', ':poultry_leg:' => '🍗', ':meat_on_bone:' => '🍖',
+            ':spaghetti:' => '🍝', ':curry:' => '🍛', ':fried_shrimp:' => '🍤', ':bento:' => '🍱',
+            ':sushi:' => '🍣', ':fish_cake:' => '🍥', ':rice_ball:' => '🍙', ':rice_cracker:' => '🍘',
+            ':rice:' => '🍚', ':ramen:' => '🍜', ':stew:' => '🍲', ':oden:' => '🍢',
+            ':dango:' => '🍡', ':egg:' => '🥚', ':bread:' => '🍞', ':doughnut:' => '🍩',
+            ':custard:' => '🍮', ':icecream:' => '🍦', ':ice_cream:' => '🍨', ':shaved_ice:' => '🍧',
+            ':birthday:' => '🎂', ':cake:' => '🍰', ':cookie:' => '🍪', ':chocolate_bar:' => '🍫',
+            ':candy:' => '🍬', ':lollipop:' => '🍭', ':honey_pot:' => '🍯', ':apple:' => '🍎',
+            ':green_apple:' => '🍏', ':tangerine:' => '🍊', ':lemon:' => '🍋', ':cherries:' => '🍒',
+            ':grapes:' => '🍇', ':watermelon:' => '🍉', ':strawberry:' => '🍓', ':peach:' => '🍑',
+            ':melon:' => '🍈', ':banana:' => '🍌', ':pear:' => '🍐', ':pineapple:' => '🍍',
+            ':sweet_potato:' => '🍠', ':eggplant:' => '🍆', ':tomato:' => '🍅', ':corn:' => '🌽',
+            ':house:' => '🏠', ':house_with_garden:' => '🏡', ':school:' => '🏫', ':office:' => '🏢',
+            ':post_office:' => '🏣', ':hospital:' => '🏥', ':bank:' => '🏦', ':convenience_store:' => '🏪',
+            ':love_hotel:' => '🏩', ':hotel:' => '🏨', ':wedding:' => '💒', ':church:' => '⛪️',
+            ':department_store:' => '🏬', ':european_post_office:' => '🏤', ':city_sunrise:' => '🌇', ':city_sunset:' => '🌆',
+            ':japanese_castle:' => '🏯', ':european_castle:' => '🏰', ':tent:' => '⛺️', ':factory:' => '🏭',
+            ':tokyo_tower:' => '🗼', ':japan:' => '🗾', ':mount_fuji:' => '🗻', ':sunrise_over_mountains:' => '🌄',
+            ':sunrise:' => '🌅', ':stars:' => '🌠', ':statue_of_liberty:' => '🗽', ':bridge_at_night:' => '🌉',
+            ':carousel_horse:' => '🎠', ':rainbow:' => '🌈', ':ferris_wheel:' => '🎡', ':fountain:' => '⛲️',
+            ':roller_coaster:' => '🎢', ':ship:' => '🚢', ':speedboat:' => '🚤', ':boat:' => '⛵️',
+            ':sailboat:' => '⛵️', ':rowboat:' => '🚣', ':anchor:' => '⚓️', ':rocket:' => '🚀',
+            ':airplane:' => '✈️', ':helicopter:' => '🚁', ':steam_locomotive:' => '🚂', ':tram:' => '🚊',
+            ':mountain_railway:' => '🚞', ':bike:' => '🚲', ':aerial_tramway:' => '🚡', ':suspension_railway:' => '🚟',
+            ':mountain_cableway:' => '🚠', ':tractor:' => '🚜', ':blue_car:' => '🚙', ':oncoming_automobile:' => '🚘',
+            ':car:' => '🚗', ':red_car:' => '🚗', ':taxi:' => '🚕', ':oncoming_taxi:' => '🚖',
+            ':articulated_lorry:' => '🚛', ':bus:' => '🚌', ':oncoming_bus:' => '🚍', ':rotating_light:' => '🚨',
+            ':police_car:' => '🚓', ':oncoming_police_car:' => '🚔', ':fire_engine:' => '🚒', ':ambulance:' => '🚑',
+            ':minibus:' => '🚐', ':truck:' => '🚚', ':train:' => '🚋', ':station:' => '🚉',
+            ':train2:' => '🚆', ':bullettrain_front:' => '🚅', ':bullettrain_side:' => '🚄', ':light_rail:' => '🚈',
+            ':monorail:' => '🚝', ':railway_car:' => '🚃', ':trolleybus:' => '🚎', ':ticket:' => '🎫',
+            ':fuelpump:' => '⛽️', ':vertical_traffic_light:' => '🚦', ':traffic_light:' => '🚥', ':warning:' => '⚠️',
+            ':construction:' => '🚧', ':beginner:' => '🔰', ':atm:' => '🏧', ':slot_machine:' => '🎰',
+            ':busstop:' => '🚏', ':barber:' => '💈', ':hotsprings:' => '♨️', ':checkered_flag:' => '🏁',
+            ':crossed_flags:' => '🎌', ':izakaya_lantern:' => '🏮', ':moyai:' => '🗿', ':circus_tent:' => '🎪',
+            ':performing_arts:' => '🎭', ':round_pushpin:' => '📍', ':triangular_flag_on_post:' => '🚩', ':jp:' => '🇯🇵',
+            ':kr:' => '🇰🇷', ':cn:' => '🇨🇳', ':us:' => '🇺🇸', ':fr:' => '🇫🇷',
+            ':es:' => '🇪🇸', ':it:' => '🇮🇹', ':ru:' => '🇷🇺', ':gb:' => '🇬🇧',
+            ':uk:' => '🇬🇧', ':de:' => '🇩🇪', ':one:' => '1️⃣', ':two:' => '2️⃣',
+            ':three:' => '3️⃣', ':four:' => '4️⃣', ':five:' => '5️⃣', ':six:' => '6️⃣',
+            ':seven:' => '7️⃣', ':eight:' => '8️⃣', ':nine:' => '9️⃣', ':keycap_ten:' => '🔟',
+            ':1234:' => '🔢', ':zero:' => '0️⃣', ':hash:' => '#️⃣', ':symbols:' => '🔣',
+            ':arrow_backward:' => '◀️', ':arrow_down:' => '⬇️', ':arrow_forward:' => '▶️', ':arrow_left:' => '⬅️',
+            ':capital_abcd:' => '🔠', ':abcd:' => '🔡', ':abc:' => '🔤', ':arrow_lower_left:' => '↙️',
+            ':arrow_lower_right:' => '↘️', ':arrow_right:' => '➡️', ':arrow_up:' => '⬆️', ':arrow_upper_left:' => '↖️',
+            ':arrow_upper_right:' => '↗️', ':arrow_double_down:' => '⏬', ':arrow_double_up:' => '⏫', ':arrow_down_small:' => '🔽',
+            ':arrow_heading_down:' => '⤵️', ':arrow_heading_up:' => '⤴️', ':leftwards_arrow_with_hook:' => '↩️', ':arrow_right_hook:' => '↪️',
+            ':left_right_arrow:' => '↔️', ':arrow_up_down:' => '↕️', ':arrow_up_small:' => '🔼', ':arrows_clockwise:' => '🔃',
+            ':arrows_counterclockwise:' => '🔄', ':rewind:' => '⏪', ':fast_forward:' => '⏩', ':information_source:' => 'ℹ️',
+            ':ok:' => '🆗', ':twisted_rightwards_arrows:' => '🔀', ':repeat:' => '🔁', ':repeat_one:' => '🔂',
+            ':new:' => '🆕', ':top:' => '🔝', ':up:' => '🆙', ':cool:' => '🆒',
+            ':free:' => '🆓', ':ng:' => '🆖', ':cinema:' => '🎦', ':koko:' => '🈁',
+            ':signal_strength:' => '📶', ':u5272:' => '🈹', ':u5408:' => '🈴', ':u55b6:' => '🈺',
+            ':u6307:' => '🈯️', ':u6708:' => '🈷️', ':u6709:' => '🈶', ':u6e80:' => '🈵',
+            ':u7121:' => '🈚️', ':u7533:' => '🈸', ':u7a7a:' => '🈳', ':u7981:' => '🈲',
+            ':sa:' => '🈂️', ':restroom:' => '🚻', ':mens:' => '🚹', ':womens:' => '🚺',
+            ':baby_symbol:' => '🚼', ':no_smoking:' => '🚭', ':parking:' => '🅿️', ':wheelchair:' => '♿️',
+            ':metro:' => '🚇', ':baggage_claim:' => '🛄', ':accept:' => '🉑', ':wc:' => '🚾',
+            ':potable_water:' => '🚰', ':put_litter_in_its_place:' => '🚮', ':secret:' => '㊙️', ':congratulations:' => '㊗️',
+            ':m:' => 'Ⓜ️', ':passport_control:' => '🛂', ':left_luggage:' => '🛅', ':customs:' => '🛃',
+            ':ideograph_advantage:' => '🉐', ':cl:' => '🆑', ':sos:' => '🆘', ':id:' => '🆔',
+            ':no_entry_sign:' => '🚫', ':underage:' => '🔞', ':no_mobile_phones:' => '📵', ':do_not_litter:' => '🚯',
+            ':non-potable_water:' => '🚱', ':no_bicycles:' => '🚳', ':no_pedestrians:' => '🚷', ':children_crossing:' => '🚸',
+            ':no_entry:' => '⛔️', ':eight_spoked_asterisk:' => '✳️', ':eight_pointed_black_star:' => '✴️', ':heart_decoration:' => '💟',
+            ':vs:' => '🆚', ':vibration_mode:' => '📳', ':mobile_phone_off:' => '📴', ':chart:' => '💹',
+            ':currency_exchange:' => '💱', ':aries:' => '♈️', ':taurus:' => '♉️', ':gemini:' => '♊️',
+            ':cancer:' => '♋️', ':leo:' => '♌️', ':virgo:' => '♍️', ':libra:' => '♎️',
+            ':scorpius:' => '♏️', ':sagittarius:' => '♐️', ':capricorn:' => '♑️', ':aquarius:' => '♒️',
+            ':pisces:' => '♓️', ':ophiuchus:' => '⛎', ':six_pointed_star:' => '🔯', ':negative_squared_cross_mark:' => '❎',
+            ':a:' => '🅰️', ':b:' => '🅱️', ':ab:' => '🆎', ':o2:' => '🅾️',
+            ':diamond_shape_with_a_dot_inside:' => '💠', ':recycle:' => '♻️', ':end:' => '🔚', ':on:' => '🔛',
+            ':soon:' => '🔜', ':clock1:' => '🕐', ':clock130:' => '🕜', ':clock10:' => '🕙',
+            ':clock1030:' => '🕥', ':clock11:' => '🕚', ':clock1130:' => '🕦', ':clock12:' => '🕛',
+            ':clock1230:' => '🕧', ':clock2:' => '🕑', ':clock230:' => '🕝', ':clock3:' => '🕒',
+            ':clock330:' => '🕞', ':clock4:' => '🕓', ':clock430:' => '🕟', ':clock5:' => '🕔',
+            ':clock530:' => '🕠', ':clock6:' => '🕕', ':clock630:' => '🕡', ':clock7:' => '🕖',
+            ':clock730:' => '🕢', ':clock8:' => '🕗', ':clock830:' => '🕣', ':clock9:' => '🕘',
+            ':clock930:' => '🕤', ':heavy_dollar_sign:' => '💲', ':copyright:' => '©️', ':registered:' => '®️',
+            ':tm:' => '™️', ':x:' => '❌', ':heavy_exclamation_mark:' => '❗️', ':bangbang:' => '‼️',
+            ':interrobang:' => '⁉️', ':o:' => '⭕️', ':heavy_multiplication_x:' => '✖️', ':heavy_plus_sign:' => '➕',
+            ':heavy_minus_sign:' => '➖', ':heavy_division_sign:' => '➗', ':white_flower:' => '💮', ':100:' => '💯',
+            ':heavy_check_mark:' => '✔️', ':ballot_box_with_check:' => '☑️', ':radio_button:' => '🔘', ':link:' => '🔗',
+            ':curly_loop:' => '➰', ':wavy_dash:' => '〰️', ':part_alternation_mark:' => '〽️', ':trident:' => '🔱',
+            ':white_check_mark:' => '✅', ':black_square_button:' => '🔲', ':white_square_button:' => '🔳', ':black_circle:' => '⚫️',
+            ':white_circle:' => '⚪️', ':red_circle:' => '🔴', ':large_blue_circle:' => '🔵', ':large_blue_diamond:' => '🔷',
+            ':large_orange_diamond:' => '🔶', ':small_blue_diamond:' => '🔹', ':small_orange_diamond:' => '🔸', ':small_red_triangle:' => '🔺',
+            ':small_red_triangle_down:' =>  '🔻', ':black_small_square:' => '▪️', ':black_medium_small_square:' => '◾',':black_medium_square:' => '◼️',
+            ':black_large_square:' => '⬛', ':white_small_square:' => '▫️', ':white_medium_small_square:' => '◽', ':white_medium_square:' => '◻️',
+            ':white_large_square:' => '⬜'
+        ];
+
+        if (preg_match('/^(:)([^:]*?)(:)/', $Excerpt['text'], $matches)) {
+            return [
+               'extent' => strlen($matches[0]),
+               'element' => [
+                   // Transliterate characters to ASCII
+                   'text' => str_replace(array_keys($emoji_map), $emoji_map, $matches[0])
+               ],
+            ];
+        }
+    }
+
+    /*
+     * Inline Highlight
+     * -------------------------------------------------------------------------
+     */
+
+    protected function inlineHighlight($Excerpt)
+    {
+        if (preg_match('/^(==)([^=]*?)(==)/', $Excerpt['text'], $matches)) {
+            return [
+               'extent' => strlen($matches[0]),
+               'element' => [
+                   'name' => 'mark',
+                   'text' => $matches[2]
+               ]
+            ];
+        }
+    }
+
+    /*
+     * Inline Keystrokes
+     * -------------------------------------------------------------------------
+     */
+
+    protected function inlineKeystrokes($Excerpt)
+    {
+        if (preg_match('/^(?<!\[)(?:\[\[([^\[\]]*|[\[\]])\]\])(?!\])/s', $Excerpt['text'], $matches)) {
+            return [
+               'extent' => strlen($matches[0]),
+               'element' => [
+                   'name' => 'kbd',
+                   'text' => $matches[1],
+               ]
+            ];
+        }
+    }
+
+    /*
+     * Inline Superscript
+     * -------------------------------------------------------------------------
+     */
+
+    protected function inlineSuperscript($Excerpt)
+    {
+        if (preg_match('/(?:\^(?!\^)([^\^ ]*)\^(?!\^))/', $Excerpt['text'], $matches)) {
+            return [
+             'extent' => strlen($matches[0]),
+             'element' => [
+                 'name' => 'sup',
+                 'text' => $matches[1],
+                 'function' => 'lineElements',
+             ],
+          ];
+        }
+    }
+
+    /*
+     * Inline Subscript
+     * -------------------------------------------------------------------------
+     */
+
+    protected function inlineSubscript($Excerpt)
+    {
+        if (preg_match('/(?:~(?!~)([^~ ]*)~(?!~))/', $Excerpt['text'], $matches)) {
+            return [
+             'extent' => strlen($matches[0]),
+             'element' => [
+                 'name' => 'sub',
+                 'text' => $matches[1],
+                 'function' => 'lineElements',
+             ],
+          ];
+        }
+    }
+
+    /*
+     * Inline Math
+     * -------------------------------------------------------------------------
+     */
 
     protected function inlineMath($Excerpt)
     {
-        if (!$this->config['math']) {
-            return;
+        $matchSignleDollar = $this->options['extensions']['math']['matchSingleDollar'] ?? false;
+
+        // Inline Matches
+        if (preg_match('/^(?<!\\\\\()\\\\\((.*?)(?<!\\\\\()\\\\\)(?!\\\\\))/s', $Excerpt['text'], $matches)) {
+            $mathMatch = $matches[0];
         }
 
-        if (preg_match('/^(?<!\\\\)(?<!\\\\\()\\\\\((.*?)(?<!\\\\\()\\\\\)(?!\\\\\))/s', $Excerpt['text'], $matches)) {
+        if (isset($mathMatch)) {
             return array(
-                'extent' => strlen($matches[0]),
-                'element' => array(
-                    'text' =>  $matches[0]
-                ),
+               'extent' => strlen($mathMatch),
+               'element' => array(
+                   'text' => $mathMatch,
+               ),
             );
         }
     }
-
-    protected $specialCharacters = array(
-        '\\', '`', '*', '_', '{', '}', '[', ']', '(', ')', '<', '>', '#', '+', '-', '.', '!', '|', '~', '^', '='
-    );
-
-
-    //
-    // Inline Escape
-    // -------------------------------------------------------------------------
 
     protected function inlineEscapeSequence($Excerpt)
     {
         $Element = array(
             'element' => array(
-                'rawHtml' => $Excerpt['text'][1],
+               'rawHtml' => $Excerpt['text'][1],
             ),
             'extent' => 2,
         );
 
-        if ($this->config['math']) {
-            if (isset($Excerpt['text'][1]) && in_array($Excerpt['text'][1], $this->specialCharacters) && !preg_match('/(?<!\\\\)((?<!\\\\\()\\\\\((?!\\\\\())(.*?)(?<!\\\\)(?<!\\\\\()((?<!\\\\\))\\\\\)(?!\\\\\)))(?!\\\\\()/s', $Excerpt['text'])) {
-                return $Element;
+        $math = $this->options['extensions']['math'] ?? true;
+
+        if ($math) {
+            if (isset($Excerpt['text'][1]) && in_array($Excerpt['text'][1], $this->specialCharacters) && !preg_match('/^(?<!\\\\)(?<!\\\\\()\\\\\((.{2,}?)(?<!\\\\\()\\\\\)(?!\\\\\))/s', $Excerpt['text'])) {
+               return $Element;
             }
         } else {
             if (isset($Excerpt['text'][1]) && in_array($Excerpt['text'][1], $this->specialCharacters)) {
-                return $Element;
+               return $Element;
             }
         }
     }
 
-
-
-    //
-    // Inline Superscript
-    // -------------------------------------------------------------------------
-
-    protected function inlineSuperText($Excerpt)
-    {
-        if (!$this->config['scripts']) {
-            return;
-        }
-
-        if (preg_match('/(?:\^(?!\^)([^\^ ]*)\^(?!\^))/', $Excerpt['text'], $matches)) {
-            return array(
-                'extent' => strlen($matches[0]),
-                'element' => array(
-                    'name' => 'sup',
-                    'text' => $matches[1],
-                    'function' => 'lineElements'
-                ),
-
-            );
-        }
-    }
-
-
-    //
-    // Inline Subscript
-    // -------------------------------------------------------------------------
-
-    protected function inlineSubText($Excerpt)
-    {
-        if (!$this->config['scripts']) {
-            return;
-        }
-
-        if (preg_match('/(?:~(?!~)([^~ ]*)~(?!~))/', $Excerpt['text'], $matches)) {
-            return array(
-                'extent' => strlen($matches[0]),
-                'element' => array(
-                    'name' => 'sub',
-                    'text' => $matches[1],
-                    'function' => 'lineElements'
-                ),
-
-            );
-        }
-    }
-
-
-    //
-    // Inline Strikethrough
-    // -------------------------------------------------------------------------
-
-    protected function inlineStrikethrough($Excerpt)
-    {
-        if (!isset($Excerpt['text'][1])) {
-            return;
-        }
-
-        if ($Excerpt['text'][1] === '~' && preg_match('/^~~(?=\S)(.+?)(?<=\S)~~/', $Excerpt['text'], $matches)) {
-            return array(
-                'extent' => strlen($matches[0]),
-                'element' => array(
-                    'name' => 's',
-                    'handler' => array(
-                        'function' => 'lineElements',
-                        'argument' => $matches[1],
-                        'destination' => 'elements',
-                    )
-                ),
-            );
-        }
-    }
-
-
-    //
-    // Inline Insert
-    // -------------------------------------------------------------------------
-
-    protected function inlineInsertText($Excerpt)
-    {
-        if (!$this->config['insert']) {
-            return;
-        }
-
-        if (preg_match('/^(\+\+)([^+]*?)(\+\+)/', $Excerpt['text'], $matches)) {
-            return array(
-
-                'extent' => strlen($matches[0]),
-                'element' => array(
-                    'name' => 'ins',
-                    'text' => $matches[2]
-                ),
-            );
-        }
-    }
-
-
-    //
-    // Inline KBD
-    // -------------------------------------------------------------------------
-
-    protected function inlineKbd($Excerpt)
-    {
-        if (!$this->config['kbd']) {
-            return;
-        }
-
-        if (preg_match('/^(?<!\[)(?:\[\[([^\[\]]*|[\[\]])\]\])(?!\])/s', $Excerpt['text'], $matches)) {
-            return array(
-                'extent' => strlen($matches[0]),
-                'element' => array(
-                    'name' => 'kbd',
-                    'text' => $matches[1]
-                ),
-
-            );
-        }
-    }
-
-
-
-
-
-    // -------------------------------------------------------------------------
-    // -----------------------         Blocks         --------------------------
-    // -------------------------------------------------------------------------
-
-
-
-    //
-    // Header
-    // -------------------------------------------------------------------------
-
-    protected function blockHeader($Line)
-    {
-        $Block = parent::blockHeader($Line);
-        if (preg_match('/[ #]*{('.$this->regexAttribute.'+)}[ ]*$/', $Block['element']['handler']['argument'], $matches, PREG_OFFSET_CAPTURE)) {
-            $attributeString = $matches[1][0];
-            $Block['element']['attributes'] = $this->parseAttributeData($attributeString);
-            $Block['element']['handler']['argument'] = substr($Block['element']['handler']['argument'], 0, $matches[0][1]);
-        }
-
-        // createAnchorID
-        if (!isset($Block['element']['attributes']['id']) && isset($Block['element']['handler']['argument'])) {
-            $Block['element']['attributes']['id'] = $this->createAnchorID($Block['element']['handler']['argument'], ['transliterate' => false]);
-        }
-
-        $link = "#".$Block['element']['attributes']['id'];
-
-        $Block['element']['handler']['argument'] = $Block['element']['handler']['argument']."<a class='heading-link' href='{$link}'> <i class='fas fa-link'></i></a>";
-
-        // ~
-
-        return $Block;
-    }
-
-    //
-    // Setext
-    protected function blockSetextHeader($Line, array $Block = null)
-    {
-        $Block = parent::blockSetextHeader($Line, $Block);
-
-        if (preg_match('/[ ]*{('.$this->regexAttribute.'+)}[ ]*$/', $Block['element']['handler']['argument'], $matches, PREG_OFFSET_CAPTURE)) {
-            $attributeString = $matches[1][0];
-            $Block['element']['attributes'] = $this->parseAttributeData($attributeString);
-            $Block['element']['handler']['argument'] = substr($Block['element']['handler']['argument'], 0, $matches[0][1]);
-        }
-
-        // createAnchorID
-        if (!isset($Block['element']['attributes']['id']) && isset($Block['element']['handler']['argument'])) {
-            $Block['element']['attributes']['id'] = $this->createAnchorID($Block['element']['handler']['argument'], ['transliterate' => false]);
-        }
-
-        if ($Block['type'] == 'Paragraph') {
-            $link = "#".$Block['element']['attributes']['id'];
-            $Block['element']['handler']['argument'] = $Block['element']['handler']['argument']."<a class='heading-link' href='{$link}'> <i class='fas fa-link'></i></a>";
-        }
-
-
-        // ~
-
-        return $Block;
-    }
-
-
-    //
-    // Toc
-    // -------------------------------------------------------------------------
-
-    public function toc($input = null)
-    {
-        if (!$this->config['toc']['enable']) {
-            return;
-        }
-
-        $Line['text'] = '[toc]';
-        $Line['toc']['type'] = 'string';
-
-        if (is_string($input)) {
-            $this->fullDocument = $input;
-        } else {
-            throw new Exception("Unexpected parameter type");
-        }
-
-        return $this->blockToc($Line, null, false);
-    }
-
-    // ~
-
-    protected $contentsListString;
-    protected $contentsListArray = array();
-    protected $firstHeadLevel = 0;
-
-    // ~
-
-    protected function blockToc(array $Line, array $Block = null, $isInline = true)
-    {
-        if (!$this->config['toc']['enable']) {
-            return;
-        }
-
-        if ($Line['text'] == '[toc]') {
-            if (isset($this->config['toc']['inline']) && $this->config['toc']['inline'] == false && $isInline == true) {
-                return;
-            }
-
-            $selectorList = isset($this->config['toc']['selectors']) ? $this->config['toc']['selectors'] : ['h1','h2','h3','h4','h5','h6'];
-
-            // Check if $Line[toc][type] already is defined
-            if (!isset($Line['toc']['type'])) {
-                $Line['toc']['type'] = 'array';
-            }
-
-            foreach ($selectorList as $selector) {
-                $selectors[] = (integer) trim($selector, 'h');
-            }
-
-            $cleanDoc = preg_replace('/<!--(.|\s)*?-->/', '', $this->fullDocument);
-            $headerLines = array();
-            $prevLine = '';
-
-            // split text into lines
-            $lines = explode("\n", $cleanDoc);
-
-            foreach ($lines as $headerLine) {
-                if (strspn($headerLine, '#') > 0 || strspn($headerLine, '=') >= 3 || strspn($headerLine, '-') >= 3) {
-                    $level = strspn($headerLine, '#');
-
-                    // Setext headers
-                    if (strspn($headerLine, '=') >= 3 && $prevLine !== '') {
-                        $level = 1;
-                        $headerLine = $prevLine;
-                    } elseif (strspn($headerLine, '-') >= 3 && $prevLine !== '') {
-                        $level = 2;
-                        $headerLine = $prevLine;
-                    }
-
-                    if (in_array($level, $selectors) && $level > 0 && $level <= 6) {
-                        $text = preg_replace('/[ #]*{('.$this->regexAttribute.'+)}[ ]*$/', '', $headerLine);
-                        $text = trim(trim($text, '#'));
-
-                        // createAnchorID
-                        $id = $this->createAnchorID($text, ['transliterate' => false]);
-
-                        if (preg_match('/{('.$this->regexAttribute.'+)}$/', $headerLine, $matches)) {
-                            if (strspn($matches[1], '#') > 0) {
-                                $id = trim($matches[1], '#');
-                            }
-                        }
-
-                        // ~
-
-                        if ($this->firstHeadLevel === 0) {
-                            $this->firstHeadLevel = $level;
-                        }
-
-                        $cutIndent = $this->firstHeadLevel - 1;
-
-                        if ($cutIndent > $level) {
-                            $level = 1;
-                        } else {
-                            $level = $level - $cutIndent;
-                        }
-
-                        $indent = str_repeat('  ', $level);
-
-                        // ~
-
-                        if ($Line['toc']['type'] == 'string') {
-                            $this->contentsListString .= "$indent- [${text}](#${id})\n";
-                        } else {
-                            $this->contentsListArray[] = "$indent- [${text}](#${id})\n";
-                        }
-                    }
-                }
-                $prevLine = $headerLine;
-            }
-
-            if ($Line['toc']['type'] == 'string') {
-                return $this->text($this->contentsListString);
-            }
-
-            // ~
-
-            $Block = array(
-
-                'element' => array(
-                    'name' => 'nav',
-                    'attributes' => array(
-                        'id'   => 'table-of-contents',
-                    ),
-                    'elements' => array(
-                        '1' => array(
-                            "handler" => array(
-                                "function" => "li",
-                                "argument" => $this->contentsListArray,
-                                "destination" => "elements",
-                            ),
-                        ),
-                    ),
-                ),
-            );
-
-            // ~
-
-            return $Block;
-        }
-    }
-
-
-    //
-    // Tables
-    // -------------------------------------------------------------------------
-
-    protected function blockTableContinue($Line, array $Block)
-    {
-        if (isset($Block['interrupted'])) {
-            return;
-        }
-
-        if (count($Block['alignments']) === 1 || $Line['text'][0] === '|' || strpos($Line['text'], '|')) {
-            $Elements = array();
-
-            $row = $Line['text'];
-
-            $row = trim($row);
-            $row = trim($row, '|');
-
-
-            preg_match_all('/(?:(\\\\[|])|[^|`]|`[^`]++`|`)++/', $row, $matches);
-
-            $cells = array_slice($matches[0], 0, count($Block['alignments']));
-
-            foreach ($cells as $index => $cell) {
-                $cell = trim($cell);
-
-                if ($this->config['smarttypography']) {
-                    $cellContent = $this->smartTypographyReplace($cell);
-                }
-
-                $Element = array(
-                    'name' => 'td',
-                    'handler' => array(
-                        'function' => 'lineElements',
-                        'argument' => $cellContent ?? $cell,
-                        'destination' => 'elements',
-                    )
-                );
-
-                if (isset($Block['alignments'][$index])) {
-                    $Element['attributes'] = array(
-                        'style' => 'text-align: ' . $Block['alignments'][$index] . ';',
-                    );
-                }
-
-                $Elements []= $Element;
-            }
-
-            $Element = array(
-                'name' => 'tr',
-                'elements' => $Elements,
-            );
-
-            $Block['element']['elements'][1]['elements'] []= $Element;
-
-            // ~
-
-            return $Block;
-        }
-    }
-
-
-    //
-    // Quote
-
-    protected function blockQuote($Line)
-    {
-        if (preg_match('/^>(?!>)[ ]?+(.*+)/', $Line['text'], $matches)) {
-            $Block = array(
-                'element' => array(
-                    'name' => 'blockquote',
-                    'handler' => array(
-                        'function' => 'linesElements',
-                        'argument' => (array) $matches[1],
-                        'destination' => 'elements',
-                    )
-                ),
-            );
-
-            // ~
-
-            return $Block;
-        }
-    }
-
-    // ~
-
-    protected function blockQuoteContinue($Line, array $Block)
-    {
-        if (isset($Block['interrupted'])) {
-            return;
-        }
-
-        // ~
-
-        if ($Line['text'][0] === '>' && preg_match('/^>(?!>)[ ]?+(.*+)/', $Line['text'], $matches)) {
-            $Block['element']['handler']['argument'] []= $matches[1];
-
-            return $Block;
-        }
-
-        // ~
-
-        if (! isset($Block['interrupted'])) {
-            $Block['element']['handler']['argument'] []= $Line['text'];
-
-            return $Block;
-        }
-    }
-
-    //
-    // Block Fenced Code
-    // --------------------------------------------------------------------------
-
-    protected function blockFencedCode($Line)
-    {
-        $marker = $Line['text'][0];
-
-        $openerLength = strspn($Line['text'], $marker);
-
-        if ($openerLength < 3) {
-            return;
-        }
-
-        $language = trim(preg_replace('/^`{3}([^\s]+)(.+)?/s', '$1', $Line['text']));
-        $infostring = trim(preg_replace('/^`{3}([^\s]+)(.+)?/s', '$2', $Line['text']));
-
-        if (strpos($infostring, '`') !== false) {
-            return;
-        }
-
-        if ($this->config['diagrams']) {
-
-            // Mermaid.js https://mermaidjs.github.io
-            if (strtolower($language) == 'mermaid') {
-                $Element = array(
-                    'text' => ''
-                );
-
-                $Block = array(
-                    'char' => $marker,
-                    'openerLength' => $openerLength,
-                    'element' => array(
-                        'element' => $Element,
-                        'name' => 'div',
-                        'attributes' => array(
-                            'class' => 'mermaid'
-                        ),
-                    )
-                );
-
-                return $Block;
-            }
-
-
-
-            // Chart.js https://www.chartjs.org/
-            if (strtolower($language) == 'chart') {
-                $Element = array(
-                    'text' => ''
-                );
-
-                $Block = array(
-                    'char' => $marker,
-                    'openerLength' => $openerLength,
-                    'element' => array(
-                        'element' => $Element,
-                        'name' => 'canvas',
-                        'attributes' => array(
-                            'class' => 'chartjs'
-                        ),
-                    )
-                );
-
-                return $Block;
-            }
-        }
-
-        $Element = array(
-            'name' => 'code',
-            'text' => '',
-        );
-
-        if ($language !== '') {
-            $Element['attributes'] = array('class' => "language-$language");
-        }
-
-        $Block = array(
-            'char' => $marker,
-            'openerLength' => $openerLength,
-            'element' => array(
-                'name' => 'pre',
-                'element' => $Element,
-            ),
-        );
-
-        $attr = trim($infostring, '{}');
-        $Block['element']['attributes'] = $this->parseAttributeData($attr);
-
-        // ~
-
-        return $Block;
-    }
-
-
-    //
-    // Block Math
-    // --------------------------------------------------------------------------
+    /**
+     * ------------------------------------------------------------------------
+     *  Blocks.
+     * ------------------------------------------------------------------------
+     */
+
+    /*
+     * Block Math
+     * -------------------------------------------------------------------------
+     */
 
     protected function blockMath($Line)
     {
-        if (!$this->config['math']) {
-            return;
-        }
-
-        $Block = array(
-            'element' => array(
-                'text' => '',
-            ),
-        );
+        $Block = [
+          'element' => [
+             'text' => '',
+          ],
+      ];
 
         if (preg_match('/^(?<!\\\\)(\\\\\[)(?!.)$/', $Line['text'])) {
             $Block['end'] = '\]';
@@ -973,23 +794,32 @@ class ParsedownExtended extends DynamicParent
         }
 
         if (isset($Block['interrupted'])) {
-            $Block['element']['text'] .= str_repeat("\n", $Block['interrupted']);
+            $Block['element']['text'] .= str_repeat(
+               "\n",
+               $Block['interrupted']
+            );
 
             unset($Block['interrupted']);
         }
 
-        if (preg_match('/^(?<!\\\\)(\\\\\])$/', $Line['text']) && $Block['end'] === '\]') {
+        if (
+          preg_match('/^(?<!\\\\)(\\\\\])$/', $Line['text']) &&
+          $Block['end'] === '\]'
+      ) {
             $Block['complete'] = true;
             $Block['math'] = true;
-            $Block['element']['text'] = "\\[".$Block['element']['text']."\\]";
+            $Block['element']['text'] =
+             "\\[" . $Block['element']['text'] . "\\]";
             return $Block;
-        } elseif (preg_match('/^(?<!\\\\)(\$\$)$/', $Line['text']) && $Block['end'] === '$$') {
+        } elseif (
+          preg_match('/^(?<!\\\\)(\$\$)$/', $Line['text']) &&
+          $Block['end'] === '$$'
+      ) {
             $Block['complete'] = true;
             $Block['math'] = true;
-            $Block['element']['text'] = "$$".$Block['element']['text']."$$";
+            $Block['element']['text'] = "$$" . $Block['element']['text'] . "$$";
             return $Block;
         }
-
 
         $Block['element']['text'] .= "\n" . $Line['body'];
 
@@ -1005,283 +835,383 @@ class ParsedownExtended extends DynamicParent
         return $Block;
     }
 
-    //
-    // Block Checkbox
-    // --------------------------------------------------------------------------
+    /*
+     * Block Fenced Code
+     * -------------------------------------------------------------------------
+     */
 
-    protected function blockList($Line, array $CurrentBlock = null)
+    protected function blockFencedCode($Line)
     {
-        list($name, $pattern) = $Line['text'][0] <= '-' ? array('ul', '[*+-]') : array('ol', '[0-9]{1,9}+[.\)]');
+        $state = isset($this->options['code_block']) ? $this->options['code_block'] : true;
+        if ($state === false) {
+            return;
+        }
+        $Block = DynamicParent::blockFencedCode($Line);
 
-        if (preg_match('/^('.$pattern.'([ ]++|$))(.*+)/', $Line['text'], $matches)) {
-            $contentIndent = strlen($matches[2]);
+        $marker = $Line['text'][0];
+        $openerLength = strspn($Line['text'], $marker);
+        $language = trim(
+            preg_replace('/^`{3}([^\s]+)(.+)?/s', '$1', $Line['text'])
+        );
 
-            if ($contentIndent >= 5) {
-                $contentIndent -= 1;
-                $matches[1] = substr($matches[1], 0, -$contentIndent);
-                $matches[3] = str_repeat(' ', $contentIndent) . $matches[3];
-            } elseif ($contentIndent === 0) {
-                $matches[1] .= ' ';
+
+        $state = isset($this->options['diagrams']) ? $this->options['diagrams'] : true;
+        if ($state) {
+
+            // Mermaid.js https://mermaidjs.github.io
+            if (strtolower($language) == 'mermaid') {
+                $Element = [
+                   'text' => '',
+                ];
+
+                $Block = [
+                   'char' => $marker,
+                   'openerLength' => $openerLength,
+                   'element' => [
+                       'element' => $Element,
+                       'name' => 'div',
+                       'attributes' => [
+                           'class' => 'mermaid',
+                       ],
+                   ],
+                ];
+
+                return $Block;
             }
 
-            $markerWithoutWhitespace = strstr($matches[1], ' ', true);
+            // Chart.js https://www.chartjs.org/
+            if (strtolower($language) == 'chart') {
+                $Element = [
+                   'text' => '',
+                ];
 
-            $Block = array(
-                'indent' => $Line['indent'],
-                'pattern' => $pattern,
-                'data' => array(
-                    'type' => $name,
-                    'marker' => $matches[1],
-                    'markerType' => ($name === 'ul' ? $markerWithoutWhitespace : substr($markerWithoutWhitespace, -1)),
-                ),
-                'element' => array(
-                    'name' => $name,
-                    'elements' => array(),
-                ),
-            );
-            $Block['data']['markerTypeRegex'] = preg_quote($Block['data']['markerType'], '/');
+                $Block = [
+                   'char' => $marker,
+                   'openerLength' => $openerLength,
+                   'element' => [
+                       'element' => $Element,
+                       'name' => 'canvas',
+                       'attributes' => [
+                           'class' => 'chartjs',
+                       ],
+                   ],
+                ];
 
-            if ($name === 'ol') {
-                $listStart = ltrim(strstr($matches[1], $Block['data']['markerType'], true), '0') ?: '0';
-
-                if ($listStart !== '1') {
-                    if (
-                        isset($CurrentBlock)
-                        && $CurrentBlock['type'] === 'Paragraph'
-                        && ! isset($CurrentBlock['interrupted'])
-                    ) {
-                        return;
-                    }
-
-                    $Block['element']['attributes'] = array('start' => $listStart);
-                }
-            }
-
-            $this->checkbox($matches[3], $attributes);
-
-            $Block['li'] = array(
-                'name' => 'li',
-                'handler' => array(
-                    'function' => 'li',
-                    'argument' => !empty($matches[3]) ? array($matches[3]) : array(),
-                    'destination' => 'elements'
-                )
-            );
-
-            $attributes && $Block['li']['attributes'] = $attributes;
-
-            $Block['element']['elements'] []= & $Block['li'];
-            return $Block;
-        }
-    }
-
-    // ~
-
-    protected function blockListContinue($Line, array $Block)
-    {
-        if (isset($Block['interrupted']) && empty($Block['li']['handler']['argument'])) {
-            return null;
-        }
-
-        $requiredIndent = ($Block['indent'] + strlen($Block['data']['marker']));
-
-        if ($Line['indent'] < $requiredIndent
-            && (
-                (
-                    $Block['data']['type'] === 'ol'
-                    && preg_match('/^[0-9]++'.$Block['data']['markerTypeRegex'].'(?:[ ]++(.*)|$)/', $Line['text'], $matches)
-                ) or (
-                    $Block['data']['type'] === 'ul'
-                    && preg_match('/^'.$Block['data']['markerTypeRegex'].'(?:[ ]++(.*)|$)/', $Line['text'], $matches)
-                )
-            )
-        ) {
-            if (isset($Block['interrupted'])) {
-                $Block['li']['handler']['argument'] []= '';
-
-                $Block['loose'] = true;
-
-                unset($Block['interrupted']);
-            }
-
-            unset($Block['li']);
-
-            $text = $matches[1] ?? '';
-
-            $this->checkbox($text, $attributes);
-
-
-            $Block['indent'] = $Line['indent'];
-
-            $Block['li'] = array(
-                'name' => 'li',
-                'handler' => array(
-                    'function' => 'li',
-                    'argument' => array($text),
-                    'destination' => 'elements'
-                )
-            );
-            $attributes && $Block['li']['attributes'] = $attributes;
-            $Block['element']['elements'] []= & $Block['li'];
-
-            return $Block;
-        } elseif ($Line['indent'] < $requiredIndent && $this->blockList($Line)) {
-            return null;
-        }
-
-        if ($Line['text'][0] === '[' && $this->blockReference($Line)) {
-            return $Block;
-        }
-
-        if ($Line['indent'] >= $requiredIndent) {
-            if (isset($Block['interrupted'])) {
-                $Block['li']['handler']['argument'] []= '';
-
-                $Block['loose'] = true;
-
-                unset($Block['interrupted']);
-            }
-
-            $text = substr($Line['body'], $requiredIndent);
-
-            $Block['li']['handler']['argument'] []= $text;
-
-            // ~
-
-            return $Block;
-        }
-
-        if (! isset($Block['interrupted'])) {
-            $text = preg_replace('/^[ ]{0,'.$requiredIndent.'}+/', '', $Line['body']);
-
-            $Block['li']['handler']['argument'] []= $text;
-
-            // ~
-
-            return $Block;
-        }
-    }
-
-    // ~
-
-    protected function blockListComplete(array $Block)
-    {
-        if (isset($Block['loose'])) {
-            foreach ($Block['element']['elements'] as &$li) {
-                if (end($li['handler']['argument']) !== '') {
-                    $li['handler']['argument'] []= '';
-                }
+                return $Block;
             }
         }
-
-        // ~
 
         return $Block;
     }
 
+    /*
+    * Checkbox
+    * -------------------------------------------------------------------------
+    */
+    protected function blockCheckbox($line)
+    {
+        $text = trim($line['text']);
+        $begin_line = substr($text, 0, 4);
+        if ('[ ] ' === $begin_line) {
+            return [
+               'handler' => 'checkboxUnchecked',
+               'text' => substr(trim($text), 4),
+            ];
+        }
 
-    // -------------------------------------------------------------------------
-    // -----------------------         Helpers        --------------------------
-    // -------------------------------------------------------------------------
+        if ('[x] ' === $begin_line) {
+            return [
+               'handler' => 'checkboxChecked',
+               'text' => substr(trim($text), 4),
+            ];
+        }
+    }
+    protected function blockCheckboxContinue(array $block)
+    {
+        // This is here because Parsedown require it.
+    }
 
+    protected function blockCheckboxComplete(array $block)
+    {
+        $block['element'] = [
+            'rawHtml' => $this->{$block['handler']}($block['text']),
+            'allowRawHtmlInSafeMode' => true,
+        ];
+
+        return $block;
+    }
+
+    protected function checkboxUnchecked($text)
+    {
+        if ($this->markupEscaped || $this->safeMode) {
+            $text = self::escape($text);
+        }
+
+        return '<input type="checkbox" disabled /> ' . $this->format($text);
+    }
+
+    protected function checkboxChecked($text)
+    {
+        if ($this->markupEscaped || $this->safeMode) {
+            $text = self::escape($text);
+        }
+
+        return '<input type="checkbox" checked disabled /> ' . $this->format($text);
+    }
+
+    /**
+     * Formats the checkbox label without double escaping.
+     * @param string $text the string to format
+     * @return string the formatted text
+     */
+    protected function format($text)
+    {
+        // backup settings
+        $markup_escaped = $this->markupEscaped;
+        $safe_mode = $this->safeMode;
+
+        // disable rules to prevent double escaping.
+        $this->setMarkupEscaped(false);
+        $this->setSafeMode(false);
+
+        // format line
+        $text = $this->line($text);
+
+        // reset old values
+        $this->setMarkupEscaped($markup_escaped);
+        $this->setSafeMode($safe_mode);
+
+        return $text;
+    }
+    /**
+    * ------------------------------------------------------------------------
+    *  Helpers.
+    * ------------------------------------------------------------------------
+    */
+
+    /**
+     * Parses the given markdown string to an HTML string but it leaves the ToC
+     * tag as is. It's an alias of the parent method "\DynamicParent::text()".
+     *
+     * @param  string $text  Markdown string to be parsed.
+     * @return string        Parsed HTML string.
+     */
+    public function body($text) : string
+    {
+        $text = $this->encodeTagToHash($text);   // Escapes ToC tag temporary
+        $html = DynamicParent::text($text);      // Parses the markdown text
+        $html = $this->decodeTagFromHash($html); // Unescape the ToC tag
+
+        return $html;
+    }
+
+    /**
+     * Parses markdown string to HTML and also the "[toc]" tag as well.
+     * It overrides the parent method: \Parsedown::text().
+     *
+     * @param  string $text
+     * @return void
+     */
     public function text($text)
     {
-        $Elements = $this->textElements($text);
+        // Parses the markdown text except the ToC tag. This also searches
+        // the list of contents and available to get from "contentsList()"
+        // method.
+        $html = $this->body($text);
 
-        // convert to markup
-        $markup = $this->elements($Elements);
+        $tag_origin  = $this->getTagToC();
 
-        // trim line breaks
-        $markup = trim($markup, "\n");
-
-        // merge consecutive dl elements
-
-        $markup = preg_replace('/<\/dl>\s+<dl>\s+/', '', $markup);
-
-        // add footnotes
-
-        if (isset($this->DefinitionData['Footnote'])) {
-            $Element = $this->buildFootnoteElement();
-
-            $markup .= "\n" . $this->element($Element);
+        if (strpos($text, $tag_origin) === false) {
+            return $html;
         }
 
-        // ~
+        $toc_data = $this->contentsList();
+        $toc_id   = $this->getIdAttributeToC();
+        $needle  = '<p>' . $tag_origin . '</p>';
+        $replace = "<div id=\"${toc_id}\">${toc_data}</div>";
 
-        return $markup;
+        return str_replace($needle, $replace, $html);
     }
 
-
-    private function smartTypographyReplace($Text)
+    /**
+     * Sets the user defined ToC markdown tag.
+     *
+     * @param  string $tag
+     * @return void
+     */
+    public function setTagToc($tag)
     {
-        $typographicReplace = array(
-            '/(?<!\\\\)\(c\)/i' => '&copy;',
-            '/(?<!\\\\)\(r\)/i' => '&reg;',
-            '/(?<!\\\\)\(tm\)/i' => '&trade;',
-            '/(?<!\\\\)(?<!\.)\.{3}(?!\.)/' => '&hellip;',
-            '/(?<!\\\\)(?<!-)-{3}(?!-)/' => '&mdash;',
-            '/(?<!\\\\)(?<!-)--\s(?!-)/' => '&ndash;',
-            '/(?<!\\\\)(?<!<)<<(?!<)/' => '&laquo;',
-            '/(?<!\\\\)(?<!>)>>(?!>)/' => '&raquo;',
+        $tag = trim($tag);
+        if (self::escape($tag) === $tag) {
+            // Set ToC tag if it's safe
+            $this->tag_toc = $tag;
+        } else {
+            // Do nothing but log
+            error_log(
+                'Malformed ToC user tag given.'
+                . ' At: ' . __FUNCTION__ . '() '
+                . ' in Line:' . __LINE__ . ' (Using default ToC tag)'
+            );
+        }
+    }
+    protected $tag_toc = '';
+
+    /**
+     * Encodes the ToC tag to a hashed tag and replace.
+     *
+     * This is used to avoid parsing user defined ToC tag which includes "_" in
+     * their tag such as "[[_toc_]]". Unless it will be parsed as:
+     *   "<p>[[<em>TOC</em>]]</p>"
+     *
+     * @param  string $text
+     * @return string
+     */
+    protected function encodeTagToHash($text)
+    {
+        $salt = $this->getSalt();
+        $tag_origin = $this->getTagToC();
+
+        if (strpos($text, $tag_origin) === false) {
+            return $text;
+        }
+
+        $tag_hashed = hash('sha256', $salt . $tag_origin);
+
+        return str_replace($tag_origin, $tag_hashed, $text);
+    }
+
+    /**
+     * Decodes the hashed ToC tag to an original tag and replaces.
+     *
+     * This is used to avoid parsing user defined ToC tag which includes "_" in
+     * their tag such as "[[_toc_]]". Unless it will be parsed as:
+     *   "<p>[[<em>TOC</em>]]</p>"
+     *
+     * @param  string $text
+     * @return string
+     */
+    protected function decodeTagFromHash($text)
+    {
+        $salt = $this->getSalt();
+        $tag_origin = $this->getTagToC();
+        $tag_hashed = hash('sha256', $salt . $tag_origin);
+
+        if (strpos($text, $tag_hashed) === false) {
+            return $text;
+        }
+
+        return str_replace($tag_hashed, $tag_origin, $text);
+    }
+
+    /**
+     * Unique string to use as a salt value.
+     *
+     * @return string
+     */
+    protected function getSalt()
+    {
+        static $salt;
+        if (isset($salt)) {
+            return $salt;
+        }
+
+        $salt = hash('md5', time());
+        return $salt;
+    }
+
+    /**
+     * Gets the markdown tag for ToC.
+     *
+     * @return string
+     */
+    protected function getTagToC()
+    {
+        if (isset($this->tag_toc) && ! empty($this->tag_toc)) {
+            return $this->tag_toc;
+        }
+
+        return self::TAG_TOC_DEFAULT;
+    }
+
+    /**
+     * Returns the parsed ToC.
+     *
+     * @param  string $type_return  Type of the return format. "html" or "json".
+     * @return string               HTML/JSON string of ToC.
+     */
+    public function contentsList($type_return = 'html')
+    {
+        if ('html' === strtolower($type_return)) {
+            $result = '';
+            if (! empty($this->contentsListString)) {
+                // Parses the ToC list in markdown to HTML
+                $result = $this->body($this->contentsListString);
+            }
+            return $result;
+        }
+
+        if ('json' === strtolower($type_return)) {
+            return json_encode($this->contentsListArray);
+        }
+
+        // Forces to return ToC as "html"
+        error_log(
+            'Unknown return type given while parsing ToC.'
+            . ' At: ' . __FUNCTION__ . '() '
+            . ' in Line:' . __LINE__ . ' (Using default type)'
         );
-        return $this->pregReplaceAssoc($typographicReplace, $Text);
+        return $this->contentsList('html');
     }
 
-
-    // Checkbox
-    private function checkbox(&$text, &$attributes)
+    /**
+     * Gets the ID attribute of the ToC for HTML tags.
+     *
+     * @return string
+     */
+    protected function getIdAttributeToC()
     {
-        if (!$this->config['task']) {
-            return;
+        if (isset($this->id_toc) && ! empty($this->id_toc)) {
+            return $this->id_toc;
         }
 
-        if (strpos($text, '[x]') !== false || strpos($text, '[ ]') !== false) {
-            $attributes = array("style" => "list-style: none;");
-            $text = str_replace(array('[x]', '[ ]'), array(
-                '<input type="checkbox" checked="true" disabled="true">',
-                '<input type="checkbox" disabled="true">',
-            ), $text);
-        }
+        return self::ID_ATTRIBUTE_DEFAULT;
     }
 
-    // pregReplaceAssoc
-    private function pregReplaceAssoc(array $replace, $subject)
-    {
-        return preg_replace(array_keys($replace), array_values($replace), $subject);
-    }
-
-
-
-    private function createAnchorID($str, $options = array())
+    /**
+     * Generates an anchor text that are link-able even the heading is not in
+     * ASCII.
+     *
+     * @param  string $text
+     * @return string
+     */
+    protected function createAnchorID($str) : string
     {
         // Make sure string is in UTF-8 and strip invalid UTF-8 characters
         $str = mb_convert_encoding((string)$str, 'UTF-8', mb_list_encodings());
 
-        $defaults = array(
-            'delimiter' => '-',
-            'limit' => null,
-            'lowercase' => true,
-            'replacements' => array(),
-            'transliterate' => false,
-        );
+        if($this->options['toc']['urlencode']) {
+            // Check AnchorID is unique
+            $str = $this->incrementAnchorId($str);
 
-        // Merge options
-        $options = array_merge($defaults, $options);
+            return urlencode($str);
+        }
 
         $char_map = array(
             // Latin
-            'À' => 'A', 'Á' => 'A', 'Â' => 'A', 'Ã' => 'A', 'Ä' => 'A', 'Å' => 'Aa', 'Æ' => 'AE', 'Ç' => 'C',
+            'À' => 'A', 'Á' => 'A', 'Â' => 'A', 'Ã' => 'A', 'Ä' => 'A', 'Å' => 'AA', 'Æ' => 'AE', 'Ç' => 'C',
             'È' => 'E', 'É' => 'E', 'Ê' => 'E', 'Ë' => 'E', 'Ì' => 'I', 'Í' => 'I', 'Î' => 'I', 'Ï' => 'I',
             'Ð' => 'D', 'Ñ' => 'N', 'Ò' => 'O', 'Ó' => 'O', 'Ô' => 'O', 'Õ' => 'O', 'Ö' => 'O', 'Ő' => 'O',
-            'Ø' => 'Oe', 'Ù' => 'U', 'Ú' => 'U', 'Û' => 'U', 'Ü' => 'U', 'Ű' => 'U', 'Ý' => 'Y', 'Þ' => 'TH',
-            'ß' => 'ss', 'Œ' => 'OE',
+            'Ø' => 'OE', 'Ù' => 'U', 'Ú' => 'U', 'Û' => 'U', 'Ü' => 'U', 'Ű' => 'U', 'Ý' => 'Y', 'Þ' => 'TH',
+            'ß' => 'ss',
             'à' => 'a', 'á' => 'a', 'â' => 'a', 'ã' => 'a', 'ä' => 'a', 'å' => 'aa', 'æ' => 'ae', 'ç' => 'c',
             'è' => 'e', 'é' => 'e', 'ê' => 'e', 'ë' => 'e', 'ì' => 'i', 'í' => 'i', 'î' => 'i', 'ï' => 'i',
             'ð' => 'd', 'ñ' => 'n', 'ò' => 'o', 'ó' => 'o', 'ô' => 'o', 'õ' => 'o', 'ö' => 'o', 'ő' => 'o',
             'ø' => 'oe', 'ù' => 'u', 'ú' => 'u', 'û' => 'u', 'ü' => 'u', 'ű' => 'u', 'ý' => 'y', 'þ' => 'th',
-            'ÿ' => 'y', 'œ' => 'oe',
+            'ÿ' => 'y',
+
             // Latin symbols
-            '©' => '(c)',
+            '©' => '(c)','®' => '(r)','™' => '(tm)',
+
             // Greek
             'Α' => 'A', 'Β' => 'B', 'Γ' => 'G', 'Δ' => 'D', 'Ε' => 'E', 'Ζ' => 'Z', 'Η' => 'H', 'Θ' => '8',
             'Ι' => 'I', 'Κ' => 'K', 'Λ' => 'L', 'Μ' => 'M', 'Ν' => 'N', 'Ξ' => '3', 'Ο' => 'O', 'Π' => 'P',
@@ -1293,9 +1223,11 @@ class ParsedownExtended extends DynamicParent
             'ρ' => 'r', 'σ' => 's', 'τ' => 't', 'υ' => 'y', 'φ' => 'f', 'χ' => 'x', 'ψ' => 'ps', 'ω' => 'w',
             'ά' => 'a', 'έ' => 'e', 'ί' => 'i', 'ό' => 'o', 'ύ' => 'y', 'ή' => 'h', 'ώ' => 'w', 'ς' => 's',
             'ϊ' => 'i', 'ΰ' => 'y', 'ϋ' => 'y', 'ΐ' => 'i',
+
             // Turkish
             'Ş' => 'S', 'İ' => 'I', 'Ç' => 'C', 'Ü' => 'U', 'Ö' => 'O', 'Ğ' => 'G',
             'ş' => 's', 'ı' => 'i', 'ç' => 'c', 'ü' => 'u', 'ö' => 'o', 'ğ' => 'g',
+
             // Russian
             'А' => 'A', 'Б' => 'B', 'В' => 'V', 'Г' => 'G', 'Д' => 'D', 'Е' => 'E', 'Ё' => 'Yo', 'Ж' => 'Zh',
             'З' => 'Z', 'И' => 'I', 'Й' => 'J', 'К' => 'K', 'Л' => 'L', 'М' => 'M', 'Н' => 'N', 'О' => 'O',
@@ -1307,19 +1239,23 @@ class ParsedownExtended extends DynamicParent
             'п' => 'p', 'р' => 'r', 'с' => 's', 'т' => 't', 'у' => 'u', 'ф' => 'f', 'х' => 'h', 'ц' => 'c',
             'ч' => 'ch', 'ш' => 'sh', 'щ' => 'sh', 'ъ' => '', 'ы' => 'y', 'ь' => '', 'э' => 'e', 'ю' => 'yu',
             'я' => 'ya',
+
             // Ukrainian
             'Є' => 'Ye', 'І' => 'I', 'Ї' => 'Yi', 'Ґ' => 'G',
             'є' => 'ye', 'і' => 'i', 'ї' => 'yi', 'ґ' => 'g',
+
             // Czech
             'Č' => 'C', 'Ď' => 'D', 'Ě' => 'E', 'Ň' => 'N', 'Ř' => 'R', 'Š' => 'S', 'Ť' => 'T', 'Ů' => 'U',
             'Ž' => 'Z',
             'č' => 'c', 'ď' => 'd', 'ě' => 'e', 'ň' => 'n', 'ř' => 'r', 'š' => 's', 'ť' => 't', 'ů' => 'u',
             'ž' => 'z',
+
             // Polish
             'Ą' => 'A', 'Ć' => 'C', 'Ę' => 'e', 'Ł' => 'L', 'Ń' => 'N', 'Ó' => 'o', 'Ś' => 'S', 'Ź' => 'Z',
             'Ż' => 'Z',
             'ą' => 'a', 'ć' => 'c', 'ę' => 'e', 'ł' => 'l', 'ń' => 'n', 'ó' => 'o', 'ś' => 's', 'ź' => 'z',
             'ż' => 'z',
+
             // Latvian
             'Ā' => 'A', 'Č' => 'C', 'Ē' => 'E', 'Ģ' => 'G', 'Ī' => 'i', 'Ķ' => 'k', 'Ļ' => 'L', 'Ņ' => 'N',
             'Š' => 'S', 'Ū' => 'u', 'Ž' => 'Z',
@@ -1328,49 +1264,159 @@ class ParsedownExtended extends DynamicParent
         );
 
         // Make custom replacements
-        $str = preg_replace(array_keys($options['replacements']), $options['replacements'], $str);
+        if(!empty($this->options['toc']['replacements'])) {
+            $str = preg_replace(array_keys($this->options['replacements']), $this->options['replacements'], $str);
+        }
 
         // Transliterate characters to ASCII
-        if ($options['transliterate']) {
+        if ($this->options['toc']['transliterate']) {
             $str = str_replace(array_keys($char_map), $char_map, $str);
         }
 
         // Replace non-alphanumeric characters with our delimiter
-        $str = preg_replace('/[^\p{L}\p{Nd}]+/u', $options['delimiter'], $str);
+        $str = preg_replace('/[^\p{L}\p{Nd}]+/u', $this->options['toc']['delimiter'], $str);
 
         // Remove duplicate delimiters
-        $str = preg_replace('/(' . preg_quote($options['delimiter'], '/') . '){2,}/', '$1', $str);
+        $str = preg_replace('/(' . preg_quote($this->options['toc']['delimiter'], '/') . '){2,}/', '$1', $str);
 
         // Truncate slug to max. characters
-        $str = mb_substr($str, 0, ($options['limit'] ? $options['limit'] : mb_strlen($str, 'UTF-8')), 'UTF-8');
+        $str = mb_substr($str, 0, ($this->options['toc']['limit'] ? $this->options['toc']['limit'] : mb_strlen($str, 'UTF-8')), 'UTF-8');
 
         // Remove delimiter from ends
-        $str = trim($str, $options['delimiter']);
+        $str = trim($str, $this->options['toc']['delimiter']);
 
-        return $options['lowercase'] ? mb_strtolower($str, 'UTF-8') : $str;
+        $str = $this->options['toc']['lowercase'] ? mb_strtolower($str, 'UTF-8') : $str;
+
+        $str = $this->incrementAnchorId($str);
+
+        return $str;
     }
 
-
-    protected function parseAttributeData($attributeString)
+    /**
+     * Get only the text from a markdown string.
+     * It parses to HTML once then trims the tags to get the text.
+     *
+     * @param  string $text  Markdown text.
+     * @return string
+     */
+    protected function fetchText($text)
     {
-        $Data = array();
+        return trim(strip_tags($this->line($text)));
+    }
 
-        $attributes = preg_split('/[ ]+/', $attributeString, - 1, PREG_SPLIT_NO_EMPTY);
+    /**
+     * Set/stores the heading block to ToC list in a string and array format.
+     *
+     * @param  array $Content   Heading info such as "level","id" and "text".
+     * @return void
+     */
+    protected function setContentsList(array $Content)
+    {
+        // Stores as an array
+        $this->setContentsListAsArray($Content);
+        // Stores as string in markdown list format.
+        $this->setContentsListAsString($Content);
+    }
 
-        foreach ($attributes as $attribute) {
-            if ($attribute[0] === '#') {
-                $Data['id'] = substr($attribute, 1);
-            } else { // "."
-                $classes []= substr($attribute, 1);
+    /**
+     * Sets/stores the heading block info as an array.
+     *
+     * @param  array $Content
+     * @return void
+     */
+    protected function setContentsListAsArray(array $Content)
+    {
+        $this->contentsListArray[] = $Content;
+    }
+
+    protected $contentsListArray = array();
+
+    /**
+     * Sets/stores the heading block info as a list in markdown format.
+     *
+     * @param  array $Content  Heading info such as "level","id" and "text".
+     * @return void
+     */
+    protected function setContentsListAsString(array $Content)
+    {
+        $text  = $this->fetchText($Content['text']);
+        $id    = $Content['id'];
+        $level = (integer) trim($Content['level'], 'h');
+        $link  = "[${text}](#${id})";
+
+        if ($this->firstHeadLevel === 0) {
+            $this->firstHeadLevel = $level;
+        }
+        $cutIndent = $this->firstHeadLevel - 1;
+        if ($cutIndent > $level) {
+            $level = 1;
+        } else {
+            $level = $level - $cutIndent;
+        }
+
+        $indent = str_repeat('  ', $level);
+
+        // Stores in markdown list format as below:
+        // - [Header1](#Header1)
+        //   - [Header2-1](#Header2-1)
+        //     - [Header3](#Header3)
+        //   - [Header2-2](#Header2-2)
+        // ...
+        $this->contentsListString .= "${indent}- ${link}" . PHP_EOL;
+    }
+    protected $contentsListString = '';
+    protected $firstHeadLevel = 0;
+
+    /**
+     * Collect and count anchors in use to prevent duplicated ids. Return string
+     * with incremental, numeric suffix. Also init optional blacklist of ids.
+     *
+     * @param  string $str
+     * @return string
+     */
+    protected function incrementAnchorId($str) {
+
+        // add blacklist to list of used anchors
+        if (!$this->isBlacklistInitialized) $this->initBlacklist();
+
+        $this->anchorDuplicates[$str] = !isset($this->anchorDuplicates[$str]) ? 0 : ++$this->anchorDuplicates[$str];
+
+        $newStr = $str;
+
+        if ($count = $this->anchorDuplicates[$str]) {
+
+            $newStr .= "-{$count}";
+
+            // increment until conversion doesn't produce new duplicates anymore
+            if (isset($this->anchorDuplicates[$newStr])) {
+                $newStr = $this->incrementAnchorId($str);
+            }
+            else {
+                $this->anchorDuplicates[$newStr] = 0;
+            }
+
+        }
+
+        return $newStr;
+    }
+
+    protected $isBlacklistInitialized = false;
+    protected $anchorDuplicates = [];
+
+    /**
+     * Add blacklisted ids to anchor list
+     */
+    protected function initBlacklist() {
+
+        if ($this->isBlacklistInitialized) return;
+
+        if (!empty($this->options['headers']['blacklist']) && is_array($this->options['headers']['blacklist'])) {
+
+            foreach ($this->options['headers']['blacklist'] as $v) {
+                if (is_string($v)) $this->anchorDuplicates[$v] = 0;
             }
         }
 
-        if (isset($classes)) {
-            $Data['class'] = implode(' ', $classes);
-        }
-
-        return $Data;
+        $this->isBlacklistInitialized = true;
     }
-
-    protected $regexAttribute = '(?:[#.][-\w]+[ ]*)';
 }
