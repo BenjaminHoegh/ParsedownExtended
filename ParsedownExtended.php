@@ -55,22 +55,22 @@ class ParsedownExtended extends DynamicParent
         * ------------------------------------------------------------------------
         */
 
-        // Highlight
-        $state = isset($this->options['extensions']['highlights']) ? $this->options['extensions']['highlights'] : true;
+        // Marks
+        $state = isset($this->options['marks']) ? $this->options['marks'] : true;
         if ($state !== false) {
-            $this->InlineTypes['='][] = 'Highlight';
+            $this->InlineTypes['='][] = 'marks';
             $this->inlineMarkerList .= '=';
         }
 
         // Keystrokes
-        $state = isset($this->options['extensions']['keystrokes']) ? $this->options['extensions']['keystrokes'] : true;
+        $state = isset($this->options['keystrokes']) ? $this->options['keystrokes'] : true;
         if ($state !== false) {
             $this->InlineTypes['['][] = 'Keystrokes';
             $this->inlineMarkerList .= '[';
         }
 
         // Inline Math
-        $state = isset($this->options['extensions']['math']) ? $this->options['extensions']['math'] : true;
+        $state = isset($this->options['math']) ? $this->options['math'] : true;
         if ($state !== false) {
             $this->InlineTypes['\\'][] = 'Math';
             $this->inlineMarkerList .= '\\';
@@ -79,20 +79,20 @@ class ParsedownExtended extends DynamicParent
         }
 
         // Superscript
-        $state = isset($this->options['extensions']['superscripts']) ? $this->options['extensions']['superscripts'] : true;
+        $state = isset($this->options['superscripts']) ? $this->options['superscripts'] : true;
         if ($state !== false) {
             $this->InlineTypes['^'][] = 'Superscript';
             $this->inlineMarkerList .= '^';
         }
 
         // Subscript
-        $state = isset($this->options['extensions']['subscripts']) ? $this->options['extensions']['subscripts'] : true;
+        $state = isset($this->options['subscripts']) ? $this->options['subscripts'] : true;
         if ($state !== false) {
             $this->InlineTypes['~'][] = 'Subscript';
         }
 
         // Emojis
-        $state = isset($this->options['extensions']['emojis']) ? $this->options['extensions']['emojis'] : true;
+        $state = isset($this->options['emojis']) ? $this->options['emojis'] : true;
         if ($state !== false) {
             $this->InlineTypes[':'][] = 'Emojis';
             $this->inlineMarkerList .= ':';
@@ -154,6 +154,10 @@ class ParsedownExtended extends DynamicParent
             // Get the heading level. Levels are h1, h2, ..., h6
             $level = $Block['element']['name'];
 
+            $headersAllowed = $this->options['headers']['allowed'] ?? ["h1", "h2", "h3", "h4", "h5", "h6"];
+            if (!in_array($level, $headersAllowed)) {
+                return;
+            }
 
             // Checks if auto generated anchors is allowed
             $autoAnchors = isset($this->options['headers']['auto_anchors']) ? $this->options['headers']['auto_anchors'] : true;
@@ -170,8 +174,9 @@ class ParsedownExtended extends DynamicParent
             // Set attributes to head tags
             $Block['element']['attributes']['id'] = $id;
 
+            $tocHeaders = $this->options['toc']['headings'] ?? ["h1", "h2", "h3", "h4", "h5", "h6"];
             // Check if level are defined as a heading
-            if (in_array($level, $this->options['headers']['allowed'])) {
+            if (in_array($level, $tocHeaders)) {
 
                 // Add/stores the heading element info to the ToC list
                 $this->setContentsList(array(
@@ -243,8 +248,10 @@ class ParsedownExtended extends DynamicParent
             // Set attributes to head tags
             $Block['element']['attributes']['id'] = $id;
 
+            $headersAllowed = $this->options['headers']['allowed'] ?? ["h1", "h2", "h3", "h4", "h5", "h6"];
+
             // Check if level are defined as a heading
-            if (in_array($level, $this->options['headers']['allowed'])) {
+            if (in_array($level, $headersAllowed)) {
 
                 // Add/stores the heading element info to the ToC list
                 $this->setContentsList(array(
@@ -286,12 +293,19 @@ class ParsedownExtended extends DynamicParent
     {
         $state = isset($this->options['abbreviations']) ? $this->options['abbreviations'] : true;
         if ($state) {
+
+            if(isset($this->options['abbreviations']['data'])) {
+                foreach($this->options['abbreviations']['data'] as $abbreviations => $description) {
+                    $this->DefinitionData['Abbreviation'][$abbreviations] = $description;
+                }
+            }
             return DynamicParent::blockAbbreviation($Line);
         }
     }
 
     protected function inlineText($text)
     {
+
         $Inline = array(
             'extent' => strlen($text),
             'element' => array(),
@@ -306,6 +320,7 @@ class ParsedownExtended extends DynamicParent
             $text
         );
 
+        $Inline = DynamicParent::inlineText($text);
 
         return $Inline;
     }
@@ -638,11 +653,11 @@ class ParsedownExtended extends DynamicParent
     }
 
     /*
-     * Inline Highlight
+     * Inline Marks
      * -------------------------------------------------------------------------
      */
 
-    protected function inlineHighlight($Excerpt)
+    protected function inlineMarks($Excerpt)
     {
         if (preg_match('/^(==)([^=]*?)(==)/', $Excerpt['text'], $matches)) {
             return [
@@ -1189,7 +1204,8 @@ class ParsedownExtended extends DynamicParent
         // Make sure string is in UTF-8 and strip invalid UTF-8 characters
         $str = mb_convert_encoding((string)$str, 'UTF-8', mb_list_encodings());
 
-        if($this->options['toc']['urlencode']) {
+        $optionUrlEncode = isset($this->options['toc']['urlencode']) ?? false;
+        if($optionUrlEncode) {
             // Check AnchorID is unique
             $str = $this->incrementAnchorId($str);
 
@@ -1269,23 +1285,27 @@ class ParsedownExtended extends DynamicParent
         }
 
         // Transliterate characters to ASCII
-        if ($this->options['toc']['transliterate']) {
+        $optionTransliterate = isset($this->options['toc']['transliterate']) ?? false;
+        if ($optionTransliterate) {
             $str = str_replace(array_keys($char_map), $char_map, $str);
         }
 
         // Replace non-alphanumeric characters with our delimiter
-        $str = preg_replace('/[^\p{L}\p{Nd}]+/u', $this->options['toc']['delimiter'], $str);
+        $optionDelimiter = $this->options['toc']['delimiter'] ?? '-';
+        $str = preg_replace('/[^\p{L}\p{Nd}]+/u', $optionDelimiter, $str);
 
         // Remove duplicate delimiters
-        $str = preg_replace('/(' . preg_quote($this->options['toc']['delimiter'], '/') . '){2,}/', '$1', $str);
+        $str = preg_replace('/(' . preg_quote($optionDelimiter, '/') . '){2,}/', '$1', $str);
 
         // Truncate slug to max. characters
-        $str = mb_substr($str, 0, ($this->options['toc']['limit'] ? $this->options['toc']['limit'] : mb_strlen($str, 'UTF-8')), 'UTF-8');
+        $optionLimit = $this->options['toc']['limit'] ?? mb_strlen($str, 'UTF-8');
+        $str = mb_substr($str, 0, $optionLimit, 'UTF-8');
 
         // Remove delimiter from ends
-        $str = trim($str, $this->options['toc']['delimiter']);
+        $str = trim($str, $optionDelimiter);
 
-        $str = $this->options['toc']['lowercase'] ? mb_strtolower($str, 'UTF-8') : $str;
+        $urlLowercase = $this->options['toc']['lowercase'] ?? true;
+        $str = $urlLowercase ? mb_strtolower($str, 'UTF-8') : $str;
 
         $str = $this->incrementAnchorId($str);
 
