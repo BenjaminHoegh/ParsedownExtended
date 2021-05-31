@@ -1,8 +1,8 @@
 {
-    "name": "benjaminhoegh/parsedown-extreme",
+    "name": "benjaminhoegh/ParsedownExtended",
     "description": "An extension of Parsedown.",
     "keywords": ["markdown", "markdown extra", "parser", "parsedown"],
-    "homepage": "https://github.com/benjaminhoegh/parsedown-extreme",
+    "homepage": "https://github.com/BenjaminHoegh/ParsedownExtended",
     "type": "library",
     "license": "MIT",
     "authors": [
@@ -20,6 +20,6 @@
         "phpunit/phpunit": "^4.8.35"
     },
     "autoload": {
-        "psr-0": {"parsedown-extreme": ""}
+        "psr-0": {"ParsedownExtended": ""}
     }
 }
