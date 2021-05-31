@@ -1,5 +1,5 @@
 {
-    "name": "benjaminhoegh/ParsedownExtended",
+    "name": "benjaminhoegh/parsedown-extended",
     "description": "An extension of Parsedown.",
     "keywords": ["markdown", "markdown extra", "parser", "parsedown"],
     "homepage": "https://github.com/BenjaminHoegh/ParsedownExtended",
@@ -20,6 +20,6 @@
         "phpunit/phpunit": "^4.8.35"
     },
     "autoload": {
-        "psr-0": {"ParsedownExtended": ""}
+        "psr-0": {"parsedown-extended": ""}
     }
 }
