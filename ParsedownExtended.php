@@ -232,6 +232,11 @@ class ParsedownExtended extends DynamicParent
             // Get the heading level. Levels are h1, h2, ..., h6
             $level = $Block['element']['name'];
 
+            $headersAllowed = $this->options['headers']['allowed'] ?? ["h1", "h2", "h3", "h4", "h5", "h6"];
+            if (!in_array($level, $headersAllowed)) {
+                return;
+            }
+
             // Checks if auto generated anchors is allowed
             $autoAnchors = isset($this->options['headers']['auto_anchors']) ? $this->options['headers']['auto_anchors'] : true;
 
@@ -1016,7 +1021,6 @@ class ParsedownExtended extends DynamicParent
         $text = $this->encodeTagToHash($text);   // Escapes ToC tag temporary
         $html = DynamicParent::text($text);      // Parses the markdown text
         $html = $this->decodeTagFromHash($html); // Unescape the ToC tag
-
         return $html;
     }
 
@@ -1034,6 +1038,10 @@ class ParsedownExtended extends DynamicParent
         // method.
         $html = $this->body($text);
 
+        if(isset($this->options['toc']) && $this->options['toc'] == false) {
+            return $html;
+        }
+
         $tag_origin  = $this->getTagToC();
 
         if (strpos($text, $tag_origin) === false) {
@@ -1046,6 +1054,7 @@ class ParsedownExtended extends DynamicParent
         $replace = "<div id=\"${toc_id}\">${toc_data}</div>";
 
         return str_replace($needle, $replace, $html);
+
     }
 
     /**
@@ -1278,11 +1287,6 @@ class ParsedownExtended extends DynamicParent
             'ā' => 'a', 'č' => 'c', 'ē' => 'e', 'ģ' => 'g', 'ī' => 'i', 'ķ' => 'k', 'ļ' => 'l', 'ņ' => 'n',
             'š' => 's', 'ū' => 'u', 'ž' => 'z'
         );
-
-        // Make custom replacements
-        if(!empty($this->options['toc']['replacements'])) {
-            $str = preg_replace(array_keys($this->options['replacements']), $this->options['replacements'], $str);
-        }
 
         // Transliterate characters to ASCII
         $optionTransliterate = isset($this->options['toc']['transliterate']) ?? false;
