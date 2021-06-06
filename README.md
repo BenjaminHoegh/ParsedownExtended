@@ -12,9 +12,9 @@
     <a href="https://github.com/BenjaminHoegh/ParsedownExtended/wiki"><strong>Explore Documentation »</strong></a>
     <br>
     <br>
-    <a href="https://github.com/BenjaminHoegh/ParsedownExtended/issues/new?template=bug.md">Report bug</a>
+    <a href="https://github.com/BenjaminHoegh/ParsedownExtended/issues/new?template=bug_report.md">Report bug</a>
     ·
-    <a href="https://github.com/BenjaminHoegh/ParsedownExtended/issues/new?template=feature.md&labels=feature">Request feature</a>
+    <a href="https://github.com/BenjaminHoegh/ParsedownExtended/issues/new?template=feature_request.md&labels=feature">Request feature</a>
     ·
     <a href="https://github.com/BenjaminHoegh/ParsedownExtended/discussions">Discussions</a>
   </p>
