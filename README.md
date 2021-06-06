@@ -20,8 +20,6 @@ Parsedown Extended is a extension to [Parsedown](https://github.com/erusev/parse
 2. You must include `parsedown.php` or `parsedownExtra.php` too.
 3. Include `ParsedownExtended.php`
 
-> **Important:** Parsedown and ParsedownExtra don't work with PHP 7.4+ at the moment and it will throw some errors on ParsedownExtended. Use PHP 7.3 until Parsedown have been updated
-
 ##### Example
 
 ```php

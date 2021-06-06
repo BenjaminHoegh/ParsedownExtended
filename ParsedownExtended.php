@@ -108,7 +108,7 @@ class ParsedownExtended extends DynamicParent
         $this->BlockTypes['\\'][] = 'Math';
         $this->BlockTypes['$'][] = 'Math';
 
-        // Subscript
+        // Task
         $state = isset($this->options['lists']['task_list']) ? $this->options['lists']['task_list'] : true;
         if ($state !== false) {
             $this->BlockTypes['['][] = 'Checkbox';
@@ -121,58 +121,58 @@ class ParsedownExtended extends DynamicParent
      * ------------------------------------------------------------------------
      */
 
-    protected function blockCode($Line, $Block = null)
+    protected function blockCode($line, $block = null)
     {
-        $state = isset($this->options['code_block']) ? $this->options['code_block'] : true;
+        $state = isset($this->options['code_blocks']) ? $this->options['code_blocks'] : true;
         if ($state) {
-            return DynamicParent::blockCode($Line, $Block);
+            return DynamicParent::blockCode($line, $block);
         }
     }
 
-    protected function blockComment($Line)
+    protected function blockComment($line)
     {
         $state = isset($this->options['comments']) ? $this->options['comments'] : true;
         if ($state) {
-            return DynamicParent::blockComment($Line);
+            return DynamicParent::blockComment($line);
         }
     }
 
-    protected function blockHeader($Line)
+    protected function blockHeader($line)
     {
-        $state = isset($this->options['headers']) ? $this->options['headers'] : true;
+        $state = isset($this->options['headings']) ? $this->options['headings'] : true;
         if (!$state) {
             return;
         }
 
-        $Block = DynamicParent::blockHeader($Line);
-        if (!empty($Block)) {
+        $block = DynamicParent::blockHeader($line);
+        if (!empty($block)) {
             // Get the text of the heading
-            if (isset($Block['element']['handler']['argument'])) {
-                $text = $Block['element']['handler']['argument'];
+            if (isset($block['element']['handler']['argument'])) {
+                $text = $block['element']['handler']['argument'];
             }
 
             // Get the heading level. Levels are h1, h2, ..., h6
-            $level = $Block['element']['name'];
+            $level = $block['element']['name'];
 
-            $headersAllowed = $this->options['headers']['allowed'] ?? ["h1", "h2", "h3", "h4", "h5", "h6"];
+            $headersAllowed = $this->options['headings']['allowed'] ?? ["h1", "h2", "h3", "h4", "h5", "h6"];
             if (!in_array($level, $headersAllowed)) {
                 return;
             }
 
             // Checks if auto generated anchors is allowed
-            $autoAnchors = isset($this->options['headers']['auto_anchors']) ? $this->options['headers']['auto_anchors'] : true;
+            $autoAnchors = isset($this->options['headings']['auto_anchors']) ? $this->options['headings']['auto_anchors'] : true;
 
             if($autoAnchors) {
                 // Get the anchor of the heading to link from the ToC list
-                $id = isset($Block['element']['attributes']['id']) ? $Block['element']['attributes']['id'] : $this->createAnchorID($text);
+                $id = isset($block['element']['attributes']['id']) ? $block['element']['attributes']['id'] : $this->createAnchorID($text);
 
             } else {
                 // Get the anchor of the heading to link from the ToC list
-                $id = isset($Block['element']['attributes']['id']) ? $Block['element']['attributes']['id'] : null;
+                $id = isset($block['element']['attributes']['id']) ? $block['element']['attributes']['id'] : null;
             }
 
             // Set attributes to head tags
-            $Block['element']['attributes']['id'] = $id;
+            $block['element']['attributes']['id'] = $id;
 
             $tocHeaders = $this->options['toc']['headings'] ?? ["h1", "h2", "h3", "h4", "h5", "h6"];
             // Check if level are defined as a heading
@@ -186,74 +186,73 @@ class ParsedownExtended extends DynamicParent
                 ));
             }
 
-            return $Block;
+            return $block;
         }
 
     }
 
-    protected function blockList($Line, array $CurrentBlock = null)
+    protected function blockList($line, array $CurrentBlock = null)
     {
         $state = isset($this->options['lists']) ? $this->options['lists'] : true;
         if ($state) {
-            return DynamicParent::blockList($Line, $CurrentBlock);
+            return DynamicParent::blockList($line, $CurrentBlock);
         }
     }
 
-    protected function blockQuote($Line)
+    protected function blockQuote($line)
     {
         $state = isset($this->options['blockqoutes']) ? $this->options['blockqoutes'] : true;
         if ($state) {
-            return DynamicParent::blockQuote($Line);
+            return DynamicParent::blockQuote($line);
         }
     }
 
-    protected function blockRule($Line)
+    protected function blockRule($line)
     {
         $state = isset($this->options['thematic_breaks']) ? $this->options['thematic_breaks'] : true;
         if ($state) {
-            return DynamicParent::blockRule($Line);
+            return DynamicParent::blockRule($line);
         }
     }
 
-    protected function blockSetextHeader($Line, $Block = null)
+    protected function blockSetextHeader($line, $block = null)
     {
-        $state = isset($this->options['headers']) ? $this->options['headers'] : true;
+        $state = isset($this->options['headings']) ? $this->options['headings'] : true;
         if (!$state) {
             return;
-            // return DynamicParent::blockSetextHeader($Line, $Block);
         }
-        $Block = DynamicParent::blockSetextHeader($Line, $Block);
-        if (!empty($Block)) {
+        $block = DynamicParent::blockSetextHeader($line, $block);
+        if (!empty($block)) {
             // Get the text of the heading
-            if (isset($Block['element']['handler']['argument'])) {
-                $text = $Block['element']['handler']['argument'];
+            if (isset($block['element']['handler']['argument'])) {
+                $text = $block['element']['handler']['argument'];
             }
 
             // Get the heading level. Levels are h1, h2, ..., h6
-            $level = $Block['element']['name'];
+            $level = $block['element']['name'];
 
-            $headersAllowed = $this->options['headers']['allowed'] ?? ["h1", "h2", "h3", "h4", "h5", "h6"];
+            $headersAllowed = $this->options['headings']['allowed'] ?? ["h1", "h2", "h3", "h4", "h5", "h6"];
             if (!in_array($level, $headersAllowed)) {
                 return;
             }
 
             // Checks if auto generated anchors is allowed
-            $autoAnchors = isset($this->options['headers']['auto_anchors']) ? $this->options['headers']['auto_anchors'] : true;
+            $autoAnchors = isset($this->options['headings']['auto_anchors']) ? $this->options['headings']['auto_anchors'] : true;
 
             if($autoAnchors) {
                 // Get the anchor of the heading to link from the ToC list
-                $id = isset($Block['element']['attributes']['id']) ? $Block['element']['attributes']['id'] : $this->createAnchorID($text);
+                $id = isset($block['element']['attributes']['id']) ? $block['element']['attributes']['id'] : $this->createAnchorID($text);
 
             } else {
                 // Get the anchor of the heading to link from the ToC list
-                $id = isset($Block['element']['attributes']['id']) ? $Block['element']['attributes']['id'] : null;
+                $id = isset($block['element']['attributes']['id']) ? $block['element']['attributes']['id'] : null;
             }
 
 
             // Set attributes to head tags
-            $Block['element']['attributes']['id'] = $id;
+            $block['element']['attributes']['id'] = $id;
 
-            $headersAllowed = $this->options['headers']['allowed'] ?? ["h1", "h2", "h3", "h4", "h5", "h6"];
+            $headersAllowed = $this->options['headings']['allowed'] ?? ["h1", "h2", "h3", "h4", "h5", "h6"];
 
             // Check if level are defined as a heading
             if (in_array($level, $headersAllowed)) {
@@ -265,46 +264,53 @@ class ParsedownExtended extends DynamicParent
                     'level' => $level
                 ));
             }
-        return $Block;
+        return $block;
         }
     }
 
-    protected function blockMarkup($Line)
+    protected function blockMarkup($line)
     {
         $state = isset($this->options['markup']) ? $this->options['markup'] : true;
         if ($state) {
-            return DynamicParent::blockMarkup($Line);
+            return DynamicParent::blockMarkup($line);
         }
     }
 
-    protected function blockReference($Line)
+    protected function blockReference($line)
     {
         $state = isset($this->options['references']) ? $this->options['references'] : true;
         if ($state) {
-            return DynamicParent::blockReference($Line);
+            return DynamicParent::blockReference($line);
         }
     }
 
-    protected function blockTable($Line, $Block = null)
+    protected function blockTable($line, $block = null)
     {
         $state = isset($this->options['tables']) ? $this->options['tables'] : true;
         if ($state) {
-            return DynamicParent::blockTable($Line, $Block);
+            return DynamicParent::blockTable($line, $block);
         }
     }
 
 
-    protected function blockAbbreviation($Line)
+    protected function blockAbbreviation($line)
     {
+        $allowCustomAbbr = isset($this->options['abbreviations']['allow_custom_abbr']) ? $this->options['abbreviations']['allow_custom_abbr'] : true;
+
         $state = isset($this->options['abbreviations']) ? $this->options['abbreviations'] : true;
         if ($state) {
 
-            if(isset($this->options['abbreviations']['data'])) {
-                foreach($this->options['abbreviations']['data'] as $abbreviations => $description) {
+            if(isset($this->options['abbreviations']['predefine'])) {
+                foreach($this->options['abbreviations']['predefine'] as $abbreviations => $description) {
                     $this->DefinitionData['Abbreviation'][$abbreviations] = $description;
                 }
             }
-            return DynamicParent::blockAbbreviation($Line);
+
+            if ($allowCustomAbbr == true) {
+                return DynamicParent::blockAbbreviation($line);
+            } else {
+                return;
+            }
         }
     }
 
@@ -330,18 +336,21 @@ class ParsedownExtended extends DynamicParent
         return $Inline;
     }
 
-    protected function blockFootnote($Line)
+    protected function blockFootnote($line)
     {
         $state = isset($this->options['footnotes']) ? $this->options['footnotes'] : true;
         if ($state) {
-            return DynamicParent::blockFootnote($Line);
+            return DynamicParent::blockFootnote($line);
         }
     }
-    protected function blockDefinitionList($Line, $Block)
+
+
+
+    protected function blockDefinitionList($line, $block)
     {
         $state = isset($this->options['definition_lists']) ? $this->options['definition_lists'] : true;
         if ($state) {
-            return DynamicParent::blockDefinitionList($Line, $Block);
+            return DynamicParent::blockDefinitionList($line, $block);
         }
     }
 
@@ -352,70 +361,78 @@ class ParsedownExtended extends DynamicParent
      */
 
     // inlineCode
-    protected function inlineCode($Excerpt)
+    protected function inlineCode($excerpt)
     {
         $state = isset($this->options['inline_code']) ? $this->options['inline_code'] : true;
         if ($state) {
-            return DynamicParent::inlineCode($Excerpt);
+            return DynamicParent::inlineCode($excerpt);
         }
     }
 
-    protected function inlineEmailTag($Excerpt)
+    protected function inlineEmailTag($excerpt)
     {
         // TODO: Find a name for this setting.
-        $state = isset($this->options['auto_mark_emails']) ? $this->options['emails'] : true;
+        $state = isset($this->options['auto_mark_emails']) ? $this->options['auto_mark_emails'] : true;
         if ($state) {
-            return DynamicParent::inlineEmailTag($Excerpt);
+            return DynamicParent::inlineEmailTag($excerpt);
         }
     }
 
-    protected function inlineEmphasis($Excerpt)
+    protected function inlineEmphasis($excerpt)
     {
         $state = isset($this->options['emphasis']) ? $this->options['emphasis'] : true;
         if ($state) {
-            return DynamicParent::inlineEmphasis($Excerpt);
+            return DynamicParent::inlineEmphasis($excerpt);
         }
     }
 
-    protected function inlineImage($Excerpt)
+    protected function inlineImage($excerpt)
     {
         // TODO: Add a external link option
         $state = isset($this->options['images']) ? $this->options['images'] : true;
         if ($state) {
-            return DynamicParent::inlineImage($Excerpt);
+            return DynamicParent::inlineImage($excerpt);
         }
     }
 
-    protected function inlineLink($Excerpt)
+    protected function inlineLink($excerpt)
     {
         // TODO: Add link options
         $state = isset($this->options['links']) ? $this->options['links'] : true;
         if ($state) {
-            return DynamicParent::inlineLink($Excerpt);
+            return DynamicParent::inlineLink($excerpt);
         }
     }
 
-    protected function inlineMarkup($Excerpt)
+    protected function inlineMarkup($excerpt)
     {
         $state = isset($this->options['markup']) ? $this->options['markup'] : true;
         if ($state) {
-            return DynamicParent::inlineMarkup($Excerpt);
+            return DynamicParent::inlineMarkup($excerpt);
         }
     }
 
-    protected function inlineStrikethrough($Excerpt)
+    protected function inlineStrikethrough($excerpt)
     {
         $state = isset($this->options['strikethroughs']) ? $this->options['strikethroughs'] : true;
         if ($state) {
-            return DynamicParent::inlineStrikethrough($Excerpt);
+            return DynamicParent::inlineStrikethrough($excerpt);
         }
     }
 
-    protected function inlineUrl($Excerpt)
+    protected function inlineUrl($excerpt)
     {
         $state = isset($this->options['links']) ? $this->options['links'] : true;
         if ($state) {
-            return DynamicParent::inlineUrl($Excerpt);
+            return DynamicParent::inlineUrl($excerpt);
+        }
+    }
+
+    protected function inlineUrlTag($excerpt)
+    {
+        $state = isset($this->options['links']) ? $this->options['links'] : true;
+        if ($state) {
+            return DynamicParent::inlineUrlTag($excerpt);
         }
     }
 
@@ -425,7 +442,7 @@ class ParsedownExtended extends DynamicParent
      * ------------------------------------------------------------------------
      */
 
-    protected function inlineEmojis($Excerpt)
+    protected function inlineEmojis($excerpt)
     {
         // TODO: Create a module there allow for emoji extentions
         $emoji_map = [
@@ -646,7 +663,7 @@ class ParsedownExtended extends DynamicParent
             ':white_large_square:' => '⬜'
         ];
 
-        if (preg_match('/^(:)([^:]*?)(:)/', $Excerpt['text'], $matches)) {
+        if (preg_match('/^(:)([^:]*?)(:)/', $excerpt['text'], $matches)) {
             return [
                'extent' => strlen($matches[0]),
                'element' => [
@@ -662,9 +679,9 @@ class ParsedownExtended extends DynamicParent
      * -------------------------------------------------------------------------
      */
 
-    protected function inlineMarks($Excerpt)
+    protected function inlineMarks($excerpt)
     {
-        if (preg_match('/^(==)([^=]*?)(==)/', $Excerpt['text'], $matches)) {
+        if (preg_match('/^(==)([^=]*?)(==)/', $excerpt['text'], $matches)) {
             return [
                'extent' => strlen($matches[0]),
                'element' => [
@@ -680,9 +697,9 @@ class ParsedownExtended extends DynamicParent
      * -------------------------------------------------------------------------
      */
 
-    protected function inlineKeystrokes($Excerpt)
+    protected function inlineKeystrokes($excerpt)
     {
-        if (preg_match('/^(?<!\[)(?:\[\[([^\[\]]*|[\[\]])\]\])(?!\])/s', $Excerpt['text'], $matches)) {
+        if (preg_match('/^(?<!\[)(?:\[\[([^\[\]]*|[\[\]])\]\])(?!\])/s', $excerpt['text'], $matches)) {
             return [
                'extent' => strlen($matches[0]),
                'element' => [
@@ -698,9 +715,9 @@ class ParsedownExtended extends DynamicParent
      * -------------------------------------------------------------------------
      */
 
-    protected function inlineSuperscript($Excerpt)
+    protected function inlineSuperscript($excerpt)
     {
-        if (preg_match('/(?:\^(?!\^)([^\^ ]*)\^(?!\^))/', $Excerpt['text'], $matches)) {
+        if (preg_match('/(?:\^(?!\^)([^\^ ]*)\^(?!\^))/', $excerpt['text'], $matches)) {
             return [
              'extent' => strlen($matches[0]),
              'element' => [
@@ -717,9 +734,9 @@ class ParsedownExtended extends DynamicParent
      * -------------------------------------------------------------------------
      */
 
-    protected function inlineSubscript($Excerpt)
+    protected function inlineSubscript($excerpt)
     {
-        if (preg_match('/(?:~(?!~)([^~ ]*)~(?!~))/', $Excerpt['text'], $matches)) {
+        if (preg_match('/(?:~(?!~)([^~ ]*)~(?!~))/', $excerpt['text'], $matches)) {
             return [
              'extent' => strlen($matches[0]),
              'element' => [
@@ -732,16 +749,41 @@ class ParsedownExtended extends DynamicParent
     }
 
     /*
+     * Inline Smartypants
+     * -------------------------------------------------------------------------
+     */
+
+    protected function inlineSmartypants($text)
+    {
+        $state = isset($this->options['smartypants']) ? $this->options['smartypants'] : true;
+        if (!$state) {
+            return $text;
+        }
+
+        $typographicReplace = array(
+            '/(?<!\\\\)\(c\)/i' => '&copy;',
+            '/(?<!\\\\)\(r\)/i' => '&reg;',
+            '/(?<!\\\\)\(tm\)/i' => '&trade;',
+            '/(?<!\\\\)(?<!\.)\.{3}(?!\.)/' => '&hellip;',
+            '/(?<!\\\\)(?<!-)-{3}(?!-)/' => '&mdash;',
+            '/(?<!\\\\)(?<!-)--\s(?!-)/' => '&ndash;',
+            '/(?<!\\\\)(?<!<)<<(?!<)/' => '&laquo;',
+            '/(?<!\\\\)(?<!>)>>(?!>)/' => '&raquo;',
+        );
+        return $this->pregReplaceAssoc($typographicReplace, $text);
+    }
+
+    /*
      * Inline Math
      * -------------------------------------------------------------------------
      */
 
-    protected function inlineMath($Excerpt)
+    protected function inlineMath($excerpt)
     {
         $matchSignleDollar = $this->options['extensions']['math']['matchSingleDollar'] ?? false;
 
         // Inline Matches
-        if (preg_match('/^(?<!\\\\\()\\\\\((.*?)(?<!\\\\\()\\\\\)(?!\\\\\))/s', $Excerpt['text'], $matches)) {
+        if (preg_match('/^(?<!\\\\\()\\\\\((.*?)(?<!\\\\\()\\\\\)(?!\\\\\))/s', $excerpt['text'], $matches)) {
             $mathMatch = $matches[0];
         }
 
@@ -755,11 +797,11 @@ class ParsedownExtended extends DynamicParent
         }
     }
 
-    protected function inlineEscapeSequence($Excerpt)
+    protected function inlineEscapeSequence($excerpt)
     {
-        $Element = array(
+        $element = array(
             'element' => array(
-               'rawHtml' => $Excerpt['text'][1],
+               'rawHtml' => $excerpt['text'][1],
             ),
             'extent' => 2,
         );
@@ -767,12 +809,12 @@ class ParsedownExtended extends DynamicParent
         $math = $this->options['extensions']['math'] ?? true;
 
         if ($math) {
-            if (isset($Excerpt['text'][1]) && in_array($Excerpt['text'][1], $this->specialCharacters) && !preg_match('/^(?<!\\\\)(?<!\\\\\()\\\\\((.{2,}?)(?<!\\\\\()\\\\\)(?!\\\\\))/s', $Excerpt['text'])) {
-               return $Element;
+            if (isset($excerpt['text'][1]) && in_array($excerpt['text'][1], $this->specialCharacters) && !preg_match('/^(?<!\\\\)(?<!\\\\\()\\\\\((.{2,}?)(?<!\\\\\()\\\\\)(?!\\\\\))/s', $excerpt['text'])) {
+               return $element;
             }
         } else {
-            if (isset($Excerpt['text'][1]) && in_array($Excerpt['text'][1], $this->specialCharacters)) {
-               return $Element;
+            if (isset($excerpt['text'][1]) && in_array($excerpt['text'][1], $this->specialCharacters)) {
+               return $element;
             }
         }
     }
@@ -788,71 +830,71 @@ class ParsedownExtended extends DynamicParent
      * -------------------------------------------------------------------------
      */
 
-    protected function blockMath($Line)
+    protected function blockMath($line)
     {
-        $Block = [
+        $block = [
           'element' => [
              'text' => '',
           ],
       ];
 
-        if (preg_match('/^(?<!\\\\)(\\\\\[)(?!.)$/', $Line['text'])) {
-            $Block['end'] = '\]';
-            return $Block;
-        } elseif (preg_match('/^(?<!\\\\)(\$\$)(?!.)$/', $Line['text'])) {
-            $Block['end'] = '$$';
-            return $Block;
+        if (preg_match('/^(?<!\\\\)(\\\\\[)(?!.)$/', $line['text'])) {
+            $block['end'] = '\]';
+            return $block;
+        } elseif (preg_match('/^(?<!\\\\)(\$\$)(?!.)$/', $line['text'])) {
+            $block['end'] = '$$';
+            return $block;
         }
     }
 
     // ~
 
-    protected function blockMathContinue($Line, $Block)
+    protected function blockMathContinue($line, $block)
     {
-        if (isset($Block['complete'])) {
+        if (isset($block['complete'])) {
             return;
         }
 
-        if (isset($Block['interrupted'])) {
-            $Block['element']['text'] .= str_repeat(
+        if (isset($block['interrupted'])) {
+            $block['element']['text'] .= str_repeat(
                "\n",
-               $Block['interrupted']
+               $block['interrupted']
             );
 
-            unset($Block['interrupted']);
+            unset($block['interrupted']);
         }
 
         if (
-          preg_match('/^(?<!\\\\)(\\\\\])$/', $Line['text']) &&
-          $Block['end'] === '\]'
+          preg_match('/^(?<!\\\\)(\\\\\])$/', $line['text']) &&
+          $block['end'] === '\]'
       ) {
-            $Block['complete'] = true;
-            $Block['math'] = true;
-            $Block['element']['text'] =
-             "\\[" . $Block['element']['text'] . "\\]";
-            return $Block;
+            $block['complete'] = true;
+            $block['math'] = true;
+            $block['element']['text'] =
+             "\\[" . $block['element']['text'] . "\\]";
+            return $block;
         } elseif (
-          preg_match('/^(?<!\\\\)(\$\$)$/', $Line['text']) &&
-          $Block['end'] === '$$'
+          preg_match('/^(?<!\\\\)(\$\$)$/', $line['text']) &&
+          $block['end'] === '$$'
       ) {
-            $Block['complete'] = true;
-            $Block['math'] = true;
-            $Block['element']['text'] = "$$" . $Block['element']['text'] . "$$";
-            return $Block;
+            $block['complete'] = true;
+            $block['math'] = true;
+            $block['element']['text'] = "$$" . $block['element']['text'] . "$$";
+            return $block;
         }
 
-        $Block['element']['text'] .= "\n" . $Line['body'];
+        $block['element']['text'] .= "\n" . $line['body'];
 
         // ~
 
-        return $Block;
+        return $block;
     }
 
     // ~
 
-    protected function blockMathComplete($Block)
+    protected function blockMathComplete($block)
     {
-        return $Block;
+        return $block;
     }
 
     /*
@@ -860,18 +902,18 @@ class ParsedownExtended extends DynamicParent
      * -------------------------------------------------------------------------
      */
 
-    protected function blockFencedCode($Line)
+    protected function blockFencedCode($line)
     {
-        $state = isset($this->options['code_block']) ? $this->options['code_block'] : true;
+        $state = isset($this->options['code_blocks']) ? $this->options['code_blocks'] : true;
         if ($state === false) {
             return;
         }
-        $Block = DynamicParent::blockFencedCode($Line);
+        $block = DynamicParent::blockFencedCode($line);
 
-        $marker = $Line['text'][0];
-        $openerLength = strspn($Line['text'], $marker);
+        $marker = $line['text'][0];
+        $openerLength = strspn($line['text'], $marker);
         $language = trim(
-            preg_replace('/^`{3}([^\s]+)(.+)?/s', '$1', $Line['text'])
+            preg_replace('/^`{3}([^\s]+)(.+)?/s', '$1', $line['text'])
         );
 
 
@@ -880,15 +922,15 @@ class ParsedownExtended extends DynamicParent
 
             // Mermaid.js https://mermaidjs.github.io
             if (strtolower($language) == 'mermaid') {
-                $Element = [
+                $element = [
                    'text' => '',
                 ];
 
-                $Block = [
+                $block = [
                    'char' => $marker,
                    'openerLength' => $openerLength,
                    'element' => [
-                       'element' => $Element,
+                       'element' => $element,
                        'name' => 'div',
                        'attributes' => [
                            'class' => 'mermaid',
@@ -896,20 +938,20 @@ class ParsedownExtended extends DynamicParent
                    ],
                 ];
 
-                return $Block;
+                return $block;
             }
 
             // Chart.js https://www.chartjs.org/
             if (strtolower($language) == 'chart') {
-                $Element = [
+                $element = [
                    'text' => '',
                 ];
 
-                $Block = [
+                $block = [
                    'char' => $marker,
                    'openerLength' => $openerLength,
                    'element' => [
-                       'element' => $Element,
+                       'element' => $element,
                        'name' => 'canvas',
                        'attributes' => [
                            'class' => 'chartjs',
@@ -917,11 +959,11 @@ class ParsedownExtended extends DynamicParent
                    ],
                 ];
 
-                return $Block;
+                return $block;
             }
         }
 
-        return $Block;
+        return $block;
     }
 
     /*
@@ -1008,6 +1050,238 @@ class ParsedownExtended extends DynamicParent
     *  Helpers.
     * ------------------------------------------------------------------------
     */
+
+
+    protected function linesElements(array $lines)
+    {
+        $elements = array();
+        $CurrentBlock = null;
+
+        foreach ($lines as $line)
+        {
+            if (chop($line) === '')
+            {
+                if (isset($CurrentBlock))
+                {
+                    $CurrentBlock['interrupted'] = (isset($CurrentBlock['interrupted'])
+                        ? $CurrentBlock['interrupted'] + 1 : 1
+                    );
+                }
+
+                continue;
+            }
+
+            while (($beforeTab = strstr($line, "\t", true)) !== false)
+            {
+                $shortage = 4 - mb_strlen($beforeTab, 'utf-8') % 4;
+
+                $line = $beforeTab
+                    . str_repeat(' ', $shortage)
+                    . substr($line, strlen($beforeTab) + 1)
+                ;
+            }
+
+            $indent = strspn($line, ' ');
+
+            $text = $indent > 0 ? substr($line, $indent) : $line;
+
+            # ~
+
+            $line = array('body' => $line, 'indent' => $indent, 'text' => $text);
+
+            # ~
+
+            if (isset($CurrentBlock['continuable']))
+            {
+                $methodName = 'block' . $CurrentBlock['type'] . 'Continue';
+                $block = $this->$methodName($line, $CurrentBlock);
+
+                if (isset($block))
+                {
+                    $CurrentBlock = $block;
+
+                    continue;
+                }
+                else
+                {
+                    if ($this->isBlockCompletable($CurrentBlock['type']))
+                    {
+                        $methodName = 'block' . $CurrentBlock['type'] . 'Complete';
+                        $CurrentBlock = $this->$methodName($CurrentBlock);
+                    }
+                }
+            }
+
+            # ~
+
+            $marker = $text[0];
+
+            # ~
+
+            $blockTypes = $this->unmarkedBlockTypes;
+
+            if (isset($this->BlockTypes[$marker]))
+            {
+                foreach ($this->BlockTypes[$marker] as $blockType)
+                {
+                    $blockTypes []= $blockType;
+                }
+            }
+
+            #
+            # ~
+
+            foreach ($blockTypes as $blockType)
+            {
+                $block = $this->{"block$blockType"}($line, $CurrentBlock);
+
+                if (isset($block))
+                {
+                    $block['type'] = $blockType;
+
+                    if ( ! isset($block['identified']))
+                    {
+                        if (isset($CurrentBlock))
+                        {
+                            $elements[] = $this->extractElement($CurrentBlock);
+                        }
+
+                        $block['identified'] = true;
+                    }
+
+                    if ($this->isBlockContinuable($blockType))
+                    {
+                        $block['continuable'] = true;
+                    }
+
+                    $CurrentBlock = $block;
+
+                    continue 2;
+                }
+            }
+
+            # ~
+
+            if (isset($CurrentBlock) and $CurrentBlock['type'] === 'Paragraph')
+            {
+                $block = $this->paragraphContinue($line, $CurrentBlock);
+            }
+
+            if (isset($block))
+            {
+                $CurrentBlock = $block;
+            }
+            else
+            {
+                if (isset($CurrentBlock))
+                {
+                    $elements[] = $this->extractElement($CurrentBlock);
+                }
+
+                if (!isset($block['math'])) {
+                    $line = $this->inlineSmartypants($line);
+                }
+
+                $CurrentBlock = $this->paragraph($line);
+
+                $CurrentBlock['identified'] = true;
+            }
+        }
+
+        # ~
+
+        if (isset($CurrentBlock['continuable']) and $this->isBlockCompletable($CurrentBlock['type']))
+        {
+            $methodName = 'block' . $CurrentBlock['type'] . 'Complete';
+            $CurrentBlock = $this->$methodName($CurrentBlock);
+        }
+
+        # ~
+
+        if (isset($CurrentBlock))
+        {
+            $elements[] = $this->extractElement($CurrentBlock);
+        }
+
+        # ~
+
+        return $elements;
+    }
+
+
+    protected function blockTableContinue($Line, array $Block)
+    {
+        if (isset($Block['interrupted']))
+        {
+            return;
+        }
+
+        if (count($Block['alignments']) === 1 or $Line['text'][0] === '|' or strpos($Line['text'], '|'))
+        {
+            $Elements = array();
+
+            $row = $Line['text'];
+
+            $row = trim($row);
+            $row = trim($row, '|');
+
+            preg_match_all('/(?:(\\\\[|])|[^|`]|`[^`]++`|`)++/', $row, $matches);
+
+            $cells = array_slice($matches[0], 0, count($Block['alignments']));
+
+            foreach ($cells as $index => $cell)
+            {
+                $cell = trim($cell);
+
+                $cell = $this->inlineSmartypants($cell);
+
+                $Element = array(
+                    'name' => 'td',
+                    'handler' => array(
+                        'function' => 'lineElements',
+                        'argument' => $cell,
+                        'destination' => 'elements',
+                    )
+                );
+
+                if (isset($Block['alignments'][$index]))
+                {
+                    $Element['attributes'] = array(
+                        'style' => 'text-align: ' . $Block['alignments'][$index] . ';',
+                    );
+                }
+
+                $Elements []= $Element;
+            }
+
+            $Element = array(
+                'name' => 'tr',
+                'elements' => $Elements,
+            );
+
+            $Block['element']['elements'][1]['elements'] []= $Element;
+
+            return $Block;
+        }
+    }
+
+
+    private function pregReplaceAssoc(array $replace, $subject)
+    {
+        return preg_replace(array_keys($replace), array_values($replace), $subject);
+    }
+
+
+    protected function parseAttributeData($attributeString)
+    {
+        $state = isset($this->options['special_attributes']) ? $this->options['special_attributes'] : true;
+        if ($state) {
+            return DynamicParent::parseAttributeData($attributeString);
+        }
+
+        return array();
+    }
+
 
     /**
      * Parses the given markdown string to an HTML string but it leaves the ToC
@@ -1202,7 +1476,7 @@ class ParsedownExtended extends DynamicParent
     }
 
     /**
-     * Generates an anchor text that are link-able even the heading is not in
+     * Generates an anchor text that are link-able even if the heading is not in
      * ASCII.
      *
      * @param  string $text
@@ -1213,7 +1487,7 @@ class ParsedownExtended extends DynamicParent
         // Make sure string is in UTF-8 and strip invalid UTF-8 characters
         $str = mb_convert_encoding((string)$str, 'UTF-8', mb_list_encodings());
 
-        $optionUrlEncode = isset($this->options['toc']['urlencode']) ?? false;
+        $optionUrlEncode = isset($this->options['toc']['urlencode']) ? $this->options['toc']['urlencode'] : false;
         if($optionUrlEncode) {
             // Check AnchorID is unique
             $str = $this->incrementAnchorId($str);
@@ -1289,7 +1563,7 @@ class ParsedownExtended extends DynamicParent
         );
 
         // Transliterate characters to ASCII
-        $optionTransliterate = isset($this->options['toc']['transliterate']) ?? false;
+        $optionTransliterate = isset($this->options['toc']['transliterate']) ? $this->options['toc']['transliterate'] : false;
         if ($optionTransliterate) {
             $str = str_replace(array_keys($char_map), $char_map, $str);
         }
@@ -1434,9 +1708,9 @@ class ParsedownExtended extends DynamicParent
 
         if ($this->isBlacklistInitialized) return;
 
-        if (!empty($this->options['headers']['blacklist']) && is_array($this->options['headers']['blacklist'])) {
+        if (!empty($this->options['headings']['blacklist']) && is_array($this->options['headings']['blacklist'])) {
 
-            foreach ($this->options['headers']['blacklist'] as $v) {
+            foreach ($this->options['headings']['blacklist'] as $v) {
                 if (is_string($v)) $this->anchorDuplicates[$v] = 0;
             }
         }
