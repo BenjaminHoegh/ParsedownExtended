@@ -1,31 +1,65 @@
-<!-- ![ParsedownExtended](docs/img/parsedownExtended.png) -->
-<p align="center"><img alt="ParsedownExtended" src="docs/img/parsedownExtended.png" height="330" /></p>
+<p align="center">
+  <a href="https://github.com/BenjaminHoegh/ParsedownExtended">
+    <!--<img src="https://github.com/BenjaminHoegh/Chameleon/blob/master/docs/assets/images/logo/logo.svg" alt="" width=129 height=129>-->
+    <img alt="ParsedownExtended" src="docs/img/parsedownExtended.png" height="330" />
+  </a>
 
-# Parsedown Extended
-![Release](	https://img.shields.io/github/release/BenjaminHoegh/ParsedownExtended.svg?style=flat-square) ![License](https://img.shields.io/github/license/BenjaminHoegh/ParsedownExtended?style=flat-square)
+  <h3 align="center">Parsedown Extended</h3>
 
-Parsedown Extended is a extension to [Parsedown](https://github.com/erusev/parsedown) to add even more functions to the library. It also work with [ParsedownExtra](https://github.com/erusev/parsedown-extra)
+  <p align="center">
+    Sleek, intuitive, and powerful front-end framework for faster and  easier web development.
+    <br>
+    <a href="https://github.com/BenjaminHoegh/ParsedownExtended/wiki"><strong>Explore Documentation »</strong></a>
+    <br>
+    <br>
+    <a href="https://github.com/BenjaminHoegh/ParsedownExtended/issues/new?template=bug_report.md">Report bug</a>
+    ·
+    <a href="https://github.com/BenjaminHoegh/ParsedownExtended/issues/new?template=feature_request.md&labels=feature">Request feature</a>
+    ·
+    <a href="https://github.com/BenjaminHoegh/ParsedownExtended/discussions">Discussions</a>
+  </p>
 
-### Extentions included in ParsedownExtended
+</p>
 
-- [ParsedownMath](https://github.com/BenjaminHoegh/ParsedownMath)
-- [ParsedownToc](https://github.com/BenjaminHoegh/parsedownToc)
+<br>
 
+[![Github All Releases](https://img.shields.io/github/release/BenjaminHoegh/ParsedownExtended.svg?style=flat-square)](https://github.com/BenjaminHoegh/ParsedownExtended/releases) [![GitHub](https://img.shields.io/github/license/BenjaminHoegh/ParsedownExtended?style=flat-square)](https://github.com/BenjaminHoegh/ParsedownExtended/blob/master/LICENSE.md)
 
----
+Table of contents
 
-### Installation
+- [Getting started](#getting-started)
+- [Bugs and feature requests](#bugs-and-feature-requests)
+- [Contributing](#contributing)
+- [Community](#community)
+- [Copyright and license](#copyright-and-license)
 
-1. Download the "Source code" from the [latest release](https://github.com/BenjaminHoegh/ParsedownExtended/releases/latest)
-2. You must include `parsedown.php` or `parsedownExtra.php` too.
-3. Include `ParsedownExtended.php`
+## Features
+- Task
+- Smartypants
+- Emojis
+- Heading permalink
+- Table of content
+- Keystrokes
+- Highlight
+- Super and subscript
+- Diagrams
+- LaTeX
+- Predefined abbreviation
+- Options for every element of markdown
+- And more...
 
-> **Important:** Parsedown and ParsedownExtra don't work with PHP 7.4+ at the moment and it will throw some errors on ParsedownExtended. Use PHP 7.3 until Parsedown have been updated
+## Getting started
 
-
-##### Example
+### Manuel
+Download the source code from the latest release
+You must include `parsedown.php` or `parsedownExtra.php`
+Include `ParsedownExtended.php`
 
 ```php
+require 'Parsedown.php';
+require 'ParsedownExtra.php'; // optional
+require 'ParsedownExtended.php';
+
 $ParsedownExtended = new ParsedownExtended();
 
 echo $ParsedownExtended->text('Hello _Parsedown_!'); # prints: <p>Hello <em>Parsedown</em>!</p>
@@ -33,247 +67,39 @@ echo $ParsedownExtended->text('Hello _Parsedown_!'); # prints: <p>Hello <em>Pars
 echo $ParsedownExtended->line('Hello _Parsedown_!'); # prints: Hello <em>Parsedown</em>!
 ```
 
----
+### Using composer
 
-
-### Added features
-
-#### Table of contents
-
-- **Inline Example:**
-
-  **PHP**
-  ```php
-  $contents = file_get_contents('example.md');
-
-  $Parsedown = new ParsedownExtended([
-    "toc" => [
-      "enable" => true,
-      "inline" => true,
-    ]
-  ]);
-
-  echo $Parsedown->text($contents);
-  ```
-
-  **Markdown**
-  ```markdown
-  [toc]
-  ```
-
-- **Outside Markdown Example:**
-
-  **PHP**
-  ```php
-  $contents = file_get_contents('example.md');
-
-  $Parsedown = new ParsedownExtended([
-    "toc" => [
-      "enable" => true
-    ]
-  ]);
-
-  echo $Parsedown->text($contents);
-  ```
-
-  Then use where you want to execute the TOC
-  ```
-  echo $Parsedown->toc($contents);
-  ```
-
-
-#### Typography
-
-- **Insert and Mark**
-
-  ```php
-  $Parsedown = new ParsedownExtended([
-      "mark" => true,
-      "insert" => true,
-  ]);
-  ```
-
-  | Type                | To get            |
-  | ------------------- | ----------------- |
-  | \==Mark\==          | \<mark>Mark\</mark>          |
-  | \++Insert\++        | \<ins>Insert\</ins>        |
-
-- **Auto replace**
-
-  ```php
-  $Parsedown = new ParsedownExtended([
-      "smartTypography" => true,
-  ]);
-  ```
-
-  | Type        | Or    | Get      |
-  | ----------- | ----- | -------- |
-  | \(c)        | \(C)  | &copy;   |
-  | \(r)        | \(R)  | &reg;    |
-  | \(tm)       | \(TM) | &trade;  |
-  | \...        |       | &hellip; |
-  | \--         |       | &ndash;  |
-  | -\--        |       | &mdash;  |
-  | \>>         |       | &raquo;  |
-  | \<<         |       | &laquo;  |
-
-- **Subscript and superscript**
-
-  ```php
-  $Parsedown = new ParsedownExtended([
-      "scripts" => true,
-  ]);
-  ```
-
-  Superscript
-  ```
-  19^th^
-  ```
-
-  Subscript:
-  ```
-  H~2~O
-  ```
-
-- **KBD**
-
-  ```php
-  $Parsedown = new ParsedownExtended([
-      "kbd" => true,
-  ]);
-  ```
-
-  ```
-  Press [[Shift]] + [[Alt]] + [[G]] to open
-  ```
-
-  Press <kbd>Shift</kbd> + <kbd>Alt</kbd> + <kbd>G</kbd> to open
-
-#### Task
-
+From the command line interface, navigate to your project folder then run this command:
+```shell
+composer require BenjaminHoegh/parsedown-extended
+```
+Then require the auto-loader file:
 ```php
-$Parsedown = new ParsedownExtended([
-    "task" => true,
-]);
+require 'vendor/autoload.php';
+
+$ParsedownExtended = new ParsedownExtended();
+
+echo $ParsedownExtended->text('Hello _Parsedown_!'); # prints: <p>Hello <em>Parsedown</em>!</p>
+// you can also parse inline markdown only
+echo $ParsedownExtended->line('Hello _Parsedown_!'); # prints: Hello <em>Parsedown</em>!
 ```
 
+## Bugs and feature requests
 
-```markdown
-- [ ] ToDos
-- [x] Buy some salad
-- [ ] Brush teeth
-- [x] Drink some water
-```
+Have a bug or a feature request? Please first read the [issue guidelines](https://github.com/BenjaminHoegh/ParsedownExtended/blob/master/.github/CONTRIBUTING.md#using-the-issue-tracker) and search for existing and closed issues. If your problem or idea is not addressed yet, [please open a new issue](https://github.com/BenjaminHoegh/ParsedownExtended/issues/new/choose).
 
-- [ ] ToDos
-  - [x] Buy some salad
-  - [ ] Brush teeth
-  - [x] Drink some water
+## Contributing
 
+Please read through our [contributing guidelines](https://github.com/BenjaminHoegh/ParsedownExtended/blob/master/.github/CONTRIBUTING.md). Included are directions for opening issues, coding standards, and notes on development.
 
-#### LaTeX
-LaTeX syntax support for both [MathJax](https://www.mathjax.org) and [KaTeX](https://katex.org) by using [MathJax standard](https://docs.mathjax.org/en/latest/basic/mathematics.html) delimiters `$$...$$`, `\\[...\\]` and `\\(...\\)`
+All PHP should conform to the [Code Guide](https://www.php-fig.org/psr/psr-12/).
 
+## Community
 
-```php
-$Parsedown = new ParsedownExtended([
-    "math" => true,
-]);
-```
+Get updates on ParsedownExtended's development and chat with the project maintainers and community members.
 
+- Join [GitHub discussions](https://github.com/BenjaminHoegh/ParsedownExtended/discussions).
 
-- **Inline Example**
-  ```
-  This is some \(ax^2 + bx + c = 0\) inline LaTeX
-  ```
+## Copyright and license
 
-
-- **Block Example**
-  ```
-  \[
-      x = {-b \pm \sqrt{b^2-4ac} \over 2a}.
-  \]
-  ```
-
-  ```
-  $$
-      x = {-b \pm \sqrt{b^2-4ac} \over 2a}.
-  $$
-  ```
-
-#### Diagrams
-Support for [Mermaid](https://mermaid-js.github.io/mermaid/#/) and [ChartJS](https://www.chartjs.org).
-
-```php
-$Parsedown = new ParsedownExtended([
-    "diagrams" => true,
-]);
-```
-
-- **Mermaid Example**
-
-      ```mermaid
-      sequenceDiagram
-          participant Alice
-          participant Bob
-          Alice->>John: Hello John, how are you?
-          loop Healthcheck
-              John->>John: Fight against hypochondria
-          end
-          Note right of John: Rational thoughts<br/>prevail...
-          John-->>Alice: Great!
-          John->>Bob: How about you?
-          Bob-->>John: Jolly good!
-      ```
-
-- **ChartJS Example**
-
-      ```chart
-      {
-        "type": "line",
-        "data": {
-          "labels": [
-            "January",
-            "February",
-            "March",
-            "April",
-            "May",
-            "June",
-            "July"
-          ],
-          "datasets": [
-            {
-              "label": "# of bugs",
-              "fill": false,
-              "lineTension": 0.1,
-              "backgroundColor": "rgba(75,192,192,0.4)",
-              "borderColor": "rgba(75,192,192,1)",
-              "borderCapStyle": "butt",
-              "borderDash": [],
-              "borderDashOffset": 0,
-              "borderJoinStyle": "miter",
-              "pointBorderColor": "rgba(75,192,192,1)",
-              "pointBackgroundColor": "#fff",
-              "pointBorderWidth": 1,
-              "pointHoverRadius": 5,
-              "pointHoverBackgroundColor": "rgba(75,192,192,1)",
-              "pointHoverBorderColor": "rgba(220,220,220,1)",
-              "pointHoverBorderWidth": 2,
-              "pointRadius": 1,
-              "pointHitRadius": 10,
-              "data": [
-                65,
-                59,
-                80,
-                81,
-                56,
-                55,
-                40
-              ],
-              "spanGaps": false
-            }
-          ]
-        },
-        "options": {}
-      }
-      ```
+Code and documentation copyright 2021 the [ParsedownExtended Authors](https://github.com/BenjaminHoegh/ParsedownExtended/graphs/contributors). Code released under the [MIT License](https://github.com/BenjaminHoegh/ParsedownExtended/blob/master/LICENSE.md). Docs released under [Creative Commons](https://github.com/BenjaminHoegh/ParsedownExtended/blob/master/docs/LICENSE.md).
