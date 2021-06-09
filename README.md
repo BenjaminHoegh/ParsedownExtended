@@ -1,7 +1,7 @@
 <p align="center">
   <a href="https://github.com/BenjaminHoegh/ParsedownExtended">
     <!--<img src="https://github.com/BenjaminHoegh/Chameleon/blob/master/docs/assets/images/logo/logo.svg" alt="" width=129 height=129>-->
-    <img alt="ParsedownExtended" src="docs/img/parsedownExtended.png" height="330" />
+    <img alt="ParsedownExtended" src="https://github.com/BenjaminHoegh/ParsedownExtended/raw/master/docs/img/parsedownExtended.png" height="330" />
   </a>
 
   <h3 align="center">Parsedown Extended</h3>
@@ -9,7 +9,7 @@
   <p align="center">
     Sleek, intuitive, and powerful front-end framework for faster and  easier web development.
     <br>
-    <a href="https://github.com/BenjaminHoegh/ParsedownExtended/wiki"><strong>Explore Documentation »</strong></a>
+    <a href="https://benjaminhoegh.github.io/ParsedownExtended/configurations"><strong>Explore Documentation »</strong></a>
     <br>
     <br>
     <a href="https://github.com/BenjaminHoegh/ParsedownExtended/issues/new?template=bug_report.md">Report bug</a>
