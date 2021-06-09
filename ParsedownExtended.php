@@ -366,7 +366,6 @@ class ParsedownExtended extends DynamicParent
 
     protected function inlineEmailTag($excerpt)
     {
-        // TODO: Find a name for this setting.
         $state = isset($this->options['auto_mark_emails']) ? $this->options['auto_mark_emails'] : true;
         if ($state) {
             return DynamicParent::inlineEmailTag($excerpt);
@@ -383,7 +382,6 @@ class ParsedownExtended extends DynamicParent
 
     protected function inlineImage($excerpt)
     {
-        // TODO: Add a external link option
         $state = isset($this->options['images']) ? $this->options['images'] : true;
         if ($state) {
             return DynamicParent::inlineImage($excerpt);
@@ -392,7 +390,6 @@ class ParsedownExtended extends DynamicParent
 
     protected function inlineLink($excerpt)
     {
-        // TODO: Add link options
         $state = isset($this->options['links']) ? $this->options['links'] : true;
         if ($state) {
             return DynamicParent::inlineLink($excerpt);
@@ -439,7 +436,6 @@ class ParsedownExtended extends DynamicParent
 
     protected function inlineEmojis($excerpt)
     {
-        // TODO: Create a module there allow for emoji extentions
         $emoji_map = [
             ':smile:' => '😄', ':laughing:' => '😆', ':blush:' => '😊', ':smiley:' => '😃',
             ':relaxed:' => '☺️', ':smirk:' => '😏', ':heart_eyes:' => '😍', ':kissing_heart:' => '😘',
