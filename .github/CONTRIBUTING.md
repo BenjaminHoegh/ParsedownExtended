@@ -31,7 +31,7 @@ restrictions:
 
 Our bug tracker utilizes several labels to help organize and identify issues. Here's what they represent and how we use them:
 
-- `bug` - Issues that have been confirmed with a reduced test case and identify a bug in ParsedownExtended.
+- `Bug` - Issues that have been confirmed with a reduced test case and identify a bug in ParsedownExtended.
 - `Duplicate` - Issue or pull request already exists
 - `Enhancement` - Issues that will iterate on existing functionality.
 - `Feature` - Issues asking for a new feature to be added, or an existing one to be extended or modified.
@@ -41,7 +41,7 @@ Our bug tracker utilizes several labels to help organize and identify issues. He
 - `In progress` - Issue there are currently been working on
 - `Invalid` - Issues where no actions are needed or possible. The issue is either fixed, addressed better by other
 - `Investigation` - Issues that require further investigation
-- `meta` - Issues with the project itself or our GitHub repository.
+- `Meta` - Issues with the project itself or our GitHub repository.
 - `Need more info` - Issues that require further conversation to figure out how to proceed or what action steps are needed.
 - `On hold` - Issues where no actions are needed or possible. The issue is either fixed, addressed better by other
 - `Question` - Issues that require further conversation to figure out how to proceed or what action steps are needed
@@ -49,9 +49,9 @@ Our bug tracker utilizes several labels to help organize and identify issues. He
 - `Ready for review` - Issues that require further conversation to figure out how to proceed or what action steps are needed
 - `Released` -  An issue where a new functionality or a bug is finished and has been released.
 - `Under consideration` - Issues where action can be taken, but has not yet.
-- `docs` - Issues for improving or updating our documentation.
+- `Docs` - Issues for improving or updating our documentation.
 - `Won't fix` - Issues where no actions are needed or possible. The issue is either fixed, addressed better by other
-- `examples` - Issues involving the example templates included in our docs.
+- `Examples` - Issues involving the example templates included in our docs.
 
 For a complete look at our labels, see the [project labels page](https://github.com/BenjaminHoegh/ParsedownExtended/labels).
 
@@ -116,10 +116,7 @@ project (indentation, accurate comments, etc.) and any other requirements
 (such as test coverage).
 
 Similarly, when contributing to ParsedownExtended's documentation, you should edit the
-documentation source files in
-[the `/ParsedownExtended/docs/` directory of the `dev` branch](https://github.com/BenjaminHoegh/ParsedownExtended/tree/develop/docs/).
-**Do not edit the `gh-pages` branch.** That branch is generated from the
-documentation source files and is managed separately by the ParsedownExtended Core Team.
+documentation in the [wiki](https://github.com/BenjaminHoegh/ParsedownExtended/wiki).
 
 ### Which Branch?
 
@@ -127,11 +124,11 @@ documentation source files and is managed separately by the ParsedownExtended Co
 
 **Minor** features that are fully backward compatible with the current release may be sent to the `master` branch.
 
-**Major** new features should always be sent to the `master` branch, which contains the upcoming release.
+**Major** new features should always be sent to the `dev` branch, which contains the upcoming release.
 
-If you are unsure if your feature qualifies as a major or minor, please ask BenjaminHoegh in the #internals channel in the [GitHub Discussions section](https://github.com/BenjaminHoegh/ParsedownExtended/discussions/categories/internals).
+If you are unsure if your feature qualifies as a major or minor, please ask BenjaminHoegh in the #contributors channel in the [GitHub Discussions section](https://github.com/BenjaminHoegh/ParsedownExtended/discussions/categories/contributors).
 
-### Clone the repo
+### Get started
 
 Adhering to the following process is the best way to get your work
 included in the project:
@@ -203,7 +200,6 @@ includes code changes) and under the terms of the
 ### Markdown
 - Use 4 space indent.
 - Follow [Google's styleguide](https://google.github.io/styleguide/docguide/style.html) based on CommonMark.
-
 
 ## License
 
