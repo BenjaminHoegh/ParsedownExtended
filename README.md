@@ -7,8 +7,6 @@
   <h3 align="center">Parsedown Extended</h3>
 
   <p align="center">
-    Sleek, intuitive, and powerful front-end framework for faster and  easier web development.
-    <br>
     <a href="https://benjaminhoegh.github.io/ParsedownExtended/configurations"><strong>Explore Documentation »</strong></a>
     <br>
     <br>
