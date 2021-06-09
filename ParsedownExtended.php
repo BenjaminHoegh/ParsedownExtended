@@ -25,7 +25,7 @@ class ParsedownExtended extends DynamicParent
      *  Constants.
      * ------------------------------------------------------------------------
      */
-    public const VERSION = '1.4';
+    public const VERSION = '1.0';
     public const VERSION_PARSEDOWN_REQUIRED = '1.7';
     public const TAG_TOC_DEFAULT = '[toc]';
     public const ID_ATTRIBUTE_DEFAULT = 'toc';
