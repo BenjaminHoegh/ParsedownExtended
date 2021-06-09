@@ -27,19 +27,56 @@
 
 Table of contents
 
-- [Installation](#Installation)
+- [Getting started](#getting-started)
 - [Bugs and feature requests](#bugs-and-feature-requests)
 - [Contributing](#contributing)
 - [Community](#community)
 - [Copyright and license](#copyright-and-license)
 
-## Installation
+## Features
+- Task
+- Smartypants
+- Emojis
+- Heading permalink
+- Table of content
+- Keystrokes
+- Highlight
+- Super and subscript
+- Diagrams
+- LaTeX
+- Predefined abbreviation
+- Options for every element of markdown
+- And more...
 
-1. Download the "Source code" from the [latest release](https://github.com/BenjaminHoegh/ParsedownExtended/releases/latest)
-2. You must include `parsedown.php` or `parsedownExtra.php` too.
-3. Include `ParsedownExtended.php`
+## Getting started
+
+### Manuel
+Download the source code from the latest release
+You must include `parsedown.php` or `parsedownExtra.php`
+Include `ParsedownExtended.php`
 
 ```php
+require 'Parsedown.php';
+require 'ParsedownExtra.php'; // optional
+require 'ParsedownExtended.php';
+
+$ParsedownExtended = new ParsedownExtended();
+
+echo $ParsedownExtended->text('Hello _Parsedown_!'); # prints: <p>Hello <em>Parsedown</em>!</p>
+// you can also parse inline markdown only
+echo $ParsedownExtended->line('Hello _Parsedown_!'); # prints: Hello <em>Parsedown</em>!
+```
+
+### Using composer
+
+From the command line interface, navigate to your project folder then run this command:
+```shell
+composer require BenjaminHoegh/parsedown-extended
+```
+Then require the auto-loader file:
+```php
+require 'vendor/autoload.php';
+
 $ParsedownExtended = new ParsedownExtended();
 
 echo $ParsedownExtended->text('Hello _Parsedown_!'); # prints: <p>Hello <em>Parsedown</em>!</p>
