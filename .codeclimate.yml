@@ -4,3 +4,6 @@ plugins:
     channel: beta
     config:
         standard: "PSR12"
+    checks:
+      Generic Files LineLength TooLong:
+        enabled: false
