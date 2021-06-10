@@ -1,10 +1,10 @@
 ## Introduction
 
-All of the configuration for **ParsedownExtended** are defined in `json` format. Each option is documented, so feel free to look through and get familiar with the options available to you.
+All of the configurations for **ParsedownExtended** are defined in `json` format. Each option is documented, so feel free to look through and get familiar with the options available to you.
 
-These configuration allow you to configure things like your predefined abbreviation, heading permalink, as well as various other core configuration values.
+These configurations allow you to configure things like your predefined abbreviation, heading permalink, as well as various other core configuration values.
 
-By **default** any configuration where only a sub-configuration is determined will automatic turn on the function unless other are mentioned in the docs 
+By **default** any configuration where only a sub-configuration is determined will automatically turn on the function unless others are mentioned in the docs 
 
 ## Content
 - [Abbreviation](#abbreviation)
@@ -147,15 +147,6 @@ $Parsedown = new ParsedownExtended([
 ]);
 ```
 
-#### Allowed
-```php
-$Parsedown = new ParsedownExtended([
-    'headings' => [
-        'allowed' => ['h1','h2','h3']
-    ]
-]);
-```
-
 #### Heading permalink
 To enable/disable automatic heading permalink use the following:
 ```php
@@ -166,7 +157,19 @@ $Parsedown = new ParsedownExtended([
 ]);
 ```
 
+#### Allowed
+Choose what headings level can be used in the markdown
+```php
+$Parsedown = new ParsedownExtended([
+    'headings' => [
+        'allowed' => ['h1','h2','h3']
+    ]
+]);
+```
+
+
 #### Blacklist
+To block any ids from being included in the ToC simply use the following:
 ```php
 $Parsedown = new ParsedownExtended([
     'headings' => [
@@ -200,7 +203,7 @@ $Parsedown = new ParsedownExtended([
 ```
 
 ### LaTeX
-ParsedownExtended add the ability to use LaTeX in your markdown, by using regular expression to find and recognize LaTeX to avoid formatting it. This enable you to use library like [KaTeX](https://katex.org) to make the on-device rendering of the code.
+ParsedownExtended adds the ability to use LaTeX in your markdown, by using regular expression to find and recognize LaTeX to avoid formatting it. This enables you to use a library like [KaTeX](https://katex.org) to make the on-device rendering of the code.
 
 To enable LaTeX support:
 ```php
@@ -281,6 +284,38 @@ $Parsedown = new ParsedownExtended([
 ]);
 ```
 
+`setTagToc(string $tag='[tag]')`:
+- Sets user defined ToC markdown tag. Use this method before `text()` or `body()` method if you want to use the ToC tag rather than the "`[toc]`".
+- Empty value sets the default ToC tag.
+
+With the `contentsList()` method, you can get just the "ToC".
+```php
+$toc = $Parsedown->contentsList();
+```
+
+Returns the parsed content WITHOUT parsing `[toc]` tag.
+```php
+$toc = $Parsedown->body();
+```
+
+Returns the parsed content and `[toc]` tag(s) parsed as well.
+```php
+$toc = $Parsedown->text();
+```
+
+Example
+```php
+// Parse body and ToC separately
+$content = file_get_contents('sample.md');
+$Parsedown = new \ParsedownToC();
+
+$body = $Parsedown->body($content);
+$toc = $Parsedown->contentsList();
+
+echo $toc;  // Table of Contents in <ul> list
+echo $body; // Main body
+```
+
 #### Delimiter
 ```php
 $Parsedown = new ParsedownExtended([
@@ -290,6 +325,7 @@ $Parsedown = new ParsedownExtended([
 ]);
 ```
 #### Headings
+Choose what headings level to include in the ToC list.
 ```php
 $Parsedown = new ParsedownExtended([
     'toc' => [
