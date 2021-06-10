@@ -5,5 +5,13 @@ plugins:
     config:
         standard: "PSR12"
     checks:
-      Generic Files LineLength TooLong:
-        enabled: false
+        file-lines:
+            enabled: false
+        Generic Files LineLength TooLong:
+            enabled: false
+exclude_patterns:
+- "docs/"
+- ".gitignore"
+- ".editorconfig"
+- ".gitattributes"
+- ".composer.json"
