@@ -1049,6 +1049,104 @@ class ParsedownExtended extends DynamicParent
     */
 
 
+    public function line($text, $nonNestables = array())
+    {
+        // $text = $this->inlineSmartypants($text); Risky
+        return $this->elements($this->lineElements($text, $nonNestables));
+    }
+
+    protected function lineElements($text, $nonNestables = array())
+    {
+        $Elements = array();
+
+        $nonNestables = (
+            empty($nonNestables)
+            ? array()
+            : array_combine($nonNestables, $nonNestables)
+        );
+
+        # $excerpt is based on the first occurrence of a marker
+
+        while ($excerpt = strpbrk($text, $this->inlineMarkerList)) {
+            $marker = $excerpt[0];
+
+            $markerPosition = strlen($text) - strlen($excerpt);
+
+            $Excerpt = array('text' => $excerpt, 'context' => $text);
+
+            foreach ($this->InlineTypes[$marker] as $inlineType) {
+                # check to see if the current inline type is nestable in the current context
+
+                if (isset($nonNestables[$inlineType])) {
+                    continue;
+                }
+
+                $Inline = $this->{"inline$inlineType"}($Excerpt);
+
+                if (! isset($Inline)) {
+                    continue;
+                }
+
+                # makes sure that the inline belongs to "our" marker
+
+                if (isset($Inline['position']) and $Inline['position'] > $markerPosition) {
+                    continue;
+                }
+
+                # sets a default inline position
+
+                if (! isset($Inline['position'])) {
+                    $Inline['position'] = $markerPosition;
+                }
+
+                # cause the new element to 'inherit' our non nestables
+
+
+                $Inline['element']['nonNestables'] = isset($Inline['element']['nonNestables'])
+                    ? array_merge($Inline['element']['nonNestables'], $nonNestables)
+                    : $nonNestables
+                ;
+
+                # the text that comes before the inline
+                $unmarkedText = substr($text, 0, $Inline['position']);
+
+                # compile the unmarked text
+                $InlineText = $this->inlineText($unmarkedText);
+                $Elements[] = $InlineText['element'];
+
+                # compile the inline
+                $Elements[] = $this->extractElement($Inline);
+
+                # remove the examined text
+                $text = substr($text, $Inline['position'] + $Inline['extent']);
+
+                continue 2;
+            }
+
+            # the marker does not belong to an inline
+
+            $unmarkedText = substr($text, 0, $markerPosition + 1);
+
+            $InlineText = $this->inlineText($unmarkedText);
+            $Elements[] = $InlineText['element'];
+
+            $text = substr($text, $markerPosition + 1);
+
+            $text = $this->inlineSmartypants($text);
+        }
+
+        $InlineText = $this->inlineText($text);
+        $Elements[] = $InlineText['element'];
+
+        foreach ($Elements as &$Element) {
+            if (! isset($Element['autobreak'])) {
+                $Element['autobreak'] = false;
+            }
+        }
+
+        return $Elements;
+    }
+
     protected function linesElements(array $lines)
     {
         $elements = array();
@@ -1155,6 +1253,7 @@ class ParsedownExtended extends DynamicParent
                     $elements[] = $this->extractElement($CurrentBlock);
                 }
 
+                // TODO: checkup if this IF is really nessery
                 if (!isset($block['math'])) {
                     $line = $this->inlineSmartypants($line);
                 }
