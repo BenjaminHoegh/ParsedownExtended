@@ -295,12 +295,12 @@ $toc = $Parsedown->contentsList();
 
 Returns the parsed content WITHOUT parsing `[toc]` tag.
 ```php
-$toc = $Parsedown->body();
+$body = $Parsedown->body();
 ```
 
 Returns the parsed content and `[toc]` tag(s) parsed as well.
 ```php
-$toc = $Parsedown->text();
+$text = $Parsedown->text();
 ```
 
 Example
