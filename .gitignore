@@ -1,7 +1,6 @@
+.nova/
 vendor/
 test/
-composer.lock
+lab/
 notes.md
-.nova/
-debug/
-options.json
+composer.lock
