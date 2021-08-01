@@ -21,8 +21,8 @@
     "php": ">=7.2",
     "ext-dom": "*",
     "ext-mbstring": "*",
-    "erusev/parsedown": ">=1.7",
-    "erusev/parsedown-extra": ">=0.8.1"
+    "erusev/parsedown": "^1.7",
+    "erusev/parsedown-extra": "^0.8.1"
   },
   "require-dev": {
     "vimeo/psalm": "^4.9"
