@@ -37,9 +37,9 @@ class ParsedownExtended extends DynamicParent
     {
         if (version_compare(\Parsedown::version, self::VERSION_PARSEDOWN_REQUIRED) < 0) {
             $msg_error = 'Version Error.' . PHP_EOL;
-            $msg_error .= '  ParsedownToc requires a later version of Parsedown.' . PHP_EOL;
+            $msg_error .= '  ParsedownExtended requires a later version of Parsedown.' . PHP_EOL;
             $msg_error .= '  - Current version : ' . \Parsedown::version . PHP_EOL;
-            $msg_error .= '  - Required version: ' . self::VERSION_PARSEDOWN_REQUIRED .' and later' .PHP_EOL;
+            $msg_error .= '  - Required version: ' . self::VERSION_PARSEDOWN_REQUIRED . ' and later' . PHP_EOL;
             throw new Exception($msg_error);
         }
 
@@ -176,7 +176,6 @@ class ParsedownExtended extends DynamicParent
             $tocHeaders = $this->options['toc']['headings'] ?? ["h1", "h2", "h3", "h4", "h5", "h6"];
             // Check if level are defined as a heading
             if (in_array($level, $tocHeaders)) {
-
                 // Add/stores the heading element info to the ToC list
                 $this->setContentsList(array(
                     'text'  => $text,
@@ -253,7 +252,6 @@ class ParsedownExtended extends DynamicParent
 
             // Check if level are defined as a heading
             if (in_array($level, $headersAllowed)) {
-
                 // Add/stores the heading element info to the ToC list
                 $this->setContentsList(array(
                     'text'  => $text,
@@ -710,13 +708,13 @@ class ParsedownExtended extends DynamicParent
     {
         if (preg_match('/(?:\^(?!\^)([^\^ ]*)\^(?!\^))/', $excerpt['text'], $matches)) {
             return [
-             'extent' => strlen($matches[0]),
-             'element' => [
-                 'name' => 'sup',
-                 'text' => $matches[1],
-                 'function' => 'lineElements',
-             ],
-          ];
+                'extent' => strlen($matches[0]),
+                'element' => [
+                    'name' => 'sup',
+                    'text' => $matches[1],
+                    'function' => 'lineElements',
+                ],
+            ];
         }
     }
 
@@ -729,13 +727,13 @@ class ParsedownExtended extends DynamicParent
     {
         if (preg_match('/(?:~(?!~)([^~ ]*)~(?!~))/', $excerpt['text'], $matches)) {
             return [
-             'extent' => strlen($matches[0]),
-             'element' => [
-                 'name' => 'sub',
-                 'text' => $matches[1],
-                 'function' => 'lineElements',
-             ],
-          ];
+                'extent' => strlen($matches[0]),
+                'element' => [
+                    'name' => 'sub',
+                    'text' => $matches[1],
+                    'function' => 'lineElements',
+                ],
+            ];
         }
     }
 
@@ -830,10 +828,10 @@ class ParsedownExtended extends DynamicParent
     protected function blockMath($line)
     {
         $block = [
-          'element' => [
-             'text' => '',
-          ],
-      ];
+            'element' => [
+                'text' => '',
+            ],
+        ];
 
         if (preg_match('/^(?<!\\\\)(\\\\\[)(?!.)$/', $line['text'])) {
             $block['end'] = '\]';
@@ -861,19 +859,13 @@ class ParsedownExtended extends DynamicParent
             unset($block['interrupted']);
         }
 
-        if (
-          preg_match('/^(?<!\\\\)(\\\\\])$/', $line['text']) &&
-          $block['end'] === '\]'
-      ) {
+        if (preg_match('/^(?<!\\\\)(\\\\\])$/', $line['text']) && $block['end'] === '\]') {
             $block['complete'] = true;
             $block['math'] = true;
             $block['element']['text'] =
              "\\[" . $block['element']['text'] . "\\]";
             return $block;
-        } elseif (
-          preg_match('/^(?<!\\\\)(\$\$)$/', $line['text']) &&
-          $block['end'] === '$$'
-      ) {
+        } elseif (preg_match('/^(?<!\\\\)(\$\$)$/', $line['text']) && $block['end'] === '$$') {
             $block['complete'] = true;
             $block['math'] = true;
             $block['element']['text'] = "$$" . $block['element']['text'] . "$$";
@@ -916,7 +908,6 @@ class ParsedownExtended extends DynamicParent
 
         $state = isset($this->options['diagrams']) ? $this->options['diagrams'] : true;
         if ($state) {
-
             // Mermaid.js https://mermaidjs.github.io
             if (strtolower($language) == 'mermaid') {
                 $element = [
@@ -1111,7 +1102,7 @@ class ParsedownExtended extends DynamicParent
 
             if (isset($this->BlockTypes[$marker])) {
                 foreach ($this->BlockTypes[$marker] as $blockType) {
-                    $blockTypes []= $blockType;
+                    $blockTypes [] = $blockType;
                 }
             }
 
@@ -1222,7 +1213,7 @@ class ParsedownExtended extends DynamicParent
                     );
                 }
 
-                $Elements []= $Element;
+                $Elements [] = $Element;
             }
 
             $Element = array(
@@ -1230,7 +1221,7 @@ class ParsedownExtended extends DynamicParent
                 'elements' => $Elements,
             );
 
-            $Block['element']['elements'][1]['elements'] []= $Element;
+            $Block['element']['elements'][1]['elements'] [] = $Element;
 
             return $Block;
         }
@@ -1494,8 +1485,8 @@ class ParsedownExtended extends DynamicParent
             'ϊ' => 'i', 'ΰ' => 'y', 'ϋ' => 'y', 'ΐ' => 'i',
 
             // Turkish
-            'Ş' => 'S', 'İ' => 'I', 'Ç' => 'C', 'Ü' => 'U', 'Ö' => 'O', 'Ğ' => 'G',
-            'ş' => 's', 'ı' => 'i', 'ç' => 'c', 'ü' => 'u', 'ö' => 'o', 'ğ' => 'g',
+            'Ş' => 'S', 'İ' => 'I', 'Ğ' => 'G',
+            'ş' => 's', 'ı' => 'i', 'ğ' => 'g',
 
             // Russian
             'А' => 'A', 'Б' => 'B', 'В' => 'V', 'Г' => 'G', 'Д' => 'D', 'Е' => 'E', 'Ё' => 'Yo', 'Ж' => 'Zh',
@@ -1520,16 +1511,14 @@ class ParsedownExtended extends DynamicParent
             'ž' => 'z',
 
             // Polish
-            'Ą' => 'A', 'Ć' => 'C', 'Ę' => 'e', 'Ł' => 'L', 'Ń' => 'N', 'Ó' => 'o', 'Ś' => 'S', 'Ź' => 'Z',
+            'Ą' => 'A', 'Ć' => 'C', 'Ę' => 'e', 'Ł' => 'L', 'Ń' => 'N', 'Ś' => 'S', 'Ź' => 'Z',
             'Ż' => 'Z',
-            'ą' => 'a', 'ć' => 'c', 'ę' => 'e', 'ł' => 'l', 'ń' => 'n', 'ó' => 'o', 'ś' => 's', 'ź' => 'z',
+            'ą' => 'a', 'ć' => 'c', 'ę' => 'e', 'ł' => 'l', 'ń' => 'n', 'ś' => 's', 'ź' => 'z',
             'ż' => 'z',
 
             // Latvian
-            'Ā' => 'A', 'Č' => 'C', 'Ē' => 'E', 'Ģ' => 'G', 'Ī' => 'i', 'Ķ' => 'k', 'Ļ' => 'L', 'Ņ' => 'N',
-            'Š' => 'S', 'Ū' => 'u', 'Ž' => 'Z',
-            'ā' => 'a', 'č' => 'c', 'ē' => 'e', 'ģ' => 'g', 'ī' => 'i', 'ķ' => 'k', 'ļ' => 'l', 'ņ' => 'n',
-            'š' => 's', 'ū' => 'u', 'ž' => 'z'
+            'Ā' => 'A', 'Ē' => 'E', 'Ģ' => 'G', 'Ī' => 'i', 'Ķ' => 'k', 'Ļ' => 'L', 'Ņ' => 'N', 'Ū' => 'u',
+            'ā' => 'a', 'ē' => 'e', 'ģ' => 'g', 'ī' => 'i', 'ķ' => 'k', 'ļ' => 'l', 'ņ' => 'n', 'ū' => 'u'
         );
 
         // Transliterate characters to ASCII
