@@ -1,8 +1,6 @@
 vendor/
-lab/
-.nova/
-.php_cs.cache
-composer.lock
+test/
 notes.md
+.nova/
+debug/
 options.json
-docs/
