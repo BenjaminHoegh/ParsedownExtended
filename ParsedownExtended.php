@@ -37,9 +37,9 @@ class ParsedownExtended extends DynamicParent
     {
         if (version_compare(\Parsedown::version, self::VERSION_PARSEDOWN_REQUIRED) < 0) {
             $msg_error = 'Version Error.' . PHP_EOL;
-            $msg_error .= '  ParsedownToc requires a later version of Parsedown.' . PHP_EOL;
+            $msg_error .= '  ParsedownExtended requires a later version of Parsedown.' . PHP_EOL;
             $msg_error .= '  - Current version : ' . \Parsedown::version . PHP_EOL;
-            $msg_error .= '  - Required version: ' . self::VERSION_PARSEDOWN_REQUIRED .' and later' .PHP_EOL;
+            $msg_error .= '  - Required version: ' . self::VERSION_PARSEDOWN_REQUIRED . ' and later' . PHP_EOL;
             throw new Exception($msg_error);
         }
 
@@ -176,7 +176,6 @@ class ParsedownExtended extends DynamicParent
             $tocHeaders = $this->options['toc']['headings'] ?? ["h1", "h2", "h3", "h4", "h5", "h6"];
             // Check if level are defined as a heading
             if (in_array($level, $tocHeaders)) {
-
                 // Add/stores the heading element info to the ToC list
                 $this->setContentsList(array(
                     'text'  => $text,
@@ -253,7 +252,6 @@ class ParsedownExtended extends DynamicParent
 
             // Check if level are defined as a heading
             if (in_array($level, $headersAllowed)) {
-
                 // Add/stores the heading element info to the ToC list
                 $this->setContentsList(array(
                     'text'  => $text,
@@ -710,13 +708,13 @@ class ParsedownExtended extends DynamicParent
     {
         if (preg_match('/(?:\^(?!\^)([^\^ ]*)\^(?!\^))/', $excerpt['text'], $matches)) {
             return [
-             'extent' => strlen($matches[0]),
-             'element' => [
-                 'name' => 'sup',
-                 'text' => $matches[1],
-                 'function' => 'lineElements',
-             ],
-          ];
+                'extent' => strlen($matches[0]),
+                'element' => [
+                    'name' => 'sup',
+                    'text' => $matches[1],
+                    'function' => 'lineElements',
+                ],
+            ];
         }
     }
 
@@ -729,13 +727,13 @@ class ParsedownExtended extends DynamicParent
     {
         if (preg_match('/(?:~(?!~)([^~ ]*)~(?!~))/', $excerpt['text'], $matches)) {
             return [
-             'extent' => strlen($matches[0]),
-             'element' => [
-                 'name' => 'sub',
-                 'text' => $matches[1],
-                 'function' => 'lineElements',
-             ],
-          ];
+                'extent' => strlen($matches[0]),
+                'element' => [
+                    'name' => 'sub',
+                    'text' => $matches[1],
+                    'function' => 'lineElements',
+                ],
+            ];
         }
     }
 
@@ -830,10 +828,10 @@ class ParsedownExtended extends DynamicParent
     protected function blockMath($line)
     {
         $block = [
-          'element' => [
-             'text' => '',
-          ],
-      ];
+            'element' => [
+                'text' => '',
+            ],
+        ];
 
         if (preg_match('/^(?<!\\\\)(\\\\\[)(?!.)$/', $line['text'])) {
             $block['end'] = '\]';
@@ -861,19 +859,13 @@ class ParsedownExtended extends DynamicParent
             unset($block['interrupted']);
         }
 
-        if (
-          preg_match('/^(?<!\\\\)(\\\\\])$/', $line['text']) &&
-          $block['end'] === '\]'
-      ) {
+        if (preg_match('/^(?<!\\\\)(\\\\\])$/', $line['text']) && $block['end'] === '\]') {
             $block['complete'] = true;
             $block['math'] = true;
             $block['element']['text'] =
              "\\[" . $block['element']['text'] . "\\]";
             return $block;
-        } elseif (
-          preg_match('/^(?<!\\\\)(\$\$)$/', $line['text']) &&
-          $block['end'] === '$$'
-      ) {
+        } elseif (preg_match('/^(?<!\\\\)(\$\$)$/', $line['text']) && $block['end'] === '$$') {
             $block['complete'] = true;
             $block['math'] = true;
             $block['element']['text'] = "$$" . $block['element']['text'] . "$$";
@@ -916,7 +908,6 @@ class ParsedownExtended extends DynamicParent
 
         $state = isset($this->options['diagrams']) ? $this->options['diagrams'] : true;
         if ($state) {
-
             // Mermaid.js https://mermaidjs.github.io
             if (strtolower($language) == 'mermaid') {
                 $element = [
@@ -1049,104 +1040,6 @@ class ParsedownExtended extends DynamicParent
     */
 
 
-    public function line($text, $nonNestables = array())
-    {
-        // $text = $this->inlineSmartypants($text); Risky
-        return $this->elements($this->lineElements($text, $nonNestables));
-    }
-
-    protected function lineElements($text, $nonNestables = array())
-    {
-        $Elements = array();
-
-        $nonNestables = (
-            empty($nonNestables)
-            ? array()
-            : array_combine($nonNestables, $nonNestables)
-        );
-
-        # $excerpt is based on the first occurrence of a marker
-
-        while ($excerpt = strpbrk($text, $this->inlineMarkerList)) {
-            $marker = $excerpt[0];
-
-            $markerPosition = strlen($text) - strlen($excerpt);
-
-            $Excerpt = array('text' => $excerpt, 'context' => $text);
-
-            foreach ($this->InlineTypes[$marker] as $inlineType) {
-                # check to see if the current inline type is nestable in the current context
-
-                if (isset($nonNestables[$inlineType])) {
-                    continue;
-                }
-
-                $Inline = $this->{"inline$inlineType"}($Excerpt);
-
-                if (! isset($Inline)) {
-                    continue;
-                }
-
-                # makes sure that the inline belongs to "our" marker
-
-                if (isset($Inline['position']) and $Inline['position'] > $markerPosition) {
-                    continue;
-                }
-
-                # sets a default inline position
-
-                if (! isset($Inline['position'])) {
-                    $Inline['position'] = $markerPosition;
-                }
-
-                # cause the new element to 'inherit' our non nestables
-
-
-                $Inline['element']['nonNestables'] = isset($Inline['element']['nonNestables'])
-                    ? array_merge($Inline['element']['nonNestables'], $nonNestables)
-                    : $nonNestables
-                ;
-
-                # the text that comes before the inline
-                $unmarkedText = substr($text, 0, $Inline['position']);
-
-                # compile the unmarked text
-                $InlineText = $this->inlineText($unmarkedText);
-                $Elements[] = $InlineText['element'];
-
-                # compile the inline
-                $Elements[] = $this->extractElement($Inline);
-
-                # remove the examined text
-                $text = substr($text, $Inline['position'] + $Inline['extent']);
-
-                continue 2;
-            }
-
-            # the marker does not belong to an inline
-
-            $unmarkedText = substr($text, 0, $markerPosition + 1);
-
-            $InlineText = $this->inlineText($unmarkedText);
-            $Elements[] = $InlineText['element'];
-
-            $text = substr($text, $markerPosition + 1);
-
-            $text = $this->inlineSmartypants($text);
-        }
-
-        $InlineText = $this->inlineText($text);
-        $Elements[] = $InlineText['element'];
-
-        foreach ($Elements as &$Element) {
-            if (! isset($Element['autobreak'])) {
-                $Element['autobreak'] = false;
-            }
-        }
-
-        return $Elements;
-    }
-
     protected function linesElements(array $lines)
     {
         $elements = array();
@@ -1209,7 +1102,7 @@ class ParsedownExtended extends DynamicParent
 
             if (isset($this->BlockTypes[$marker])) {
                 foreach ($this->BlockTypes[$marker] as $blockType) {
-                    $blockTypes []= $blockType;
+                    $blockTypes [] = $blockType;
                 }
             }
 
@@ -1253,7 +1146,6 @@ class ParsedownExtended extends DynamicParent
                     $elements[] = $this->extractElement($CurrentBlock);
                 }
 
-                // TODO: checkup if this IF is really nessery
                 if (!isset($block['math'])) {
                     $line = $this->inlineSmartypants($line);
                 }
@@ -1321,7 +1213,7 @@ class ParsedownExtended extends DynamicParent
                     );
                 }
 
-                $Elements []= $Element;
+                $Elements [] = $Element;
             }
 
             $Element = array(
@@ -1329,7 +1221,7 @@ class ParsedownExtended extends DynamicParent
                 'elements' => $Elements,
             );
 
-            $Block['element']['elements'][1]['elements'] []= $Element;
+            $Block['element']['elements'][1]['elements'] [] = $Element;
 
             return $Block;
         }
@@ -1593,8 +1485,8 @@ class ParsedownExtended extends DynamicParent
             'ϊ' => 'i', 'ΰ' => 'y', 'ϋ' => 'y', 'ΐ' => 'i',
 
             // Turkish
-            'Ş' => 'S', 'İ' => 'I', 'Ç' => 'C', 'Ü' => 'U', 'Ö' => 'O', 'Ğ' => 'G',
-            'ş' => 's', 'ı' => 'i', 'ç' => 'c', 'ü' => 'u', 'ö' => 'o', 'ğ' => 'g',
+            'Ş' => 'S', 'İ' => 'I', 'Ğ' => 'G',
+            'ş' => 's', 'ı' => 'i', 'ğ' => 'g',
 
             // Russian
             'А' => 'A', 'Б' => 'B', 'В' => 'V', 'Г' => 'G', 'Д' => 'D', 'Е' => 'E', 'Ё' => 'Yo', 'Ж' => 'Zh',
@@ -1619,16 +1511,14 @@ class ParsedownExtended extends DynamicParent
             'ž' => 'z',
 
             // Polish
-            'Ą' => 'A', 'Ć' => 'C', 'Ę' => 'e', 'Ł' => 'L', 'Ń' => 'N', 'Ó' => 'o', 'Ś' => 'S', 'Ź' => 'Z',
+            'Ą' => 'A', 'Ć' => 'C', 'Ę' => 'e', 'Ł' => 'L', 'Ń' => 'N', 'Ś' => 'S', 'Ź' => 'Z',
             'Ż' => 'Z',
-            'ą' => 'a', 'ć' => 'c', 'ę' => 'e', 'ł' => 'l', 'ń' => 'n', 'ó' => 'o', 'ś' => 's', 'ź' => 'z',
+            'ą' => 'a', 'ć' => 'c', 'ę' => 'e', 'ł' => 'l', 'ń' => 'n', 'ś' => 's', 'ź' => 'z',
             'ż' => 'z',
 
             // Latvian
-            'Ā' => 'A', 'Č' => 'C', 'Ē' => 'E', 'Ģ' => 'G', 'Ī' => 'i', 'Ķ' => 'k', 'Ļ' => 'L', 'Ņ' => 'N',
-            'Š' => 'S', 'Ū' => 'u', 'Ž' => 'Z',
-            'ā' => 'a', 'č' => 'c', 'ē' => 'e', 'ģ' => 'g', 'ī' => 'i', 'ķ' => 'k', 'ļ' => 'l', 'ņ' => 'n',
-            'š' => 's', 'ū' => 'u', 'ž' => 'z'
+            'Ā' => 'A', 'Ē' => 'E', 'Ģ' => 'G', 'Ī' => 'i', 'Ķ' => 'k', 'Ļ' => 'L', 'Ņ' => 'N', 'Ū' => 'u',
+            'ā' => 'a', 'ē' => 'e', 'ģ' => 'g', 'ī' => 'i', 'ķ' => 'k', 'ļ' => 'l', 'ņ' => 'n', 'ū' => 'u'
         );
 
         // Transliterate characters to ASCII
