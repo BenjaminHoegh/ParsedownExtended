@@ -1,21 +1,50 @@
----
-layout: default
-title: Introduction
-nav_order: 1
----
+<p align="center">
+  <a href="https://github.com/BenjaminHoegh/ParsedownExtended">
+    <!--<img src="https://github.com/BenjaminHoegh/Chameleon/blob/master/docs/assets/images/logo/logo.svg" alt="" width=129 height=129>-->
+    <img alt="ParsedownExtended" src="https://github.com/BenjaminHoegh/ParsedownExtended/raw/master/docs/img/parsedownExtended.png" height="330" />
+  </a>
 
-# Introduction
-{: .no_toc }
+  <h3 align="center">Parsedown Extended</h3>
 
-All of the configurations for ParsedownExtended are defined as a array. Each option is documented, so feel free to look through and get familiar with the options available to you.
+  <p align="center">
+    <a href="https://benjaminhoegh.github.io/ParsedownExtended/configurations"><strong>Explore Documentation »</strong></a>
+    <br>
+    <br>
+    <a href="https://github.com/BenjaminHoegh/ParsedownExtended/issues/new?template=bug_report.md">Report bug</a>
+    ·
+    <a href="https://github.com/BenjaminHoegh/ParsedownExtended/issues/new?template=feature_request.md&labels=feature">Request feature</a>
+    ·
+    <a href="https://github.com/BenjaminHoegh/ParsedownExtended/discussions">Discussions</a>
+  </p>
 
-These configurations allow you to configure things like your predefined abbreviation, heading permalink, as well as various other core configuration values.
+</p>
 
-## Table of contents
-{: .no_toc .text-delta }
+<br>
 
-1. TOC
-{:toc}
+[![Github All Releases](https://img.shields.io/github/release/BenjaminHoegh/ParsedownExtended.svg?style=flat-square)](https://github.com/BenjaminHoegh/ParsedownExtended/releases) [![GitHub](https://img.shields.io/github/license/BenjaminHoegh/ParsedownExtended?style=flat-square)](https://github.com/BenjaminHoegh/ParsedownExtended/blob/master/LICENSE.md)
+
+Table of contents
+
+- [Getting started](#getting-started)
+- [Bugs and feature requests](#bugs-and-feature-requests)
+- [Contributing](#contributing)
+- [Community](#community)
+- [Copyright and license](#copyright-and-license)
+
+## Features
+- Task
+- Smartypants
+- Emojis
+- Heading permalink
+- Table of content
+- Keystrokes
+- Highlight
+- Super and subscript
+- Diagrams
+- LaTeX
+- Predefined abbreviation
+- Options for every element of markdown
+- And more...
 
 ## Getting started
 
@@ -40,7 +69,7 @@ echo $ParsedownExtended->line('Hello _Parsedown_!'); # prints: Hello <em>Parsedo
 
 From the command line interface, navigate to your project folder then run this command:
 ```shell
-composer require benjaminhoegh/parsedown-extended
+composer require BenjaminHoegh/parsedown-extended
 ```
 Then require the auto-loader file:
 ```php
@@ -72,4 +101,3 @@ Get updates on ParsedownExtended's development and chat with the project maintai
 ## Copyright and license
 
 Code and documentation copyright 2021 the [ParsedownExtended Authors](https://github.com/BenjaminHoegh/ParsedownExtended/graphs/contributors). Code released under the [MIT License](https://github.com/BenjaminHoegh/ParsedownExtended/blob/master/LICENSE.md). Docs released under [Creative Commons](https://github.com/BenjaminHoegh/ParsedownExtended/blob/master/docs/LICENSE.md).
-
