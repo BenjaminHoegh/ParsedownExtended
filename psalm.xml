@@ -8,7 +8,7 @@
     useDocblockTypes="false"
 >
     <projectFiles>
-        <file name="psalmTest.php" />
+        <file name="ParsedownExtended.php" />
         <ignoreFiles>
             <directory name="vendor" />
         </ignoreFiles>
