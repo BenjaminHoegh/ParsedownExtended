@@ -19,6 +19,16 @@ body:
       value: "A bug happened!"
     validations:
       required: true
+  
+  - type: textarea
+    id: expected-behavior
+    attributes:
+      label: Expected Behavior
+      description: Tell us what should happen
+      placeholder: Tell us what you expected too see
+      value: "A bug happened!"
+    validations:
+      required: false
  
   - type: dropdown
     id: ParsedownExtended-version
@@ -42,7 +52,7 @@ body:
     id: terms
     attributes:
       label: Code of Conduct
-      description: By submitting this issue, you agree to follow our [Code of Conduct](https://example.com)
+      description: By submitting this issue, you agree to follow our [Code of Conduct](https://github.com/BenjaminHoegh/ParsedownExtended/blob/main/.github/CODE_OF_CONDUCT.md)
       options:
         - label: I agree to follow this project's Code of Conduct
           required: true
