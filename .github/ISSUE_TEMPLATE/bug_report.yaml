@@ -26,7 +26,7 @@ body:
       label: Expected Behavior
       description: Tell us what should happen
       placeholder: Tell us what you expected too see
-      value: "A bug happened!"
+      value: "Tell us what you expected too see!"
     validations:
       required: false
  
@@ -47,6 +47,12 @@ body:
       label: Relevant log output
       description: Please copy and paste any relevant log output. This will be automatically formatted into code, so no need for backticks.
       render: shell
+      
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment
+      description: Please tell us what environment/extensions you are using together with ParsedownExtended and their versions.
       
   - type: checkboxes
     id: terms
