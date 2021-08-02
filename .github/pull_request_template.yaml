@@ -1,42 +1,56 @@
-
-## Types of changes
-<!--- What types of changes does your code introduce? Put an `x` in all the boxes that apply: -->
-- [ ] Bug fix (non-breaking change which fixes an issue)
-- [ ] New feature (non-breaking change which adds functionality)
-- [ ] Breaking change (fix or feature that would cause existing functionality to change)
-- [ ] I have read the **CONTRIBUTING** document.
-- [ ] My code follows the code style of this project.
-- [ ] My change requires a change to the documentation.
-- [ ] I have updated the documentation accordingly.
-- [ ] I have added tests to cover my changes.
-- [ ] All new and existing tests passed.
-
-
-<!--- Provide a general summary of your changes in the Title above -->
-
-## Description
-<!--- Describe your changes in detail -->
-
-## Motivation and Context
-<!--- Why is this change required? What problem does it solve? -->
-<!--- If it fixes an open issue, please link to the issue here. -->
-
-## How has this been tested?
-<!--- Please describe in detail how you tested your changes. -->
-<!--- Include details of your testing environment, tests ran to see how -->
-<!--- your change affects other areas of the code, etc. -->
-
-## Screenshots (if appropriate):
-
-## Types of changes
-<!--- What types of changes does your code introduce? Put an `x` in all the boxes that apply: -->
-- [ ] Bug fix (non-breaking change which fixes an issue)
-- [ ] New feature (non-breaking change which adds functionality)
-- [ ] Breaking change (fix or feature that would cause existing functionality to not work as expected)
-
-## Checklist:
-<!--- Go over all the following points, and put an `x` in all the boxes that apply. -->
-<!--- If you're unsure about any of these, don't hesitate to ask. We're here to help! -->
-- [ ] My code follows the code style of this project.
-- [ ] My change requires a change to the documentation.
-- [ ] I have updated the documentation accordingly.
+name: Pull Request
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Provide a general summary of your changes in the Title above
+        
+  - type: textarea
+    id: description
+    attributes:
+      label: Description
+      description: Describe your changes in detail?
+      placeholder: your changes!
+      value: "your changes!"
+    validations:
+      required: true
+      
+  - type: checkboxes
+    id: types-of-changes
+    attributes:
+      label: Types of changes
+      description: What types of changes does your code introduce?
+      options:
+        - label: Bug fix (non-breaking change which fixes an issue)
+        - label: New feature (non-breaking change which adds functionality)
+        - label: Breaking change (fix or feature that would cause existing functionality to change)
+          required: false
+  
+  - type: checkboxes
+    id: code-guide
+    attributes:
+      label: Community guides
+      description: What steps have you taken to make sure your code follow the community guides?
+      options:
+        - label: I have read the **CONTRIBUTING** document.
+        - label: My code follows the code style of this project.
+          required: true
+  
+  - type: checkboxes
+    id: documentation
+    attributes:
+      label: Change to the documentation
+      description: What types of changes does your code introduce?
+      options:
+        - label: My change requires a change to the documentation.
+        - label: I have updated the documentation accordingly.
+          required: false
+  
+  - type: checkboxes
+    id: terms
+    attributes:
+      label: Code of Conduct
+      description: By submitting this pull request, you agree to follow our [Code of Conduct](https://example.com)
+      options:
+        - label: I agree to follow this project's Code of Conduct
+          required: true
