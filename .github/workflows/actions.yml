@@ -58,8 +58,14 @@ jobs:
           composer install -n --prefer-dist
           composer require erusev/parsedown
           composer require erusev/parsedown-extra
+          
       - name: Run static analysis
         run: composer run sa
 
       - name: Check coding standard
         run: composer run cs
+      
+      - name: Scanning for security vulnerabilities 
+        uses: docker://vimeo/psalm-github-actions
+        with:
+          security_analysis: true
