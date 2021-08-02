@@ -1,10 +1,13 @@
 name: Pull Request
+description: File a Pull Request
+assignees:
+  - BenjaminHoegh
 body:
   - type: markdown
     attributes:
       value: |
         Provide a general summary of your changes in the Title above
-        
+
   - type: textarea
     id: description
     attributes:
@@ -14,7 +17,7 @@ body:
       value: "your changes!"
     validations:
       required: true
-      
+
   - type: checkboxes
     id: types-of-changes
     attributes:
@@ -25,7 +28,7 @@ body:
         - label: New feature (non-breaking change which adds functionality)
         - label: Breaking change (fix or feature that would cause existing functionality to change)
           required: false
-  
+
   - type: checkboxes
     id: code-guide
     attributes:
@@ -35,7 +38,7 @@ body:
         - label: I have read the **CONTRIBUTING** document.
         - label: My code follows the code style of this project.
           required: true
-  
+
   - type: checkboxes
     id: documentation
     attributes:
@@ -45,7 +48,7 @@ body:
         - label: My change requires a change to the documentation.
         - label: I have updated the documentation accordingly.
           required: false
-  
+
   - type: checkboxes
     id: terms
     attributes:
