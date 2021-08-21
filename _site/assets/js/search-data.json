@@ -1,0 +1,164 @@
+{"0": {
+    "doc": "Abbreviations",
+    "title": "Abbreviations",
+    "content": "# Abbreviation Extra Required ## Syntax ```php \"abbr\" => (boolean|array) $value // default true ``` ## Description Adds the ability to define abbreviations. Any defined abbreviation is wrapped in an `` tag. ## Parameters If `$value` is a array, then `abbr` will be `true` by default. - **allow_custom_abbr** (boolean) The ability to define abbreviations, this is on by default. - **predefine** (array) Used to predefine abbreviations. ## Examples ---- ### Disable Disable abbreviations: ```php $Parsedown = new ParsedownExtended([ \"abbr\" => false ]); ``` ### Predefined Predefine abbreviations: ```php $Parsedown = new ParsedownExtended([ \"abbr\" => [ \"predefine\" => [ \"CSS\" => \"Cascading Style Sheet\", \"HTML\" => \"Hyper Text Markup Language\", \"JS\" => \"JavaScript\" ] ] ]); ``` ### Predefined only Disable user/custom abbreviations by using `allow_custom_abbr` ```php $Parsedown = new ParsedownExtended([ \"abbr\" => [ \"allow_custom_abbr\": false \"predefine\" => [ \"CSS\" => \"Cascading Style Sheet\", \"HTML\" => \"Hyper Text Markup Language\", \"JS\" => \"JavaScript\" ] ] ]); ``` ",
+    "url": "/docs/abbreviations.html",
+    "relUrl": "/docs/abbreviations.html"
+  },"1": {
+    "doc": "Blockqoutes",
+    "title": "Blockqoutes",
+    "content": "# Blockqoutes ## Syntax ```php \"qoutes\" => (boolean) $value // default true ``` ## Description Used when you want to reference an external source using quotation marks. You represent any blockquote by preceding the first line of the block quote with a greater-than sign or angle bracket (>). Any defined abbreviation is wrapped in an `` tag. ## Examples ### Disable Disable blockqoutes: ```php $Parsedown = new ParsedownExtended([ \"qoutes\" => false ]); ``` ",
+    "url": "/docs/blockqoutes.html",
+    "relUrl": "/docs/blockqoutes.html"
+  },"2": {
+    "doc": "Code blocks and snippets",
+    "title": "Code blocks and snippets",
+    "content": "# Code ## Syntax ```php \"code\" => (boolean) $value // default Default ``` ## Examples ### Disable Disable code ```php $Parsedown = new ParsedownExtended([ 'code' => false ]); ``` ",
+    "url": "/docs/code%20blocks%20and%20snippets/code%20blocks%20and%20snippets.html",
+    "relUrl": "/docs/code%20blocks%20and%20snippets/code%20blocks%20and%20snippets.html"
+  },"3": {
+    "doc": "Code blocks",
+    "title": "Code blocks",
+    "content": "# Code blocks ## Syntax ```php \"'blocks'\" => (boolean) $value // default true ``` ## Description Formatting code blocks is useful when you have a bigger chunk of code to include in your Markdown file. Format your code blocks by indenting every line of your code block using one tab, or use three backticks (\\`\\`\\`) before and after your code ## Examples ### Disable Disable code blocks ```php $Parsedown = new ParsedownExtended([ 'code' => { 'blocks' => false } ]); ``` ",
+    "url": "/docs/code%20blocks%20and%20snippets/code%20blocks.html",
+    "relUrl": "/docs/code%20blocks%20and%20snippets/code%20blocks.html"
+  },"4": {
+    "doc": "Code snippets",
+    "title": "Code snippets",
+    "content": "# Code snippets ## Syntax ```php \"snippets\" => (boolean) $value // default true ``` ## Description Used to reference snippets of code as examples. This is particularly common in technical documentation. Markdown allows you to format code snippets using backticks (`) that wrap your code snippet ## Examples ### Disable Disable code snippets ```php $Parsedown = new ParsedownExtended([ 'code' => { 'snippets' => false } ]); ``` ",
+    "url": "/docs/code%20blocks%20and%20snippets/code%20snippets.html",
+    "relUrl": "/docs/code%20blocks%20and%20snippets/code%20snippets.html"
+  },"5": {
+    "doc": "Definition Lists",
+    "title": "Definition Lists",
+    "content": "# Definition list Extra Required ## Syntax ```php \"definition_list\" => (boolean) $value // default true ``` ## Description Allows you to create definition lists of terms and their corresponding definitions. ## Examples ### Disable Disable definition lists: ```php $Parsedown = new ParsedownExtended([ \"definition_list\" => false ]); ``` ",
+    "url": "/docs/definition%20list.html",
+    "relUrl": "/docs/definition%20list.html"
+  },"6": {
+    "doc": "Diagrams",
+    "title": "Diagrams",
+    "content": "# Diagrams ## Syntax ```php \"diagrams\" => (boolean) $value // default false ``` ## Description ParsedownExtended adds the ability to use diagrams in your markdown, by adding support for [ChartJS](https://www.chartjs.org) and [Mermaid](https://mermaid-js.github.io/mermaid/). By looking out for code related to diagrams and avoid it so it doesn\"t get manipulated. To use the function you will have to include their .js files in your project. ## Examples ### Enable Enable diagrams ```php $Parsedown = new ParsedownExtended([ \"diagrams\" => true ]); ``` ",
+    "url": "/docs/diagrams.html",
+    "relUrl": "/docs/diagrams.html"
+  },"7": {
+    "doc": "Emoji Shortcodes",
+    "title": "Emoji Shortcodes",
+    "content": "# Emoji Shortcodes ## Syntax ```php \"emojis\" => (boolean) $value // default false ``` ## Description Allows you to insert emoji by typing emoji shortcodes. These begin and end with a colon and include the name of an emoji. Gone camping! ⛺ Be back soon. That is so funny! 😂 ```markdown Gone camping! :tent: Be back soon. That is so funny! :joy: ``` ## Examples ### Enable Enable emojis shortcodes ```php $Parsedown = new ParsedownExtended([ \"emojis\" => true ]); ``` ",
+    "url": "/docs/emoji%20shortcodes.html",
+    "relUrl": "/docs/emoji%20shortcodes.html"
+  },"8": {
+    "doc": "Emphasis",
+    "title": "Emphasis",
+    "content": "# Emphasis ## Syntax ```php \"emphasis\" => (boolean) $value // default true ``` ## Description When writing your content in Markdown, you might want to place a bit more emphasis on certain words or phrases. you can emphasize your text in either italics, bold, or both. ## Examples ### Disable Disable emphasis ```php $Parsedown = new ParsedownExtended([ \"emphasis\" => false ]); ``` ",
+    "url": "/docs/emphasis.html",
+    "relUrl": "/docs/emphasis.html"
+  },"9": {
+    "doc": "Footnotes",
+    "title": "Footnotes",
+    "content": "# Footnotes Extra Required ## Syntax ```php \"footnotes\" => (boolean) $value // default true ``` ## Description Footnotes allow you to add notes and references without cluttering the body of the document. When you create a footnote, a superscript number with a link appears where you added the footnote reference. Readers can click the link to jump to the content of the footnote at the bottom of the page. ## Examples ### Disable Disable emphasis ```php $Parsedown = new ParsedownExtended([ \"footnotes\" => false ]); ``` ",
+    "url": "/docs/footnotes.html",
+    "relUrl": "/docs/footnotes.html"
+  },"10": {
+    "doc": "Headings",
+    "title": "Headings",
+    "content": "# Headings ## Syntax ```php \"headings\" => (boolean|array) $value // default true ``` ## Description headings are formatted with hashes (#) in front of the line containing your heading. You can use up to six hashes, with the number of hashes corresponding to a heading level. ## Parameters If `$value` is a array, then `headings` will be `true` by default. - **auto_anchors** (boolean) To enable/disable automatic heading permalink. - **allowed** (array) Choose what headings level can be used in the markdown. - **blacklist** (array) Blacklist any ID's from being used as a anchors. ## Examples ### Disable Disable headings ```php $Parsedown = new ParsedownExtended([ \"headings\" => true ]); ``` ### Heading permalink To enable/disable automatic heading permalink use the following: ```php $Parsedown = new ParsedownExtended([ \"headings\" => [ \"auto_anchors\" => true ] ]); ``` ### Allowed Choose what headings level can be used in the markdown ```php $Parsedown = new ParsedownExtended([ \"headings\" => [ \"allowed\" => [\"h1\",\"h2\",\"h3\"] ] ]); ``` ### Blacklist Using blacklists. ```php $Parsedown = new ParsedownExtended([ \"headings\" => [ \"blacklist\" => [\"my_blacklisted_header_id\",\"another_blacklisted_id\"] ] ]); ``` ",
+    "url": "/docs/headings.html",
+    "relUrl": "/docs/headings.html"
+  },"11": {
+    "doc": "Images",
+    "title": "Images",
+    "content": "# Images ## Syntax ```php \"images\" => (boolean) $value // default true ``` ## Description A picture is worth a thousand words, as they say. Inserting an image into your Markdown file is similar to the formatting for links. ## Examples ### Disable Disable images ```php $Parsedown = new ParsedownExtended([ \"images\" => false ]); ``` ",
+    "url": "/docs/images.html",
+    "relUrl": "/docs/images.html"
+  },"12": {
+    "doc": "Keystrokes",
+    "title": "Keystrokes",
+    "content": "# Keystrokes ## Syntax ```php \"keystrokes\" => (boolean) $value // default true ``` ## Description A keystroke is the pressing of a single key in a physical or virtual keyboard or any other input device. ## Examples ### Disable Disable keystrokes ```php $Parsedown = new ParsedownExtended([ \"keystrokes\" => false ]); ``` ",
+    "url": "/docs/keystrokes.html",
+    "relUrl": "/docs/keystrokes.html"
+  },"13": {
+    "doc": "Links",
+    "title": "Links",
+    "content": "# Links ## Syntax ```php \"links\" => (boolean|array) $value // default true ``` ## Description Description ## Parameters If `$value` is a array, then `links` will be `true` by default. - **email_links** (boolean) The ability to convert `` into a mailto link, this is on by default. ## Examples ### Disable Disable links ```php $Parsedown = new ParsedownExtended([ \"links\" => false ]); ``` ### Disable Emails Disable mailto links ```php $Parsedown = new ParsedownExtended([ \"links\" => [ \"email_links\" => false ] ]); ``` ",
+    "url": "/docs/links.html",
+    "relUrl": "/docs/links.html"
+  },"14": {
+    "doc": "Lists",
+    "title": "Lists",
+    "content": "# Lists ## Syntax ```php \"lists\" => (boolean|array) $value // default true ``` ## Description Lists can be organized into either ordered, unordered lists and [task](/docs/lists/task%20list.html). And both types of lists can also be nested. | First ordered list item. | Second ordered list item. | Third ordered list item. | Fourth ordered list item. | Fifth ordered list item. | . ``` - First ordered list item. - Second ordered list item. - Third ordered list item. - Fourth ordered list item. - Fifth ordered list item. ``` ## Examples ### Disable Disable lists ```php $Parsedown = new ParsedownExtended([ 'lists' => false ]); ``` ",
+    "url": "/docs/lists/lists.html",
+    "relUrl": "/docs/lists/lists.html"
+  },"15": {
+    "doc": "Mark",
+    "title": "Mark",
+    "content": "# Mark ## Syntax ```php \"mark\" => (boolean) $value // default true ``` ## Description Description ## Examples ### Disable Disable highlights ```php $Parsedown = new ParsedownExtended([ 'mark' => false ]); ``` ",
+    "url": "/docs/mark.html",
+    "relUrl": "/docs/mark.html"
+  },"16": {
+    "doc": "Math",
+    "title": "Math",
+    "content": "# Math ## Syntax ```php \"math\" => (boolean|array) $value // default false ``` ## Description ParsedownExtended adds the ability to use LaTeX in your markdown, by using regular expression to find and recognize LaTeX to avoid formatting it. This enables you to use a library like [KaTeX](https://katex.org) to make the on-device rendering of the code. ## Eamples ### Enable To enable LaTeX support: ```php $Parsedown = new ParsedownExtended([ \"math\" => true ]); ``` ### Single Dollar Match If you want to use single dollar to active LaTeX mode you can do the following: ```php $Parsedown = new ParsedownExtended([ \"math\" => [ \"single_dollar\" => true ] ]); ``` ",
+    "url": "/docs/math.html",
+    "relUrl": "/docs/math.html"
+  },"17": {
+    "doc": "Smartypants",
+    "title": "Smartypants",
+    "content": "# Smartypants ## Syntax ```php \"smarty\" => (boolean|array) $value // default true ``` ## Description Converts ASCII dashes, quotes and ellipses to their HTML entity equivalents. ASCII symbol | Replacements | HTML Entities | Substitution Keys ------------ | --------------- | ------------------- | ----------------- `''` | &lsquo; &rsquo; | `&lsquo;` `&rsquo;` | `\"left-single-quote\"`, `\"right-single-quote\"` `\"\"` | &ldquo; &rdquo; | `&ldquo;` `&rdquo;` | `\"left-double-quote\"`, `\"right-double-quote\"` `>` | &laquo; &raquo; | `&laquo;` `&raquo;` | `\"left-angle-quote\"`, `\"right-angle-quote\"` `...` | &hellip; | `&hellip;` | `\"ellipsis\"` `--` | &ndash; | `&ndash;` | `\"ndash\"` `---` | &mdash; | `&mdash;` | `\"mdash\"` ## Parameters If `$value` is a array, then `smarty` will be `true` by default. - **smart_dashes** (boolean) Whether to convert dashes. - **smart_quotes** (boolean) Whether to convert straight quotes. - **smart_angled_quotes** (boolean) Whether to convert angled quotes. - **smart_ellipses** (boolean) Whether to convert ellipses. - **smart_shortcodes** (boolean) Whether to convert shortcodes. - **substitutions** (array) Overwrite default substitutions. ## Examples ### Substitutions Using the configuration option `substitutions` you can overwrite the default substitutions. Just pass a dict mapping (a subset of) the keys to the substitution strings. For example, one might use the following configuration to get correct quotes for the German language: ```php { \"smarty\": { \"substitutions\": { \"left-single-quote\": \"&sbquo;\", # sb is not a typo! \"right-single-quote\": \"&lsquo;\", \"left-double-quote\": \"&bdquo;\", \"right-double-quote\": \"&ldquo;\" } } } ``` ### Enable Enable smartypants ```php $Parsedown = new ParsedownExtended([ 'smarty' => true ]); ``` ",
+    "url": "/docs/smartypants.html",
+    "relUrl": "/docs/smartypants.html"
+  },"18": {
+    "doc": "Strikethrough",
+    "title": "Strikethrough",
+    "content": "# Strikethrough ## Syntax ```php \"strikethrough\" => (boolean) $value // default true ``` ## Description You can strikethrough words by putting a horizontal line through the center of them. The result looks ~~like this~~. This feature allows you to indicate that certain words are a mistake not meant for inclusion in the document. To strikethrough words, use two tilde symbols (~~) before and after the words. ## Examples ### Disable Disable Strikethrough ```php $Parsedown = new ParsedownExtended([ \"strikethrough\" => false ]); ``` ",
+    "url": "/docs/strikethrough.html",
+    "relUrl": "/docs/strikethrough.html"
+  },"19": {
+    "doc": "Superscript",
+    "title": "Superscript",
+    "content": "# Superscript ## Syntax ```php \"sub\" => (boolean) $value // default false ``` ## Examples ### Enable Enable subscripts ```php $Parsedown = new ParsedownExtended([ 'sub' => true ]); ``` ",
+    "url": "/docs/super%20and%20subscript/sub.html",
+    "relUrl": "/docs/super%20and%20subscript/sub.html"
+  },"20": {
+    "doc": "Subscript",
+    "title": "Subscript",
+    "content": "# Subscript ## Syntax ```php \"sup\" => (boolean) $value // default false ``` ## Examples ### Enable Enable superscripts ```php $Parsedown = new ParsedownExtended([ 'sup' => true ]); ``` ",
+    "url": "/docs/super%20and%20subscript/sup.html",
+    "relUrl": "/docs/super%20and%20subscript/sup.html"
+  },"21": {
+    "doc": "Super and Subscript",
+    "title": "Super and Subscript",
+    "content": "# Super and Subscript ## Description A subscript or superscript is a character (such as a number or letter) that is set slightly below or above the normal line of type, respectively. It is usually smaller than the rest of the text. Subscripts appear at or below the baseline, while superscripts are above. ",
+    "url": "/docs/super%20and%20subscript/super%20and%20subscript.html",
+    "relUrl": "/docs/super%20and%20subscript/super%20and%20subscript.html"
+  },"22": {
+    "doc": "Table of Content",
+    "title": "Table of Content",
+    "content": "# Table of Content ## Syntax ```php \"toc\" => (boolean|array) $value // default false ``` ## Description Automatic create a ToC(Table of Content) there include every heading in the document, unless you don't want it to be included. You do not need to add anchors individually to every title. This is an automated process. ## Parameters If `$value` is a array, then `toc` will be `true` by default. - **delimiter** (boolean) Whether to convert dashes. - **headings** (boolean) Whether to convert dashes. - **lowercase** (boolean) Whether to convert dashes. - **transliterate** (boolean) Whether to convert dashes. - **urlencode** (boolean) Whether to convert dashes. - **set_toc_tag** (string) Sets user defined ToC markdown tag. Use this method before `text()` or `body()` method if you want to use the ToC tag rather than the \"`[toc]`\". Empty value sets the default ToC tag. ### Seperated ToC list With the `contentsList()` method, you can get just the \"ToC\". ```php $toc = $Parsedown->contentsList(); ``` Returns the parsed content WITHOUT parsing `[toc]` tag. ```php $body = $Parsedown->body(); ``` Returns the parsed content and `[toc]` tag(s) parsed as well. ```php $text = $Parsedown->text(); ``` ```php // Parse body and ToC separately $content = file_get_contents('sample.md'); $Parsedown = new \\ParsedownToC(); $body = $Parsedown->body($content); $toc = $Parsedown->contentsList(); echo $toc; // Table of Contents in . list echo $body; // Main body ``` ## Examples ### Enable Enable ToC ```php $Parsedown = new ParsedownExtended([ 'toc' => true ]); ``` ### Delimiter ```php $Parsedown = new ParsedownExtended([ 'toc' => [ 'delimiter' => true ] ]); ``` ### Headings Choose what headings level to include in the ToC list. ```php $Parsedown = new ParsedownExtended([ 'toc' => [ 'headings' => ['h1','h2','h3'] ] ]); ``` ### Lowercase ```php $Parsedown = new ParsedownExtended([ 'toc' => [ 'lowercase' => true ] ]); ``` ### Transliterate ```php $Parsedown = new ParsedownExtended([ 'toc' => [ 'transliterate' => true ] ]); ``` ### Urlencode ```php $Parsedown = new ParsedownExtended([ 'toc' => [ 'urlencode' => true ] ]); ``` ",
+    "url": "/docs/table%20of%20content.html",
+    "relUrl": "/docs/table%20of%20content.html"
+  },"23": {
+    "doc": "Tables",
+    "title": "Tables",
+    "content": "# Tables ## Syntax ```php \"tables\" => (boolean|array) $value // default true ``` ## Description To add a table, use three or more hyphens (---) to create each column’s header, and use pipes (|) to separate each column. For compatibility, you should also add a pipe on either end of the row. ## Parameters If `$value` is a array, then `tables` will be `true` by default. - **tablespan** (boolean) Whether to allow tablespan, disabled by default. ## Examples ### Tablespan | Colspan | for thead | . | Lorem | ipsum | dolor | sit | amet | . | - | right align | . | . | , | center align | 2x2 cell | . | another 2x2 | + | . | | | ! | . ``` | > | > | Colspan | > | for thead | ----- | :---------: | -----------: | ----------- | --------- | Lorem | ipsum | dolor | sit | amet | ^ | - | > | right align | . | , | > | center align | > | 2x2 cell | > | another 2x2 | + | > | ^ | > | ^ | | ! | ``` ### Disable Disable tables ```php $Parsedown = new ParsedownExtended([ 'tables' => false ]); ``` ### Enable Tablespan Enable tablespan ```php $Parsedown = new ParsedownExtended([ 'tables' => { 'tablespan' => true } ]); ``` ",
+    "url": "/docs/tables.html",
+    "relUrl": "/docs/tables.html"
+  },"24": {
+    "doc": "Task list",
+    "title": "Task list",
+    "content": "# Task ## Syntax ```php \"task\" => (boolean) $value // default true ``` ## Description Task lists allow you to create a list of items with checkboxes. checkboxes will be displayed next to the content. To create a task list, add dashes (-) and brackets with a space ([ ]) in front of task list items. To select a checkbox, add an x in between the brackets ([x]). | Write the press release | Update the website | Contact the media | . ```markdown - [x] Write the press release - [ ] Update the website - [ ] Contact the media ``` ## Examples ### Disable Disable tables ```php $Parsedown = new ParsedownExtended([ 'lists' => { 'task' => false } ]); ``` ",
+    "url": "/docs/lists/task%20list.html",
+    "relUrl": "/docs/lists/task%20list.html"
+  },"25": {
+    "doc": "Thematic Breaks",
+    "title": "Thematic Breaks",
+    "content": "# Thematic Breaks ## Syntax ```php \"thematic_breaks\" => (boolean) $value // default true ``` ## Description A thematic breaks is a useful little element that you can use to visually split up blocks of text within your Markdown file. A thematic breaks is represented by three or more hyphens (-), asterisks (*), or underscores (_). Whichever symbol you use renders the same output. ## Examples ### Disable Disable thematic breaks ```php $Parsedown = new ParsedownExtended([ \"thematic_breaks\" => false ]); ``` ",
+    "url": "/docs/thematic%20breaks.html",
+    "relUrl": "/docs/thematic%20breaks.html"
+  },"26": {
+    "doc": "Typographer",
+    "title": "Typographer",
+    "content": "# Typographer ## Syntax ```php \"typographer\" => (boolean) $value // default false ``` ## Description Adds some useful shortcodes to make typing faster, while also provide a very limited misspell helper Shortcode | Replacements | HTML Entities | Substitution Keys ------------ | --------------- | ------------------- | ----------------- `(c)` | &copy; | `&copy;` | `\"copy\"` `(r)` | &reg; | `&reg;` | `\"reg\"` `(tm)` | &trade; | `&trade;` | `\"trade\"` `(p)` | &para; | `&para;` | `\"para\"` `+-` | &plusmn; | `&plusmn;` | `\"plusmn\"` | Misspell | Result | ---------- | -------- | .. | ... | ..... | ... | ?.... | ?.. | !.... | !.. | ## Examples ### Enable Enable typographer ```php $Parsedown = new ParsedownExtended([ 'typographer' => true ]); ``` ",
+    "url": "/docs/typographer.html",
+    "relUrl": "/docs/typographer.html"
+  }
+}

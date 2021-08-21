@@ -1,0 +1,203 @@
+//
+// The basic two column layout
+//
+
+.sidebar {
+  position: fixed;
+  z-index: 0;
+  display: flex;
+  flex-wrap: wrap;
+  max-width: $nav-width;
+  background-color: $sidebar-color;
+  height: 100%;
+  overflow-y: hidden;
+}
+
+.main-toc {
+  max-width: $nav-width;
+  padding-top: 1rem;
+  padding-right: 15px;
+}
+.main-toc > ul {
+  border-left: 1px solid $border-color;
+}
+
+.main-toc ul {
+  list-style-type: none;
+  padding-left: 15px;
+}
+
+main {
+  position: relative;
+  margin-left: $nav-width;
+}
+
+.main-content {
+  max-width: calc(100vw - #{$nav-width * 2});
+  padding-left: 30px;
+}
+
+.main-header {
+  display: none;
+  background-color: $sidebar-color;
+
+  @include mq(md) {
+    display: flex;
+    justify-content: space-between;
+    height: $header-height;
+    background-color: $body-background-color;
+    border-bottom: $border $border-color;
+  }
+
+  &.nav-open {
+    display: block;
+
+    @include mq(md) {
+      display: flex;
+    }
+  }
+}
+
+.site-nav,
+.site-header,
+.site-footer {
+  width: 100%;
+
+  @include mq(lg) {
+    width: $nav-width;
+  }
+}
+
+.site-nav {
+  height: 100%;
+  overflow-y: auto;
+  max-height: calc(100vh - #{$header-height});
+
+  /* width */
+  &::-webkit-scrollbar {
+    width: 8px;
+  }
+
+  /* Track */
+  &::-webkit-scrollbar-track {
+    background: #f1f1f1;
+  }
+
+  /* Handle */
+  &::-webkit-scrollbar-thumb {
+    background: silver;
+    border-radius: 10px;
+  }
+
+  /* Handle on hover */
+  &::-webkit-scrollbar-thumb:hover {
+    background: #a7a7a7;
+  }
+}
+
+.site-header {
+  display: flex;
+  min-height: $header-height;
+  align-items: center;
+
+  @include mq(md) {
+    height: $header-height;
+    max-height: $header-height;
+    border-bottom: $border $border-color;
+  }
+}
+
+.site-title {
+  @include container;
+  flex-grow: 1;
+  display: flex;
+  height: 100%;
+  align-items: center;
+  padding-top: $sp-3;
+  padding-bottom: $sp-3;
+  color: $body-heading-color;
+  @include fs-5;
+
+  @include mq(md) {
+    padding-top: $sp-2;
+    padding-bottom: $sp-2;
+  }
+}
+
+@if variable-exists(logo) {
+  .site-logo {
+    width: 100%;
+    height: 100%;
+    background-image: url($logo);
+    background-repeat: no-repeat;
+    background-position: left center;
+    background-size: contain;
+  }
+}
+
+.site-button {
+  display: flex;
+  height: 100%;
+  padding: $gutter-spacing-sm;
+  align-items: center;
+}
+
+@include mq(md) {
+  .site-header .site-button {
+    display: none;
+  }
+}
+
+.site-title:hover {
+  background-image: linear-gradient(
+    -90deg,
+    rgba($feedback-color, 1) 0%,
+    rgba($feedback-color, 0.8) 80%,
+    rgba($feedback-color, 0) 100%
+  );
+}
+
+.site-button:hover {
+  background-image: linear-gradient(
+    -90deg,
+    rgba($feedback-color, 1) 0%,
+    rgba($feedback-color, 0.8) 100%
+  );
+}
+
+// stylelint-disable selector-max-type
+
+body {
+  position: relative;
+  padding-bottom: $sp-10;
+  overflow-y: scroll;
+
+  @include mq(md) {
+    position: static;
+    padding-bottom: 0;
+  }
+}
+
+// stylelint-enable selector-max-type
+
+.site-footer {
+  @include container;
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  padding-top: $sp-4;
+  padding-bottom: $sp-4;
+  color: $grey-dk-000;
+  @include fs-2;
+
+  @include mq(md) {
+    position: static;
+    justify-self: end;
+  }
+}
+
+.icon {
+  width: $sp-5;
+  height: $sp-5;
+  color: $link-color;
+}
