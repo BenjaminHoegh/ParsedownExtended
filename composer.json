@@ -19,25 +19,15 @@
   ],
   "require": {
     "php": ">=7.2",
-    "ext-dom": "*",
-    "ext-mbstring": "*",
     "erusev/parsedown": "^1.7",
     "erusev/parsedown-extra": "^0.8.1"
   },
-  "require-dev": {
-    "vimeo/psalm": "^4.9"
-  },
   "scripts": {
     "lint": "for file in `git ls-files '*.php' ':!:vendor/*' ':!:*/vendor/*'`; do php -l $file; done",
-    "psalm": "vendor/bin/psalm --no-cache",
     "cs": "php-cs-fixer fix --dry-run --diff",
-    "sa": [
-        "@psalm"
-    ],
     "ci": [
         "composer validate --strict",
         "@lint",
-        "@sa",
         "@cs"
     ]
   },

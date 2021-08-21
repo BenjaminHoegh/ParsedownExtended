@@ -1,25 +1,6 @@
-<p align="center">
-  <a href="https://github.com/BenjaminHoegh/ParsedownExtended">
-    <!--<img src="https://github.com/BenjaminHoegh/Chameleon/blob/master/docs/assets/images/logo/logo.svg" alt="" width=129 height=129>-->
-    <img alt="ParsedownExtended" src="https://github.com/BenjaminHoegh/ParsedownExtended/raw/master/docs/img/parsedownExtended.png" height="330" />
-  </a>
-
-  <h3 align="center">Parsedown Extended</h3>
-
-  <p align="center">
-    <a href="https://benjaminhoegh.github.io/ParsedownExtended/configurations"><strong>Explore Documentation »</strong></a>
-    <br>
-    <br>
-    <a href="https://github.com/BenjaminHoegh/ParsedownExtended/issues/new?template=bug_report.md">Report bug</a>
-    ·
-    <a href="https://github.com/BenjaminHoegh/ParsedownExtended/issues/new?template=feature_request.md&labels=feature">Request feature</a>
-    ·
-    <a href="https://github.com/BenjaminHoegh/ParsedownExtended/discussions">Discussions</a>
-  </p>
-
-</p>
-
-<br>
+---
+layout: page
+---
 
 [![Github All Releases](https://img.shields.io/github/release/BenjaminHoegh/ParsedownExtended.svg?style=flat-square)](https://github.com/BenjaminHoegh/ParsedownExtended/releases) [![GitHub](https://img.shields.io/github/license/BenjaminHoegh/ParsedownExtended?style=flat-square)](https://github.com/BenjaminHoegh/ParsedownExtended/blob/master/LICENSE.md)
 
