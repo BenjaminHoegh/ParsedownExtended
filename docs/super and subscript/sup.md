@@ -4,7 +4,7 @@ title: Subscript
 parent: Super and Subscript
 ---
 
-# Subscript
+# Superscript
 
 ## Syntax
 ```php
