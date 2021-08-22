@@ -1,7 +1,7 @@
 <p align="center">
   <a href="https://github.com/BenjaminHoegh/ParsedownExtended">
     <!--<img src="https://github.com/BenjaminHoegh/Chameleon/blob/main/docs/assets/images/logo/logo.svg" alt="" width=129 height=129>-->
-    <img alt="ParsedownExtended" src="https://github.com/BenjaminHoegh/ParsedownExtended/raw/main/docs/img/parsedownExtended.png" height="330" />
+    <img alt="ParsedownExtended" src="https://github.com/BenjaminHoegh/ParsedownExtended/blob/gh-pages/img/parsedownExtended.png" height="330" />
   </a>
 
   <h3 align="center">Parsedown Extended</h3>
