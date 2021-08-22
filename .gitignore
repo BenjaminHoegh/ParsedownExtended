@@ -1,5 +1,1 @@
 .nova/
-vendor/
-lab/
-docs/
-.php_cs.cache
