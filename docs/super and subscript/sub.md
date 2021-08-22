@@ -8,7 +8,7 @@ parent: Super and Subscript
 
 ## Syntax
 ```php
-"sub" => (boolean) $value // default false
+"sup" => (boolean) $value // default false
 ```
 
 ## Examples
@@ -18,6 +18,6 @@ Enable subscripts
 
 ```php
 $Parsedown = new ParsedownExtended([
-    'sub' => true
+    'sup' => true
 ]);
 ```
