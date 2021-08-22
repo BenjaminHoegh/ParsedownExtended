@@ -4,6 +4,10 @@
 
   <link rel="stylesheet" href="{{ '/assets/css/bootstrap-grid.min.css' | relative_url }}">
   <link rel="stylesheet" href="{{ '/assets/css/docs-default.css' | relative_url }}">
+  
+  {% if site.search_enabled != false %}
+    <script type="text/javascript" src="{{ '/assets/js/vendor/lunr.min.js' | relative_url }}"></script>
+  {% endif %}
 
   <script type="text/javascript" src="{{ '/assets/js/docs.js' | relative_url }}"></script>
 
