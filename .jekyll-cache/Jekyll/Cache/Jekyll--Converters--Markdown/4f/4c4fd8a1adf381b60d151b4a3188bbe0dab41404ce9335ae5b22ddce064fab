@@ -1,0 +1,16 @@
+I"t<h1 id="superscript">Superscript</h1>
+
+<h2 id="syntax">Syntax</h2>
+<div class="language-php highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="s2">"sup"</span> <span class="o">=&gt;</span> <span class="p">(</span><span class="n">boolean</span><span class="p">)</span> <span class="nv">$value</span> <span class="c1">// default false</span>
+</code></pre></div></div>
+
+<h2 id="examples">Examples</h2>
+
+<h3 id="enable">Enable</h3>
+<p>Enable superscripts</p>
+
+<div class="language-php highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nv">$Parsedown</span> <span class="o">=</span> <span class="k">new</span> <span class="nc">ParsedownExtended</span><span class="p">([</span>
+    <span class="s1">'sup'</span> <span class="o">=&gt;</span> <span class="kc">true</span>
+<span class="p">]);</span>
+</code></pre></div></div>
+:ET

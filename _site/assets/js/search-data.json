@@ -115,13 +115,13 @@
   },"19": {
     "doc": "Superscript",
     "title": "Superscript",
-    "content": "# Superscript ## Syntax ```php \"sub\" => (boolean) $value // default false ``` ## Examples ### Enable Enable subscripts ```php $Parsedown = new ParsedownExtended([ 'sub' => true ]); ``` ",
+    "content": "# Subscript ## Syntax ```php \"sub\" => (boolean) $value // default false ``` ## Examples ### Enable Enable subscripts ```php $Parsedown = new ParsedownExtended([ 'sub' => true ]); ``` ",
     "url": "/docs/super%20and%20subscript/sub.html",
     "relUrl": "/docs/super%20and%20subscript/sub.html"
   },"20": {
     "doc": "Subscript",
     "title": "Subscript",
-    "content": "# Subscript ## Syntax ```php \"sup\" => (boolean) $value // default false ``` ## Examples ### Enable Enable superscripts ```php $Parsedown = new ParsedownExtended([ 'sup' => true ]); ``` ",
+    "content": "# Superscript ## Syntax ```php \"sup\" => (boolean) $value // default false ``` ## Examples ### Enable Enable superscripts ```php $Parsedown = new ParsedownExtended([ 'sup' => true ]); ``` ",
     "url": "/docs/super%20and%20subscript/sup.html",
     "relUrl": "/docs/super%20and%20subscript/sup.html"
   },"21": {
