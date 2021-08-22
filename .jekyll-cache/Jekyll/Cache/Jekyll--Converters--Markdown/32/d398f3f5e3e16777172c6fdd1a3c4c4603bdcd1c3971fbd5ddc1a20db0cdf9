@@ -1,0 +1,38 @@
+I"<h1 id="links">Links</h1>
+
+<h2 id="syntax">Syntax</h2>
+<div class="language-php highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="s2">"links"</span> <span class="o">=&gt;</span> <span class="p">(</span><span class="n">boolean</span><span class="o">|</span><span class="k">array</span><span class="p">)</span> <span class="nv">$value</span> <span class="c1">// default true</span>
+</code></pre></div></div>
+
+<h2 id="description">Description</h2>
+<p>Description</p>
+
+<h2 id="parameters">Parameters</h2>
+
+<p>If <code class="language-plaintext highlighter-rouge">$value</code> is a array, then <code class="language-plaintext highlighter-rouge">links</code> will be <code class="language-plaintext highlighter-rouge">true</code> by default.</p>
+
+<ul>
+  <li><strong>email_links</strong> (boolean)<br />
+The ability to convert <code class="language-plaintext highlighter-rouge">&lt;my@email.com&gt;</code> into a mailto link, this is on by default.</li>
+</ul>
+
+<h2 id="examples">Examples</h2>
+
+<h3 id="disable">Disable</h3>
+<p>Disable links</p>
+
+<div class="language-php highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nv">$Parsedown</span> <span class="o">=</span> <span class="k">new</span> <span class="nc">ParsedownExtended</span><span class="p">([</span>
+    <span class="s2">"links"</span> <span class="o">=&gt;</span> <span class="kc">false</span>
+<span class="p">]);</span>
+</code></pre></div></div>
+
+<h3 id="disable-emails">Disable Emails</h3>
+<p>Disable mailto links</p>
+
+<div class="language-php highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nv">$Parsedown</span> <span class="o">=</span> <span class="k">new</span> <span class="nc">ParsedownExtended</span><span class="p">([</span>
+    <span class="s2">"links"</span> <span class="o">=&gt;</span> <span class="p">[</span>
+        <span class="s2">"email_links"</span> <span class="o">=&gt;</span> <span class="kc">false</span>
+    <span class="p">]</span>
+<span class="p">]);</span>
+</code></pre></div></div>
+:ET

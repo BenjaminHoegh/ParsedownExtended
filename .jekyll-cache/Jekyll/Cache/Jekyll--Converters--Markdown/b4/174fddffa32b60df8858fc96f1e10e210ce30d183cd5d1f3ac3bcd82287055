@@ -1,0 +1,34 @@
+I"<h1 id="task">Task</h1>
+
+<h2 id="syntax">Syntax</h2>
+
+<div class="language-php highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="s2">"task"</span> <span class="o">=&gt;</span> <span class="p">(</span><span class="n">boolean</span><span class="p">)</span> <span class="nv">$value</span> <span class="c1">// default true</span>
+</code></pre></div></div>
+
+<h2 id="description">Description</h2>
+<p>Task lists allow you to create a list of items with checkboxes. checkboxes will be displayed next to the content. To create a task list, add dashes (-) and brackets with a space ([ ]) in front of task list items. To select a checkbox, add an x in between the brackets ([x]).</p>
+
+<div class="code-example">
+<ul class="task-list">
+  <li class="task-list-item"><input type="checkbox" class="task-list-item-checkbox" disabled="disabled" checked="checked" />Write the press release</li>
+  <li class="task-list-item"><input type="checkbox" class="task-list-item-checkbox" disabled="disabled" />Update the website</li>
+  <li class="task-list-item"><input type="checkbox" class="task-list-item-checkbox" disabled="disabled" />Contact the media</li>
+</ul>
+</div>
+<div class="language-markdown highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="p">-</span> [x] Write the press release
+<span class="p">-</span> [ ] Update the website
+<span class="p">-</span> [ ] Contact the media
+</code></pre></div></div>
+
+<h2 id="examples">Examples</h2>
+
+<h3 id="disable">Disable</h3>
+<p>Disable tables</p>
+
+<div class="language-php highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nv">$Parsedown</span> <span class="o">=</span> <span class="k">new</span> <span class="nc">ParsedownExtended</span><span class="p">([</span>
+    <span class="s1">'lists'</span> <span class="o">=&gt;</span> <span class="p">{</span>
+        <span class="s1">'task'</span> <span class="o">=&gt;</span> <span class="kc">false</span>
+    <span class="p">}</span>
+<span class="p">]);</span>
+</code></pre></div></div>
+:ET

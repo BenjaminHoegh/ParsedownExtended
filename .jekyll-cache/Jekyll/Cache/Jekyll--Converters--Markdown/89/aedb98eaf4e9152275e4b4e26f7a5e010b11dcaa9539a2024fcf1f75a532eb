@@ -1,0 +1,84 @@
+I"�<p><a href="https://github.com/BenjaminHoegh/ParsedownExtended/releases"><img src="https://img.shields.io/github/release/BenjaminHoegh/ParsedownExtended.svg?style=flat-square" alt="Github All Releases" /></a> <a href="https://github.com/BenjaminHoegh/ParsedownExtended/blob/master/LICENSE.md"><img src="https://img.shields.io/github/license/BenjaminHoegh/ParsedownExtended?style=flat-square" alt="GitHub" /></a></p>
+
+<p>Table of contents</p>
+
+<ul>
+  <li><a href="#getting-started">Getting started</a></li>
+  <li><a href="#bugs-and-feature-requests">Bugs and feature requests</a></li>
+  <li><a href="#contributing">Contributing</a></li>
+  <li><a href="#community">Community</a></li>
+  <li><a href="#copyright-and-license">Copyright and license</a></li>
+</ul>
+
+<h2 id="features">Features</h2>
+<ul>
+  <li>Task</li>
+  <li>Smartypants</li>
+  <li>Emojis</li>
+  <li>Heading permalink</li>
+  <li>Table of content</li>
+  <li>Keystrokes</li>
+  <li>Highlight</li>
+  <li>Super and subscript</li>
+  <li>Diagrams</li>
+  <li>LaTeX</li>
+  <li>Predefined abbreviation</li>
+  <li>Options for every element of markdown</li>
+  <li>And more…</li>
+</ul>
+
+<h2 id="getting-started">Getting started</h2>
+
+<h3 id="manuel">Manuel</h3>
+<p>Download the source code from the latest release
+You must include <code class="language-plaintext highlighter-rouge">parsedown.php</code> or <code class="language-plaintext highlighter-rouge">parsedownExtra.php</code>
+Include <code class="language-plaintext highlighter-rouge">ParsedownExtended.php</code></p>
+
+<div class="language-php highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">require</span> <span class="s1">'Parsedown.php'</span><span class="p">;</span>
+<span class="k">require</span> <span class="s1">'ParsedownExtra.php'</span><span class="p">;</span> <span class="c1">// optional</span>
+<span class="k">require</span> <span class="s1">'ParsedownExtended.php'</span><span class="p">;</span>
+
+<span class="nv">$ParsedownExtended</span> <span class="o">=</span> <span class="k">new</span> <span class="nc">ParsedownExtended</span><span class="p">();</span>
+
+<span class="k">echo</span> <span class="nv">$ParsedownExtended</span><span class="o">-&gt;</span><span class="nf">text</span><span class="p">(</span><span class="s1">'Hello _Parsedown_!'</span><span class="p">);</span> <span class="c1"># prints: &lt;p&gt;Hello &lt;em&gt;Parsedown&lt;/em&gt;!&lt;/p&gt;</span>
+<span class="c1">// you can also parse inline markdown only</span>
+<span class="k">echo</span> <span class="nv">$ParsedownExtended</span><span class="o">-&gt;</span><span class="nf">line</span><span class="p">(</span><span class="s1">'Hello _Parsedown_!'</span><span class="p">);</span> <span class="c1"># prints: Hello &lt;em&gt;Parsedown&lt;/em&gt;!</span>
+</code></pre></div></div>
+
+<h3 id="using-composer">Using composer</h3>
+
+<p>From the command line interface, navigate to your project folder then run this command:</p>
+<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code>composer require BenjaminHoegh/parsedown-extended
+</code></pre></div></div>
+<p>Then require the auto-loader file:</p>
+<div class="language-php highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">require</span> <span class="s1">'vendor/autoload.php'</span><span class="p">;</span>
+
+<span class="nv">$ParsedownExtended</span> <span class="o">=</span> <span class="k">new</span> <span class="nc">ParsedownExtended</span><span class="p">();</span>
+
+<span class="k">echo</span> <span class="nv">$ParsedownExtended</span><span class="o">-&gt;</span><span class="nf">text</span><span class="p">(</span><span class="s1">'Hello _Parsedown_!'</span><span class="p">);</span> <span class="c1"># prints: &lt;p&gt;Hello &lt;em&gt;Parsedown&lt;/em&gt;!&lt;/p&gt;</span>
+<span class="c1">// you can also parse inline markdown only</span>
+<span class="k">echo</span> <span class="nv">$ParsedownExtended</span><span class="o">-&gt;</span><span class="nf">line</span><span class="p">(</span><span class="s1">'Hello _Parsedown_!'</span><span class="p">);</span> <span class="c1"># prints: Hello &lt;em&gt;Parsedown&lt;/em&gt;!</span>
+</code></pre></div></div>
+
+<h2 id="bugs-and-feature-requests">Bugs and feature requests</h2>
+
+<p>Have a bug or a feature request? Please first read the <a href="https://github.com/BenjaminHoegh/ParsedownExtended/blob/master/.github/CONTRIBUTING.md#using-the-issue-tracker">issue guidelines</a> and search for existing and closed issues. If your problem or idea is not addressed yet, <a href="https://github.com/BenjaminHoegh/ParsedownExtended/issues/new/choose">please open a new issue</a>.</p>
+
+<h2 id="contributing">Contributing</h2>
+
+<p>Please read through our <a href="https://github.com/BenjaminHoegh/ParsedownExtended/blob/master/.github/CONTRIBUTING.md">contributing guidelines</a>. Included are directions for opening issues, coding standards, and notes on development.</p>
+
+<p>All PHP should conform to the <a href="https://www.php-fig.org/psr/psr-12/">Code Guide</a>.</p>
+
+<h2 id="community">Community</h2>
+
+<p>Get updates on ParsedownExtended’s development and chat with the project maintainers and community members.</p>
+
+<ul>
+  <li>Join <a href="https://github.com/BenjaminHoegh/ParsedownExtended/discussions">GitHub discussions</a>.</li>
+</ul>
+
+<h2 id="copyright-and-license">Copyright and license</h2>
+
+<p>Code and documentation copyright 2021 the <a href="https://github.com/BenjaminHoegh/ParsedownExtended/graphs/contributors">ParsedownExtended Authors</a>. Code released under the <a href="https://github.com/BenjaminHoegh/ParsedownExtended/blob/master/LICENSE.md">MIT License</a>. Docs released under <a href="https://github.com/BenjaminHoegh/ParsedownExtended/blob/master/docs/LICENSE.md">Creative Commons</a>.</p>
+:ET

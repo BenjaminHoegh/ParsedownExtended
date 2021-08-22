@@ -1,0 +1,61 @@
+I"ˆ<h1 id="abbreviation-extra-required">Abbreviation <label class="label label-gray">Extra Required</label></h1>
+
+<h2 id="syntax">Syntax</h2>
+
+<div class="language-php highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="s2">"abbr"</span> <span class="o">=&gt;</span> <span class="p">(</span><span class="n">boolean</span><span class="o">|</span><span class="k">array</span><span class="p">)</span> <span class="nv">$value</span> <span class="c1">// default true</span>
+</code></pre></div></div>
+
+<h2 id="description">Description</h2>
+
+<p>Adds the ability to define abbreviations. Any defined abbreviation is wrapped in an <code class="language-plaintext highlighter-rouge">&lt;abbr&gt;</code> tag.</p>
+
+<h2 id="parameters">Parameters</h2>
+
+<p>If <code class="language-plaintext highlighter-rouge">$value</code> is a array, then <code class="language-plaintext highlighter-rouge">abbr</code> will be <code class="language-plaintext highlighter-rouge">true</code> by default.</p>
+
+<ul>
+  <li><strong>allow_custom_abbr</strong> (boolean)<br />
+The ability to define abbreviations, this is on by default.</li>
+  <li><strong>predefine</strong> (array)<br />
+Used to predefine abbreviations.</li>
+</ul>
+
+<h2 id="examples">Examples</h2>
+
+<hr />
+
+<h3 id="disable">Disable</h3>
+<p>Disable abbreviations:</p>
+<div class="language-php highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nv">$Parsedown</span> <span class="o">=</span> <span class="k">new</span> <span class="nc">ParsedownExtended</span><span class="p">([</span>
+    <span class="s2">"abbr"</span> <span class="o">=&gt;</span> <span class="kc">false</span>
+<span class="p">]);</span>
+</code></pre></div></div>
+
+<h3 id="predefined">Predefined</h3>
+<p>Predefine abbreviations:</p>
+<div class="language-php highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nv">$Parsedown</span> <span class="o">=</span> <span class="k">new</span> <span class="nc">ParsedownExtended</span><span class="p">([</span>
+    <span class="s2">"abbr"</span> <span class="o">=&gt;</span> <span class="p">[</span>
+        <span class="s2">"predefine"</span> <span class="o">=&gt;</span> <span class="p">[</span>
+            <span class="s2">"CSS"</span> <span class="o">=&gt;</span> <span class="s2">"Cascading Style Sheet"</span><span class="p">,</span>
+            <span class="s2">"HTML"</span> <span class="o">=&gt;</span> <span class="s2">"Hyper Text Markup Language"</span><span class="p">,</span>
+            <span class="s2">"JS"</span> <span class="o">=&gt;</span> <span class="s2">"JavaScript"</span>
+        <span class="p">]</span>
+    <span class="p">]</span>
+<span class="p">]);</span>
+</code></pre></div></div>
+
+<h3 id="predefined-only">Predefined only</h3>
+<p>Disable user/custom abbreviations by using <code class="language-plaintext highlighter-rouge">allow_custom_abbr</code></p>
+
+<div class="language-php highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nv">$Parsedown</span> <span class="o">=</span> <span class="k">new</span> <span class="nc">ParsedownExtended</span><span class="p">([</span>
+    <span class="s2">"abbr"</span> <span class="o">=&gt;</span> <span class="p">[</span>
+        <span class="s2">"allow_custom_abbr"</span><span class="o">:</span> <span class="kc">false</span>
+        <span class="s2">"predefine"</span> <span class="o">=&gt;</span> <span class="p">[</span>
+            <span class="s2">"CSS"</span> <span class="o">=&gt;</span> <span class="s2">"Cascading Style Sheet"</span><span class="p">,</span>
+            <span class="s2">"HTML"</span> <span class="o">=&gt;</span> <span class="s2">"Hyper Text Markup Language"</span><span class="p">,</span>
+            <span class="s2">"JS"</span> <span class="o">=&gt;</span> <span class="s2">"JavaScript"</span>
+        <span class="p">]</span>
+    <span class="p">]</span>
+<span class="p">]);</span>
+</code></pre></div></div>
+:ET

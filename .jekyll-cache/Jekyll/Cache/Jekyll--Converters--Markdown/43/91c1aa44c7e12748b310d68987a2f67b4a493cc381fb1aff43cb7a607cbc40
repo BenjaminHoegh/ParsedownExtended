@@ -1,0 +1,59 @@
+I"L<h1 id="headings">Headings</h1>
+
+<h2 id="syntax">Syntax</h2>
+
+<div class="language-php highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="s2">"headings"</span> <span class="o">=&gt;</span> <span class="p">(</span><span class="n">boolean</span><span class="o">|</span><span class="k">array</span><span class="p">)</span> <span class="nv">$value</span> <span class="c1">// default true</span>
+</code></pre></div></div>
+
+<h2 id="description">Description</h2>
+<p>headings are formatted with hashes (#) in front of the line containing your heading. You can use up to six hashes, with the number of hashes corresponding to a heading level.</p>
+
+<h2 id="parameters">Parameters</h2>
+
+<p>If <code class="language-plaintext highlighter-rouge">$value</code> is a array, then <code class="language-plaintext highlighter-rouge">headings</code> will be <code class="language-plaintext highlighter-rouge">true</code> by default.</p>
+
+<ul>
+  <li><strong>auto_anchors</strong> (boolean)<br />
+To enable/disable automatic heading permalink.</li>
+  <li><strong>allowed</strong> (array)<br />
+Choose what headings level can be used in the markdown.</li>
+  <li><strong>blacklist</strong> (array)<br />
+Blacklist any ID’s from being used as a anchors.</li>
+</ul>
+
+<h2 id="examples">Examples</h2>
+
+<h3 id="disable">Disable</h3>
+<p>Disable headings</p>
+<div class="language-php highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nv">$Parsedown</span> <span class="o">=</span> <span class="k">new</span> <span class="nc">ParsedownExtended</span><span class="p">([</span>
+    <span class="s2">"headings"</span> <span class="o">=&gt;</span> <span class="kc">true</span>
+<span class="p">]);</span>
+</code></pre></div></div>
+
+<h3 id="heading-permalink">Heading permalink</h3>
+<p>To enable/disable automatic heading permalink use the following:</p>
+<div class="language-php highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nv">$Parsedown</span> <span class="o">=</span> <span class="k">new</span> <span class="nc">ParsedownExtended</span><span class="p">([</span>
+    <span class="s2">"headings"</span> <span class="o">=&gt;</span> <span class="p">[</span>
+        <span class="s2">"auto_anchors"</span> <span class="o">=&gt;</span> <span class="kc">true</span>
+    <span class="p">]</span>
+<span class="p">]);</span>
+</code></pre></div></div>
+
+<h3 id="allowed">Allowed</h3>
+<p>Choose what headings level can be used in the markdown</p>
+<div class="language-php highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nv">$Parsedown</span> <span class="o">=</span> <span class="k">new</span> <span class="nc">ParsedownExtended</span><span class="p">([</span>
+    <span class="s2">"headings"</span> <span class="o">=&gt;</span> <span class="p">[</span>
+        <span class="s2">"allowed"</span> <span class="o">=&gt;</span> <span class="p">[</span><span class="s2">"h1"</span><span class="p">,</span><span class="s2">"h2"</span><span class="p">,</span><span class="s2">"h3"</span><span class="p">]</span>
+    <span class="p">]</span>
+<span class="p">]);</span>
+</code></pre></div></div>
+
+<h3 id="blacklist">Blacklist</h3>
+<p>Using blacklists.</p>
+<div class="language-php highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nv">$Parsedown</span> <span class="o">=</span> <span class="k">new</span> <span class="nc">ParsedownExtended</span><span class="p">([</span>
+    <span class="s2">"headings"</span> <span class="o">=&gt;</span> <span class="p">[</span>
+        <span class="s2">"blacklist"</span> <span class="o">=&gt;</span> <span class="p">[</span><span class="s2">"my_blacklisted_header_id"</span><span class="p">,</span><span class="s2">"another_blacklisted_id"</span><span class="p">]</span>
+    <span class="p">]</span>
+<span class="p">]);</span>
+</code></pre></div></div>
+:ET

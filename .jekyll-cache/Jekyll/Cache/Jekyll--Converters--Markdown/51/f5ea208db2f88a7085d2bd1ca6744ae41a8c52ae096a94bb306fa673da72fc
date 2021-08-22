@@ -1,0 +1,21 @@
+I"è<h1 id="inline-code">Inline Code</h1>
+
+<h2 id="syntax">Syntax</h2>
+<div class="language-php highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="s2">"inline"</span> <span class="o">=&gt;</span> <span class="p">(</span><span class="n">boolean</span><span class="p">)</span> <span class="nv">$value</span> <span class="c1">// default true</span>
+</code></pre></div></div>
+
+<h2 id="description">Description</h2>
+<p>Used to reference snippets of code as examples. This is particularly common in technical documentation. Markdown allows you to format code snippets using backticks (`) that wrap your code snippet</p>
+
+<h2 id="examples">Examples</h2>
+
+<h3 id="disable">Disable</h3>
+<p>Disable inline code</p>
+
+<div class="language-php highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nv">$Parsedown</span> <span class="o">=</span> <span class="k">new</span> <span class="nc">ParsedownExtended</span><span class="p">([</span>
+    <span class="s1">'code'</span> <span class="o">=&gt;</span> <span class="p">{</span>
+        <span class="s1">'inline'</span> <span class="o">=&gt;</span> <span class="kc">false</span>
+    <span class="p">}</span>
+<span class="p">]);</span>
+</code></pre></div></div>
+:ET

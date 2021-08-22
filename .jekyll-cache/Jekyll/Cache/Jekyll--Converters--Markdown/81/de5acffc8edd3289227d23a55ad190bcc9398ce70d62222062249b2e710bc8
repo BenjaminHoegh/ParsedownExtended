@@ -1,0 +1,29 @@
+I"S<h1 id="emoji-shortcodes">Emoji Shortcodes</h1>
+
+<h2 id="syntax">Syntax</h2>
+
+<div class="language-php highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="s2">"emojis"</span> <span class="o">=&gt;</span> <span class="p">(</span><span class="n">boolean</span><span class="p">)</span> <span class="nv">$value</span> <span class="c1">// default false</span>
+</code></pre></div></div>
+
+<h2 id="description">Description</h2>
+<p>Allows you to insert emoji by typing emoji shortcodes. These begin and end with a colon and include the name of an emoji.</p>
+
+<div class="code-example">
+Gone camping! ⛺ Be back soon.<br /><br />
+
+That is so funny! 😂
+</div>
+<div class="language-markdown highlighter-rouge"><div class="highlight"><pre class="highlight"><code>Gone camping! :tent: Be back soon.
+
+That is so funny! :joy:
+</code></pre></div></div>
+
+<h2 id="examples">Examples</h2>
+
+<h3 id="enable">Enable</h3>
+<p>Enable emojis shortcodes</p>
+<div class="language-php highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nv">$Parsedown</span> <span class="o">=</span> <span class="k">new</span> <span class="nc">ParsedownExtended</span><span class="p">([</span>
+    <span class="s2">"emojis"</span> <span class="o">=&gt;</span> <span class="kc">true</span>
+<span class="p">]);</span>
+</code></pre></div></div>
+:ET

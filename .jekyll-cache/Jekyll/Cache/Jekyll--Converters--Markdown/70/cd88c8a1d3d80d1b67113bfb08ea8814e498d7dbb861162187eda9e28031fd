@@ -1,0 +1,20 @@
+I"<h1 id="footnotes-extra-required">Footnotes <label class="label label-gray">Extra Required</label></h1>
+
+<h2 id="syntax">Syntax</h2>
+
+<div class="language-php highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="s2">"footnotes"</span> <span class="o">=&gt;</span> <span class="p">(</span><span class="n">boolean</span><span class="p">)</span> <span class="nv">$value</span> <span class="c1">// default true</span>
+</code></pre></div></div>
+<h2 id="description">Description</h2>
+
+<p>Footnotes allow you to add notes and references without cluttering the body of the document. When you create a footnote, a superscript number with a link appears where you added the footnote reference. Readers can click the link to jump to the content of the footnote at the bottom of the page.</p>
+
+<h2 id="examples">Examples</h2>
+
+<h3 id="disable">Disable</h3>
+<p>Disable emphasis</p>
+
+<div class="language-php highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nv">$Parsedown</span> <span class="o">=</span> <span class="k">new</span> <span class="nc">ParsedownExtended</span><span class="p">([</span>
+    <span class="s2">"footnotes"</span> <span class="o">=&gt;</span> <span class="kc">false</span>
+<span class="p">]);</span>
+</code></pre></div></div>
+:ET

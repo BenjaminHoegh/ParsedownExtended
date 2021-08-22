@@ -1,0 +1,99 @@
+I"�<h1 id="table-of-content">Table of Content</h1>
+
+<h2 id="syntax">Syntax</h2>
+<div class="language-php highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="s2">"toc"</span> <span class="o">=&gt;</span> <span class="p">(</span><span class="n">boolean</span><span class="o">|</span><span class="k">array</span><span class="p">)</span> <span class="nv">$value</span> <span class="c1">// default false</span>
+</code></pre></div></div>
+
+<h2 id="description">Description</h2>
+<p>Automatic create a ToC(Table of Content) there include every heading in the document, unless you don’t want it to be included. You do not need to add anchors individually to every title. This is an automated process.</p>
+
+<h2 id="parameters">Parameters</h2>
+
+<p>If <code class="language-plaintext highlighter-rouge">$value</code> is a array, then <code class="language-plaintext highlighter-rouge">toc</code> will be <code class="language-plaintext highlighter-rouge">true</code> by default.</p>
+
+<ul>
+  <li><strong>delimiter</strong> (boolean)<br />
+Whether to convert dashes.</li>
+  <li><strong>headings</strong> (boolean)<br />
+Whether to convert dashes.</li>
+  <li><strong>lowercase</strong> (boolean)<br />
+Whether to convert dashes.</li>
+  <li><strong>transliterate</strong> (boolean)<br />
+Whether to convert dashes.</li>
+  <li><strong>urlencode</strong> (boolean)<br />
+Whether to convert dashes.</li>
+  <li><strong>set_toc_tag</strong> (string)<br />
+Sets user defined ToC markdown tag. Use this method before <code class="language-plaintext highlighter-rouge">text()</code> or <code class="language-plaintext highlighter-rouge">body()</code> method if you want to use the ToC tag rather than the “<code class="language-plaintext highlighter-rouge">[toc]</code>”. Empty value sets the default ToC tag.</li>
+</ul>
+
+<h3 id="seperated-toc-list">Seperated ToC list</h3>
+<p>With the <code class="language-plaintext highlighter-rouge">contentsList()</code> method, you can get just the “ToC”.</p>
+<div class="language-php highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nv">$toc</span> <span class="o">=</span> <span class="nv">$Parsedown</span><span class="o">-&gt;</span><span class="nf">contentsList</span><span class="p">();</span>
+</code></pre></div></div>
+
+<p>Returns the parsed content WITHOUT parsing <code class="language-plaintext highlighter-rouge">[toc]</code> tag.</p>
+<div class="language-php highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nv">$body</span> <span class="o">=</span> <span class="nv">$Parsedown</span><span class="o">-&gt;</span><span class="nf">body</span><span class="p">();</span>
+</code></pre></div></div>
+
+<p>Returns the parsed content and <code class="language-plaintext highlighter-rouge">[toc]</code> tag(s) parsed as well.</p>
+<div class="language-php highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nv">$text</span> <span class="o">=</span> <span class="nv">$Parsedown</span><span class="o">-&gt;</span><span class="nf">text</span><span class="p">();</span>
+</code></pre></div></div>
+
+<div class="language-php highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1">// Parse body and ToC separately</span>
+<span class="nv">$content</span> <span class="o">=</span> <span class="nb">file_get_contents</span><span class="p">(</span><span class="s1">'sample.md'</span><span class="p">);</span>
+<span class="nv">$Parsedown</span> <span class="o">=</span> <span class="k">new</span> <span class="err">\</span><span class="nf">ParsedownToC</span><span class="p">();</span>
+
+<span class="nv">$body</span> <span class="o">=</span> <span class="nv">$Parsedown</span><span class="o">-&gt;</span><span class="nf">body</span><span class="p">(</span><span class="nv">$content</span><span class="p">);</span>
+<span class="nv">$toc</span> <span class="o">=</span> <span class="nv">$Parsedown</span><span class="o">-&gt;</span><span class="nf">contentsList</span><span class="p">();</span>
+
+<span class="k">echo</span> <span class="nv">$toc</span><span class="p">;</span>  <span class="c1">// Table of Contents in &lt;ul&gt; list</span>
+<span class="k">echo</span> <span class="nv">$body</span><span class="p">;</span> <span class="c1">// Main body</span>
+</code></pre></div></div>
+
+<h2 id="examples">Examples</h2>
+
+<h3 id="enable">Enable</h3>
+<p>Enable ToC</p>
+
+<div class="language-php highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nv">$Parsedown</span> <span class="o">=</span> <span class="k">new</span> <span class="nc">ParsedownExtended</span><span class="p">([</span>
+    <span class="s1">'toc'</span> <span class="o">=&gt;</span> <span class="kc">true</span>
+<span class="p">]);</span>
+</code></pre></div></div>
+
+<h3 id="delimiter">Delimiter</h3>
+<div class="language-php highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nv">$Parsedown</span> <span class="o">=</span> <span class="k">new</span> <span class="nc">ParsedownExtended</span><span class="p">([</span>
+    <span class="s1">'toc'</span> <span class="o">=&gt;</span> <span class="p">[</span>
+        <span class="s1">'delimiter'</span> <span class="o">=&gt;</span> <span class="kc">true</span> 
+    <span class="p">]</span>
+<span class="p">]);</span>
+</code></pre></div></div>
+<h3 id="headings">Headings</h3>
+<p>Choose what headings level to include in the ToC list.</p>
+<div class="language-php highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nv">$Parsedown</span> <span class="o">=</span> <span class="k">new</span> <span class="nc">ParsedownExtended</span><span class="p">([</span>
+    <span class="s1">'toc'</span> <span class="o">=&gt;</span> <span class="p">[</span>
+        <span class="s1">'headings'</span> <span class="o">=&gt;</span> <span class="p">[</span><span class="s1">'h1'</span><span class="p">,</span><span class="s1">'h2'</span><span class="p">,</span><span class="s1">'h3'</span><span class="p">]</span>  
+    <span class="p">]</span>
+<span class="p">]);</span>
+</code></pre></div></div>
+<h3 id="lowercase">Lowercase</h3>
+<div class="language-php highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nv">$Parsedown</span> <span class="o">=</span> <span class="k">new</span> <span class="nc">ParsedownExtended</span><span class="p">([</span>
+    <span class="s1">'toc'</span> <span class="o">=&gt;</span> <span class="p">[</span>
+        <span class="s1">'lowercase'</span> <span class="o">=&gt;</span> <span class="kc">true</span> 
+    <span class="p">]</span>
+<span class="p">]);</span>
+</code></pre></div></div>
+<h3 id="transliterate">Transliterate</h3>
+<div class="language-php highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nv">$Parsedown</span> <span class="o">=</span> <span class="k">new</span> <span class="nc">ParsedownExtended</span><span class="p">([</span>
+    <span class="s1">'toc'</span> <span class="o">=&gt;</span> <span class="p">[</span>
+        <span class="s1">'transliterate'</span> <span class="o">=&gt;</span> <span class="kc">true</span> 
+    <span class="p">]</span>
+<span class="p">]);</span>
+</code></pre></div></div>
+<h3 id="urlencode">Urlencode</h3>
+<div class="language-php highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nv">$Parsedown</span> <span class="o">=</span> <span class="k">new</span> <span class="nc">ParsedownExtended</span><span class="p">([</span>
+    <span class="s1">'toc'</span> <span class="o">=&gt;</span> <span class="p">[</span>
+        <span class="s1">'urlencode'</span> <span class="o">=&gt;</span> <span class="kc">true</span> 
+    <span class="p">]</span>
+<span class="p">]);</span>
+</code></pre></div></div>
+:ET

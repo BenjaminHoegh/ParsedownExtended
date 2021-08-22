@@ -1,33 +1,33 @@
 {"0": {
+    "doc": "Inline code and blocks",
+    "title": "Inline code and blocks",
+    "content": "# Code ## Syntax ```php \"code\" => (boolean) $value // default Default ``` ## Examples ### Disable Disable code ```php $Parsedown = new ParsedownExtended([ 'code' => false ]); ``` ",
+    "url": "/docs/code%20blocks%20and%20snippets/Inline%20code%20and%20blocks.html",
+    "relUrl": "/docs/code%20blocks%20and%20snippets/Inline%20code%20and%20blocks.html"
+  },"1": {
     "doc": "Abbreviations",
     "title": "Abbreviations",
     "content": "# Abbreviation Extra Required ## Syntax ```php \"abbr\" => (boolean|array) $value // default true ``` ## Description Adds the ability to define abbreviations. Any defined abbreviation is wrapped in an `` tag. ## Parameters If `$value` is a array, then `abbr` will be `true` by default. - **allow_custom_abbr** (boolean) The ability to define abbreviations, this is on by default. - **predefine** (array) Used to predefine abbreviations. ## Examples ---- ### Disable Disable abbreviations: ```php $Parsedown = new ParsedownExtended([ \"abbr\" => false ]); ``` ### Predefined Predefine abbreviations: ```php $Parsedown = new ParsedownExtended([ \"abbr\" => [ \"predefine\" => [ \"CSS\" => \"Cascading Style Sheet\", \"HTML\" => \"Hyper Text Markup Language\", \"JS\" => \"JavaScript\" ] ] ]); ``` ### Predefined only Disable user/custom abbreviations by using `allow_custom_abbr` ```php $Parsedown = new ParsedownExtended([ \"abbr\" => [ \"allow_custom_abbr\": false \"predefine\" => [ \"CSS\" => \"Cascading Style Sheet\", \"HTML\" => \"Hyper Text Markup Language\", \"JS\" => \"JavaScript\" ] ] ]); ``` ",
     "url": "/docs/abbreviations.html",
     "relUrl": "/docs/abbreviations.html"
-  },"1": {
+  },"2": {
     "doc": "Blockqoutes",
     "title": "Blockqoutes",
     "content": "# Blockqoutes ## Syntax ```php \"qoutes\" => (boolean) $value // default true ``` ## Description Used when you want to reference an external source using quotation marks. You represent any blockquote by preceding the first line of the block quote with a greater-than sign or angle bracket (>). Any defined abbreviation is wrapped in an `` tag. ## Examples ### Disable Disable blockqoutes: ```php $Parsedown = new ParsedownExtended([ \"qoutes\" => false ]); ``` ",
     "url": "/docs/blockqoutes.html",
     "relUrl": "/docs/blockqoutes.html"
-  },"2": {
-    "doc": "Code blocks and snippets",
-    "title": "Code blocks and snippets",
-    "content": "# Code ## Syntax ```php \"code\" => (boolean) $value // default Default ``` ## Examples ### Disable Disable code ```php $Parsedown = new ParsedownExtended([ 'code' => false ]); ``` ",
-    "url": "/docs/code%20blocks%20and%20snippets/code%20blocks%20and%20snippets.html",
-    "relUrl": "/docs/code%20blocks%20and%20snippets/code%20blocks%20and%20snippets.html"
   },"3": {
-    "doc": "Code blocks",
-    "title": "Code blocks",
-    "content": "# Code blocks ## Syntax ```php \"'blocks'\" => (boolean) $value // default true ``` ## Description Formatting code blocks is useful when you have a bigger chunk of code to include in your Markdown file. Format your code blocks by indenting every line of your code block using one tab, or use three backticks (\\`\\`\\`) before and after your code ## Examples ### Disable Disable code blocks ```php $Parsedown = new ParsedownExtended([ 'code' => { 'blocks' => false } ]); ``` ",
+    "doc": "Block Code",
+    "title": "Block Code",
+    "content": "# Code blocks ## Syntax ```php \"blocks\" => (boolean) $value // default true ``` ## Description Formatting code blocks is useful when you have a bigger chunk of code to include in your Markdown file. Format your code blocks by indenting every line of your code block using one tab, or use three backticks (\\`\\`\\`) before and after your code ## Examples ### Disable Disable code blocks ```php $Parsedown = new ParsedownExtended([ 'code' => { 'blocks' => false } ]); ``` ",
     "url": "/docs/code%20blocks%20and%20snippets/code%20blocks.html",
     "relUrl": "/docs/code%20blocks%20and%20snippets/code%20blocks.html"
   },"4": {
-    "doc": "Code snippets",
-    "title": "Code snippets",
-    "content": "# Code snippets ## Syntax ```php \"snippets\" => (boolean) $value // default true ``` ## Description Used to reference snippets of code as examples. This is particularly common in technical documentation. Markdown allows you to format code snippets using backticks (`) that wrap your code snippet ## Examples ### Disable Disable code snippets ```php $Parsedown = new ParsedownExtended([ 'code' => { 'snippets' => false } ]); ``` ",
-    "url": "/docs/code%20blocks%20and%20snippets/code%20snippets.html",
-    "relUrl": "/docs/code%20blocks%20and%20snippets/code%20snippets.html"
+    "doc": "Inline Code",
+    "title": "Inline Code",
+    "content": "# Inline Code ## Syntax ```php \"inline\" => (boolean) $value // default true ``` ## Description Used to reference snippets of code as examples. This is particularly common in technical documentation. Markdown allows you to format code snippets using backticks (`) that wrap your code snippet ## Examples ### Disable Disable inline code ```php $Parsedown = new ParsedownExtended([ 'code' => { 'inline' => false } ]); ``` ",
+    "url": "/docs/code%20blocks%20and%20snippets/code%20inline.html",
+    "relUrl": "/docs/code%20blocks%20and%20snippets/code%20inline.html"
   },"5": {
     "doc": "Definition Lists",
     "title": "Definition Lists",

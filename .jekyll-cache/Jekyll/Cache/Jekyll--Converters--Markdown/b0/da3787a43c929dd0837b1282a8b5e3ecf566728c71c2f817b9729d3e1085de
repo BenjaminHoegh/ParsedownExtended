@@ -1,0 +1,89 @@
+I"�<h1 id="typographer">Typographer</h1>
+
+<h2 id="syntax">Syntax</h2>
+<div class="language-php highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="s2">"typographer"</span> <span class="o">=&gt;</span> <span class="p">(</span><span class="n">boolean</span><span class="p">)</span> <span class="nv">$value</span> <span class="c1">// default false</span>
+</code></pre></div></div>
+
+<h2 id="description">Description</h2>
+<p>Adds some useful shortcodes to make typing faster, while also provide a very limited misspell helper</p>
+
+<table>
+  <thead>
+    <tr>
+      <th>Shortcode</th>
+      <th>Replacements</th>
+      <th>HTML Entities</th>
+      <th>Substitution Keys</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">(c)</code></td>
+      <td>©</td>
+      <td><code class="language-plaintext highlighter-rouge">&amp;copy;</code></td>
+      <td><code class="language-plaintext highlighter-rouge">"copy"</code></td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">(r)</code></td>
+      <td>®</td>
+      <td><code class="language-plaintext highlighter-rouge">&amp;reg;</code></td>
+      <td><code class="language-plaintext highlighter-rouge">"reg"</code></td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">(tm)</code></td>
+      <td>™</td>
+      <td><code class="language-plaintext highlighter-rouge">&amp;trade;</code></td>
+      <td><code class="language-plaintext highlighter-rouge">"trade"</code></td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">(p)</code></td>
+      <td>¶</td>
+      <td><code class="language-plaintext highlighter-rouge">&amp;para;</code></td>
+      <td><code class="language-plaintext highlighter-rouge">"para"</code></td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">+-</code></td>
+      <td>±</td>
+      <td><code class="language-plaintext highlighter-rouge">&amp;plusmn;</code></td>
+      <td><code class="language-plaintext highlighter-rouge">"plusmn"</code></td>
+    </tr>
+  </tbody>
+</table>
+
+<table>
+  <thead>
+    <tr>
+      <th>Misspell</th>
+      <th>Result</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>..</td>
+      <td>…</td>
+    </tr>
+    <tr>
+      <td>…..</td>
+      <td>…</td>
+    </tr>
+    <tr>
+      <td>?….</td>
+      <td>?..</td>
+    </tr>
+    <tr>
+      <td>!….</td>
+      <td>!..</td>
+    </tr>
+  </tbody>
+</table>
+
+<h2 id="examples">Examples</h2>
+
+<h3 id="enable">Enable</h3>
+<p>Enable typographer</p>
+
+<div class="language-php highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nv">$Parsedown</span> <span class="o">=</span> <span class="k">new</span> <span class="nc">ParsedownExtended</span><span class="p">([</span>
+    <span class="s1">'typographer'</span> <span class="o">=&gt;</span> <span class="kc">true</span>
+<span class="p">]);</span>
+</code></pre></div></div>
+:ET

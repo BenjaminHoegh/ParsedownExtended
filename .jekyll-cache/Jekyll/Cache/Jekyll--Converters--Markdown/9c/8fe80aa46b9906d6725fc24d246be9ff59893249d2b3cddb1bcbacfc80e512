@@ -1,0 +1,19 @@
+I"Ù<h1 id="thematic-breaks">Thematic Breaks</h1>
+
+<h2 id="syntax">Syntax</h2>
+<div class="language-php highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="s2">"thematic_breaks"</span> <span class="o">=&gt;</span> <span class="p">(</span><span class="n">boolean</span><span class="p">)</span> <span class="nv">$value</span> <span class="c1">// default true</span>
+</code></pre></div></div>
+
+<h2 id="description">Description</h2>
+<p>A thematic breaks is a useful little element that you can use to visually split up blocks of text within your Markdown file. A thematic breaks is represented by three or more hyphens (-), asterisks (*), or underscores (_). Whichever symbol you use renders the same output.</p>
+
+<h2 id="examples">Examples</h2>
+
+<h3 id="disable">Disable</h3>
+<p>Disable thematic breaks</p>
+
+<div class="language-php highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nv">$Parsedown</span> <span class="o">=</span> <span class="k">new</span> <span class="nc">ParsedownExtended</span><span class="p">([</span>
+    <span class="s2">"thematic_breaks"</span> <span class="o">=&gt;</span> <span class="kc">false</span>
+<span class="p">]);</span>
+</code></pre></div></div>
+:ET
