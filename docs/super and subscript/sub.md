@@ -4,11 +4,11 @@ title: Superscript
 parent: Super and Subscript
 ---
 
-# Superscript
+# Subscript
 
 ## Syntax
 ```php
-"sup" => (boolean) $value // default false
+"sub" => (boolean) $value // default false
 ```
 
 ## Examples
@@ -18,6 +18,6 @@ Enable subscripts
 
 ```php
 $Parsedown = new ParsedownExtended([
-    'sup' => true
+    'sub' => true
 ]);
 ```
