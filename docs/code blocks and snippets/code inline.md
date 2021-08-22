@@ -4,7 +4,7 @@ title: Inline Code
 parent: Inline code and blocks
 ---
 
-# Code snippets
+# Inline Code
 
 ## Syntax
 ```php
@@ -17,12 +17,12 @@ Used to reference snippets of code as examples. This is particularly common in t
 ## Examples
 
 ### Disable
-Disable code snippets
+Disable inline code
 
 ```php
 $Parsedown = new ParsedownExtended([
     'code' => {
-        'snippets' => false
+        'inline' => false
     }
 ]);
 ```
