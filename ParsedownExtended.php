@@ -260,7 +260,7 @@ class ParsedownExtended extends DynamicParent
     // inlineCode
     protected function inlineCode($excerpt)
     {
-        $codeSnippets = $this->options['code']['snippets'] ?? true;
+        $codeSnippets = $this->options['code']['inline'] ?? true;
         $codeMain = $this->options['code'] ?? true;
         if ($codeSnippets === true and $codeMain === true) {
             return DynamicParent::inlineCode($excerpt);
