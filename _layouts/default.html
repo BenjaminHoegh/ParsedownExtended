@@ -44,7 +44,7 @@ layout: table_wrappers
     <div class="row">
         <aside class="col sidebar g-0">
           <div class="site-header">
-            <a href="{{ '/' | relative_url }}" class="site-title lh-tight">{{ site.title }}</a>
+            <a href="{{ '/' | absolute_url }}" class="site-title lh-tight">{{ site.title }}</a>
             <a href="#" id="menu-button" class="site-button">
               <svg viewBox="0 0 24 24" class="icon"><use xlink:href="#svg-menu"></use></svg>
             </a>
@@ -101,7 +101,12 @@ layout: table_wrappers
           </div>
           <div class="row">
             <div class="col main-content">
+              {% if site.heading_anchors != false %}
+              {% include vendor/anchor_headings.html html=content anchorBody="<svg viewBox=\"0 0 16 16\" aria-hidden=\"true\"><use xlink:href=\"#svg-link\"></use></svg>" anchorClass="anchor-heading" anchorAttrs="aria-labelledby=\"%html_id%\"" %}
+              {% else %}
               {{ content }}
+              {% endif %}
+
 
               {% if page.has_children == true and page.has_toc != false %}
               <hr>
