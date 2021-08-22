@@ -1,6 +1,6 @@
 ---
 layout: default
-title: Code blocks and snippets
+title: Inline code and blocks
 has_children: true
 ---
 

@@ -1,13 +1,13 @@
 ---
 layout: default
-title: Code blocks
-parent: Code blocks and snippets
+title: Block Code
+parent: Inline code and blocks
 ---
 # Code blocks
 
 ## Syntax
 ```php
-"'blocks'" => (boolean) $value // default true
+"blocks" => (boolean) $value // default true
 ```
 
 ## Description
