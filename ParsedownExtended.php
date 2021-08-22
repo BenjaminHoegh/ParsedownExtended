@@ -674,6 +674,11 @@ class ParsedownExtended extends DynamicParent
 
             if ($smartBackticks) {
                 if ('``' === $matches[1]) {
+                    $length = strlen(trim($excerpt['before']));
+                    if ($length > 0) {
+                        return;
+                    }
+
                     return [
                         'extent' => strlen($matches[0]),
                         'element' => [
@@ -688,6 +693,11 @@ class ParsedownExtended extends DynamicParent
 
             if ($smartQuotes) {
                 if ("'" === $matches[1]) {
+                    $length = strlen(trim($excerpt['before']));
+                    if ($length > 0) {
+                        return;
+                    }
+
                     return [
                         'extent' => strlen($matches[0]),
                         'element' => [
@@ -697,6 +707,11 @@ class ParsedownExtended extends DynamicParent
                 }
 
                 if ('"' === $matches[1]) {
+                    $length = strlen(trim($excerpt['before']));
+                    if ($length > 0) {
+                        return;
+                    }
+
                     return [
                         'extent' => strlen($matches[0]),
                         'element' => [
@@ -711,6 +726,11 @@ class ParsedownExtended extends DynamicParent
 
             if ($smartAngledQuotes) {
                 if ('<<' === $matches[1]) {
+                    $length = strlen(trim($excerpt['before']));
+                    if ($length > 0) {
+                        return;
+                    }
+
                     return [
                         'extent' => strlen($matches[0]),
                         'element' => [
@@ -1635,6 +1655,103 @@ class ParsedownExtended extends DynamicParent
         }
 
         $this->isBlacklistInitialized = true;
+    }
+
+    protected function lineElements($text, $nonNestables = [])
+    {
+        $Elements = [];
+
+        $nonNestables = (
+            empty($nonNestables)
+            ? []
+            : array_combine($nonNestables, $nonNestables)
+        );
+
+        // $excerpt is based on the first occurrence of a marker
+
+        while ($excerpt = strpbrk($text, $this->inlineMarkerList)) {
+            $marker = $excerpt[0];
+
+            $markerPosition = strlen($text) - strlen($excerpt);
+
+            // Get the first char before the marker
+            $beforeMarkerPosition = $markerPosition - 1;
+            if ($beforeMarkerPosition >= 0) {
+                $charBeforeMarker = $text[$markerPosition - 1];
+            } else {
+                $charBeforeMarker = '';
+            }
+
+            $Excerpt = ['text' => $excerpt, 'context' => $text, 'before' => $charBeforeMarker];
+
+            foreach ($this->InlineTypes[$marker] as $inlineType) {
+                // check to see if the current inline type is nestable in the current context
+
+                if (isset($nonNestables[$inlineType])) {
+                    continue;
+                }
+
+                $Inline = $this->{"inline{$inlineType}"}($Excerpt);
+
+                if (!isset($Inline)) {
+                    continue;
+                }
+
+                // makes sure that the inline belongs to "our" marker
+
+                if (isset($Inline['position']) and $Inline['position'] > $markerPosition) {
+                    continue;
+                }
+
+                // sets a default inline position
+
+                if (!isset($Inline['position'])) {
+                    $Inline['position'] = $markerPosition;
+                }
+
+                // cause the new element to 'inherit' our non nestables
+
+                $Inline['element']['nonNestables'] = isset($Inline['element']['nonNestables'])
+                    ? array_merge($Inline['element']['nonNestables'], $nonNestables)
+                    : $nonNestables
+                ;
+
+                // the text that comes before the inline
+                $unmarkedText = substr($text, 0, $Inline['position']);
+
+                // compile the unmarked text
+                $InlineText = $this->inlineText($unmarkedText);
+                $Elements[] = $InlineText['element'];
+
+                // compile the inline
+                $Elements[] = $this->extractElement($Inline);
+
+                // remove the examined text
+                $text = substr($text, $Inline['position'] + $Inline['extent']);
+
+                continue 2;
+            }
+
+            // the marker does not belong to an inline
+
+            $unmarkedText = substr($text, 0, $markerPosition + 1);
+
+            $InlineText = $this->inlineText($unmarkedText);
+            $Elements[] = $InlineText['element'];
+
+            $text = substr($text, $markerPosition + 1);
+        }
+
+        $InlineText = $this->inlineText($text);
+        $Elements[] = $InlineText['element'];
+
+        foreach ($Elements as &$Element) {
+            if (!isset($Element['autobreak'])) {
+                $Element['autobreak'] = false;
+            }
+        }
+
+        return $Elements;
     }
 
     private function pregReplaceAssoc(array $replace, $subject)
