@@ -37,6 +37,7 @@ function initNav() {
 
   const siteNav = document.getElementById('site-nav');
   const mainHeader = document.getElementById('main-header');
+  const body = document.getElementById('body');
   const menuButton = document.getElementById('menu-button');
 
   jtd.addEvent(menuButton, 'click', function(e){
@@ -45,9 +46,11 @@ function initNav() {
     if (menuButton.classList.toggle('nav-open')) {
       siteNav.classList.add('nav-open');
       mainHeader.classList.add('nav-open');
+      body.classList.add('nav-open');
     } else {
       siteNav.classList.remove('nav-open');
       mainHeader.classList.remove('nav-open');
+      body.classList.remove('nav-open');
     }
   });
 

@@ -6,7 +6,7 @@ layout: table_wrappers
 
 <html lang="{{ site.lang | default: 'en-US' }}">
 {% include head.html %}
-<body>
+<body id="body">
   <svg xmlns="http://www.w3.org/2000/svg" style="display: none;">
     <symbol id="svg-link" viewBox="0 0 24 24">
       <title>Link</title>
@@ -97,6 +97,24 @@ layout: table_wrappers
                   </ul>
                 </nav>
               {% endif %}
+              <nav role="navigation" aria-label="Main" id="nav" class="site-nav d-block d-md-none">
+                {% if site.just_the_docs.collections %}
+                  {% assign collections_size = site.just_the_docs.collections | size %}
+                  {% for collection_entry in site.just_the_docs.collections %}
+                    {% assign collection_key = collection_entry[0] %}
+                    {% assign collection_value = collection_entry[1] %}
+                    {% assign collection = site[collection_key] %}
+                    {% if collection_value.nav_exclude != true %}
+                      {% if collections_size > 1 %}
+                        <div class="nav-category">{{ collection_value.name }}</div>
+                      {% endif %}
+                      {% include nav.html pages=collection %}
+                    {% endif %}
+                  {% endfor %}
+                {% else %}
+                  {% include nav.html pages=site.html_pages %}
+                {% endif %}
+              </nav>
             </div>
           </div>
           <div class="row">
@@ -153,7 +171,7 @@ layout: table_wrappers
               </footer>
               {% endif %}
             </div>
-            <div class="col main-toc">
+            <div class="col d-none d-lg-block main-toc">
               {% include toc.html html=content h_min=2 %}
             </div>
           </div>

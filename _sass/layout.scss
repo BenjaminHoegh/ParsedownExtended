@@ -4,13 +4,17 @@
 
 .sidebar {
   position: fixed;
-  z-index: 0;
   display: flex;
   flex-wrap: wrap;
-  max-width: $nav-width;
   background-color: $sidebar-color;
-  height: 100%;
   overflow-y: hidden;
+  height: $header-height;
+  z-index: 1;
+  @include mq(md) {
+    height: 100%;
+    z-index: 0;
+    max-width: $nav-width;
+  }
 }
 
 .main-toc {
@@ -27,14 +31,33 @@
   padding-left: 15px;
 }
 
-main {
+main.col {
   position: relative;
-  margin-left: $nav-width;
+  margin-top: $header-height;
+  @include mq(md) {
+    margin-top: 0;
+    margin-left: $nav-width;
+  }
 }
 
 .main-content {
-  max-width: calc(100vw - #{$nav-width * 2});
   padding-left: 30px;
+  @include mq(lg) {
+    max-width: calc(100vw - #{$nav-width * 2});
+  }
+
+  .anchor-heading {
+    left: -1.5rem;
+  }
+}
+
+body.nav-open {
+  overflow: hidden;
+  height: 100vh;
+}
+
+#nav {
+  padding-bottom: 20px;
 }
 
 .main-header {
