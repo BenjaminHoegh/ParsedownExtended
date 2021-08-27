@@ -42,7 +42,7 @@ layout: table_wrappers
 
   <div class="container-fluid">
     <div class="row">
-        <aside class="col sidebar g-0">
+        <aside id="sidebar" class="sidebar g-0">
           <div class="site-header">
             <a href="{{ '/' | absolute_url }}" class="site-title lh-tight">{{ site.title }}</a>
             <a href="#" id="menu-button" class="site-button">
@@ -97,24 +97,6 @@ layout: table_wrappers
                   </ul>
                 </nav>
               {% endif %}
-              <nav role="navigation" aria-label="Main" id="nav" class="site-nav d-block d-md-none">
-                {% if site.just_the_docs.collections %}
-                  {% assign collections_size = site.just_the_docs.collections | size %}
-                  {% for collection_entry in site.just_the_docs.collections %}
-                    {% assign collection_key = collection_entry[0] %}
-                    {% assign collection_value = collection_entry[1] %}
-                    {% assign collection = site[collection_key] %}
-                    {% if collection_value.nav_exclude != true %}
-                      {% if collections_size > 1 %}
-                        <div class="nav-category">{{ collection_value.name }}</div>
-                      {% endif %}
-                      {% include nav.html pages=collection %}
-                    {% endif %}
-                  {% endfor %}
-                {% else %}
-                  {% include nav.html pages=site.html_pages %}
-                {% endif %}
-              </nav>
             </div>
           </div>
           <div class="row">
@@ -143,7 +125,7 @@ layout: table_wrappers
               <hr>
               <footer>
                 {% if site.back_to_top %}
-                  <p><a href="#top" id="back-to-top">{{ site.back_to_top_text }}</a></p>
+                  <a href="#" id="go-to-top">{{ site.back_to_top_text }}</a>
                 {% endif %}
 
                 {{ footer_custom }}

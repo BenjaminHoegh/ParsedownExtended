@@ -7,6 +7,7 @@
 
 .main-content {
   line-height: $content-line-height;
+  margin-top: 10px;
 
   ol,
   ul,
@@ -228,4 +229,169 @@
       margin-top: 0;
     }
   }
+
+
+// Someting too add
+
+  kbd {
+    box-shadow: 0px 0px 15px 0px rgba(0, 0, 0, 0.05);
+    border-radius: 0.25rem;
+    border: 1px solid $kbd-border-color;
+    background: $kbd-primary-background-color;
+    position: relative;
+    display: inline-block;
+    margin: .2rem;
+    padding: 0 .5rem 0 2.5rem;
+    font-size: inherit;
+    font-family: "Open Sans", sans-serif;
+    border-radius: 0.25rem;
+    font-size: 14px;
+    color: $body-text-color;
+
+    &:before {
+      content:"\F097B";
+      font-size: 16px;
+      transform: translate(0, -50%);
+      position: absolute;
+      left: 0;
+      top: 50%;
+      display: inline-block;
+      width: 2rem;
+      height: 100%;
+      text-align: center;
+      background: $kbd-background-color;
+      color: $body-text-color;
+      font-family: "Material Design Icons";
+      border-radius: 0.25rem;
+      border-right: 1px solid $kbd-border-color;
+      border-top-right-radius: 0;
+      border-bottom-right-radius: 0;
+      box-sizing: border-box;
+    }
+  }
+  code.console {
+    box-shadow: 0px 0px 15px 0px rgba(0, 0, 0, 0.05);
+    border-radius: 0.25rem;
+    border: 1px solid $kbd-border-color;
+    background: $kbd-primary-background-color;
+    position: relative;
+    display: inline-block;
+    margin: .2rem;
+    padding: 0.1rem .5rem 0.1rem 2.5rem;
+    font-size: inherit;
+    font-family: "Open Sans", sans-serif;
+    border-radius: 0.25rem;
+    font-size: 14px;
+    color: $body-text-color;
+    &:before {
+      content:"\F07B7";
+      font-size: 16px;
+      transform: translate(0, -50%);
+      position: absolute;
+      left: 0;
+      top: 50%;
+      display: inline-block;
+      width: 2rem;
+      height: 100%;
+      text-align: center;
+      background: $kbd-background-color;
+      color: $body-text-color;
+      font-family: "Material Design Icons";
+      border-radius: 0.25rem;
+      border-right: 1px solid $kbd-border-color;
+      border-top-right-radius: 0;
+      border-bottom-right-radius: 0;
+      box-sizing: border-box;
+    }
+  }
+  code.folder {
+    box-shadow: 0px 0px 15px 0px rgba(0, 0, 0, 0.05);
+    border-radius: 0.25rem;
+    border: 1px solid $kbd-border-color;
+    background: $kbd-primary-background-color;
+    position: relative;
+    display: inline-block;
+    margin: .2rem;
+    padding: 0.1rem .5rem 0.1rem 2.5rem;
+    font-size: inherit;
+    font-family: "Open Sans", sans-serif;
+    border-radius: 0.25rem;
+    font-size: 14px;
+    color: $body-text-color;
+    &:before {
+      content:"\F0256";
+      font-size: 16px;
+      transform: translate(0, -50%);
+      position: absolute;
+      left: 0;
+      top: 50%;
+      display: inline-block;
+      width: 2rem;
+      height: 100%;
+      text-align: center;
+      background: $kbd-background-color;
+      color: $body-text-color;
+      font-family: "Material Design Icons";
+      border-radius: 0.25rem;
+      border-right: 1px solid $kbd-border-color;
+      border-top-right-radius: 0;
+      border-bottom-right-radius: 0;
+      box-sizing: border-box;
+    }
+  }
+  a.external {
+    color: $body-text-color;
+    background: $kbd-primary-background-color;
+    border: 1px solid $kbd-border-color;
+    border-radius: .25rem;
+    box-shadow: 0 0 15px 0 rgba(0,0,0,0.05);
+    padding: 0.15rem .5rem 0.15rem 2.5rem;
+    position: relative;
+    font-family: "Open Sans", sans-serif;
+    font-size: 15px;
+
+    &:before {
+      content: "\F03CC";
+      height: 100%;
+      width: 2rem;
+      color: $body-text-color;
+      background: $kbd-background-color;
+      border-radius: .25rem;
+      border-right: 1px solid $kbd-border-color;
+      border-bottom: 1px solid $kbd-border-color;
+      border-bottom-right-radius: 0;
+      border-top-right-radius: 0;
+      font-family: "Material Design Icons";
+      position: absolute;
+      text-align: center;
+      top: 50%;
+      left: 0;
+      transform: translate(0,-50%);
+      box-sizing: border-box;
+    }
+
+    &:hover {
+      background: $link-color;
+      color: #fff;
+      border-color: #064CDB;
+
+      &:before {
+        background: rgba(0, 0, 0, 0.1);
+        color: #fff;
+        border-color: rgba(0, 0, 0, 0.1);
+      }
+    }
+  }
+
+  > footer div {
+    justify-content: flex-end;
+    margin-bottom: 30px;
+    #edit-this-page {
+      color: gray;
+    }
+  }
 }
+
+
+
+

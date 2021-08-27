@@ -1,7 +1,6 @@
 //
 // Main nav, breadcrumb, etc...
 //
-// stylelint-disable selector-no-type, max-nesting-depth, selector-max-compound-selectors, selector-max-type, selector-max-specificity
 
 .nav-list {
   padding: 0;
@@ -24,6 +23,7 @@
       padding-top: $sp-1;
       padding-bottom: $sp-1;
       line-height: #{$nav-list-item-height-sm - 2 * $sp-1};
+      color: $body-text-color;
       @if $nav-list-expander-right {
         padding-right: $nav-list-item-height-sm;
         padding-left: $gutter-spacing-sm;
@@ -71,7 +71,8 @@
       padding-right: #{$nav-list-item-height-sm / 4};
       padding-bottom: #{$nav-list-item-height-sm / 4};
       padding-left: #{$nav-list-item-height-sm / 4};
-      color: $link-color;
+      // color: $link-color;
+      color: $body-text-color;
 
       @include mq(md) {
         width: $nav-list-item-height;
@@ -216,4 +217,22 @@
       content: "";
     }
   }
+}
+
+#go-to-top {
+  position: fixed;
+  bottom: 2em;
+  right: 2em;
+  text-decoration: none;
+  color: white;
+  background-color: $btn-primary-color;
+  font-size: 12px;
+  padding: 1em;
+  border-radius: 4px;
+  transition: opacity .2s ease;
+  opacity: 0;
+}
+
+#go-to-top:hover {
+  background-color: rgba(0, 0, 0, 0.6);
 }

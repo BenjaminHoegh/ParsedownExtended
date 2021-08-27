@@ -39,6 +39,7 @@ $grey-dk-100: #5c5962 !default;
 $grey-dk-200: #44434d !default;
 $grey-dk-250: #302d36 !default;
 $grey-dk-300: #27262b !default;
+$grey-dk-400: #1D1D20 !default;
 
 $grey-lt-000: #f5f6fa !default;
 $grey-lt-100: #eeebee !default;
@@ -81,9 +82,17 @@ $body-text-color: $grey-dk-100 !default;
 $body-heading-color: $grey-dk-300 !default;
 $search-result-preview-color: $grey-dk-000 !default;
 $nav-child-link-color: $grey-dk-100 !default;
-$link-color: $purple-000 !default;
-$btn-primary-color: $purple-100 !default;
+$link-color: #5469d4 !default;
+$btn-primary-color: #5469d4 !default;
 $base-button-color: #f7f7f7 !default;
+
+
+
+$kbd-primary-background-color: white;
+$kbd-background-color: #f5f5f5;
+$kbd-border-color: #e5e5e5;
+
+
 
 //
 // Spacing

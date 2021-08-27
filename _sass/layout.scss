@@ -2,18 +2,27 @@
 // The basic two column layout
 //
 
+.noscroll {
+  overflow: hidden;
+}
+
 .sidebar {
-  position: fixed;
+  position: relative;
   display: flex;
   flex-wrap: wrap;
   background-color: $sidebar-color;
-  overflow-y: hidden;
   height: $header-height;
-  z-index: 1;
+  width: 100%;
+  overflow: hidden;
   @include mq(md) {
+    position: fixed;
     height: 100%;
-    z-index: 0;
     max-width: $nav-width;
+  }
+
+  &.nav-open {
+    height: 100%;
+    overscroll-behavior: contain;
   }
 }
 
@@ -33,7 +42,6 @@
 
 main.col {
   position: relative;
-  margin-top: $header-height;
   @include mq(md) {
     margin-top: 0;
     margin-left: $nav-width;
@@ -54,10 +62,6 @@ main.col {
 body.nav-open {
   overflow: hidden;
   height: 100vh;
-}
-
-#nav {
-  padding-bottom: 20px;
 }
 
 .main-header {
