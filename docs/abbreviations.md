@@ -8,7 +8,7 @@ title: Abbreviations
 ## Syntax
 
 ```php
-"abbr" => (boolean|array) $value // default true
+"abbreviations" => (boolean|array) $value // default true
 ```
 
 ## Description
@@ -18,11 +18,11 @@ Adds the ability to define abbreviations. Any defined abbreviation is wrapped in
 
 ## Parameters
 
-If `$value` is a array, then `abbr` will be `true` by default.
+If `$value` is a array, then `abbreviations` will be `true` by default.
 
-- **allow_custom_abbr** (boolean)  
+- **allow_custom_abbr** (boolean)
   The ability to define abbreviations, this is on by default.
-- **predefine** (array)  
+- **predefine** (array)
   Used to predefine abbreviations.
 
 
@@ -35,7 +35,7 @@ If `$value` is a array, then `abbr` will be `true` by default.
 Disable abbreviations:
 ```php
 $Parsedown = new ParsedownExtended([
-    "abbr" => false
+    "abbreviations" => false
 ]);
 ```
 
@@ -43,7 +43,7 @@ $Parsedown = new ParsedownExtended([
 Predefine abbreviations:
 ```php
 $Parsedown = new ParsedownExtended([
-    "abbr" => [
+    "abbreviations" => [
         "predefine" => [
             "CSS" => "Cascading Style Sheet",
             "HTML" => "Hyper Text Markup Language",
@@ -58,7 +58,7 @@ Disable user/custom abbreviations by using `allow_custom_abbr`
 
 ```php
 $Parsedown = new ParsedownExtended([
-    "abbr" => [
+    "abbreviations" => [
         "allow_custom_abbr": false
         "predefine" => [
             "CSS" => "Cascading Style Sheet",

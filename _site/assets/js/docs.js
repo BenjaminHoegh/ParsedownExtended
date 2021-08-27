@@ -33,22 +33,22 @@ function initNav() {
     }
   });
 
-  const siteNav = document.getElementById('site-nav');
-  const mainHeader = document.getElementById('main-header');
   const body = document.getElementById('body');
+  const siteNav = document.getElementById('sidebar');
+  const mainHeader = document.getElementById('main-header');
   const menuButton = document.getElementById('menu-button');
 
   jtd.addEvent(menuButton, 'click', function(e){
     e.preventDefault();
 
     if (menuButton.classList.toggle('nav-open')) {
+      body.classList.add('noscroll');
       siteNav.classList.add('nav-open');
       mainHeader.classList.add('nav-open');
-      body.classList.add('nav-open');
     } else {
+      body.classList.remove('noscroll');
       siteNav.classList.remove('nav-open');
       mainHeader.classList.remove('nav-open');
-      body.classList.remove('nav-open');
     }
   });
 }
@@ -433,7 +433,7 @@ jtd.getTheme = function() {
 
 jtd.setTheme = function(theme) {
   var cssFile = document.querySelector('[rel="stylesheet"]');
-  cssFile.setAttribute('href', '/assets/css/just-the-docs-' + theme + '.css');
+  cssFile.setAttribute('href', '/assets/css/docs-' + theme + '.css');
 }
 
 // Document ready
@@ -445,4 +445,40 @@ jtd.onReady(function(){
 
 })(window.jtd = window.jtd || {});
 
+if (window.matchMedia) {
+    window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', event => {
+      if (event.matches) {
+        jtd.setTheme('dark');
+      } else {
+        jtd.setTheme('light');
+      }
+    });
+    if(window.matchMedia('(prefers-color-scheme: dark)').matches) {
+      jtd.setTheme('dark');
+    }
+  }
+
+window.onload = function() {
+    //Get the button
+    var mybutton = document.getElementById("go-to-top");
+
+    // When the user scrolls down 20px from the top of the document, show the button
+    window.onscroll = function() {scrollFunction()};
+
+    function scrollFunction() {
+      if (document.body.scrollTop > 250 || document.documentElement.scrollTop > 250) {
+        // mybutton.style.display = "block";
+        mybutton.style.opacity = 100;
+      } else {
+        // mybutton.style.display = "none";
+        mybutton.style.opacity = 0;
+      }
+    }
+
+    // When the user clicks on the button, scroll to the top of the document
+    function topFunction() {
+      document.body.scrollTop = 0;
+      document.documentElement.scrollTop = 0;
+    }
+}
 

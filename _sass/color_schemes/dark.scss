@@ -1,17 +1,23 @@
-$body-background-color: $grey-dk-300;
-$sidebar-color: $grey-dk-300;
-$border-color: $grey-dk-200;
+$primary-text-color: #adbac7;
 
-$body-text-color: $grey-lt-300;
-$body-heading-color: $grey-lt-000;
-$nav-child-link-color: $grey-dk-000;
-$search-result-preview-color: $grey-dk-000;
+$body-background-color: #22272e;
+$sidebar-color: #2d333b;
+$border-color: #444c56;
 
-$link-color: $blue-000;
-$btn-primary-color: $blue-200;
+$body-text-color: $primary-text-color;
+$body-heading-color: $primary-text-color;
+$nav-child-link-color: $primary-text-color;
+$search-result-preview-color: $primary-text-color;
+
+$link-color: #539bf5;
+$btn-primary-color: #316dca;
 $base-button-color: $grey-dk-250;
 
-$code-background-color: $grey-dk-250;
-$search-background-color: $grey-dk-250;
-$table-background-color: $grey-dk-250;
+$code-background-color: #2d333b;
+$search-background-color: #2d333b;
+$table-background-color: #2d333b;
 $feedback-color: darken($sidebar-color, 3%);
+
+$kbd-primary-background-color: #22272e;
+$kbd-background-color: #373e47;
+$kbd-border-color: #343940;

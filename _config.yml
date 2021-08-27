@@ -84,7 +84,7 @@ gh_edit_view_mode: "tree" # "tree" or "edit" if you want the user to jump into t
 color_scheme: nil
 
 # Dark color scheme; activates auto-switching if not nil. Supports "dark" or a custom color scheme
-dark_color_scheme: nil
+dark_color_scheme: dark
 
 # Google Analytics Tracking (optional)
 # e.g, UA-1234567-89
