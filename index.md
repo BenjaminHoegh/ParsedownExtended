@@ -31,8 +31,8 @@ Table of contents
 
 ### Manuel
 Download the source code from the latest release
-You must include `parsedown.php` or `parsedownExtra.php`
-Include `ParsedownExtended.php`
+You must include <code class="file">parsedown.php</code>
+and <code class="file">ParsedownExtended.php</code>
 
 ```php
 require 'Parsedown.php';
@@ -49,9 +49,8 @@ echo $ParsedownExtended->line('Hello _Parsedown_!'); # prints: Hello <em>Parsedo
 ### Using composer
 
 From the command line interface, navigate to your project folder then run this command:
-```shell
-composer require BenjaminHoegh/parsedown-extended
-```
+<code class="console">composer require BenjaminHoegh/parsedown-extended</code>
+
 Then require the auto-loader file:
 ```php
 require 'vendor/autoload.php';
