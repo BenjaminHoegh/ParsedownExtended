@@ -49,7 +49,9 @@ echo $ParsedownExtended->line('Hello _Parsedown_!'); # prints: Hello <em>Parsedo
 ### Using composer
 
 From the command line interface, navigate to your project folder then run this command:
-<code class="console">composer require BenjaminHoegh/parsedown-extended</code>
+```shell
+composer require BenjaminHoegh/parsedown-extended
+```
 
 Then require the auto-loader file:
 ```php
