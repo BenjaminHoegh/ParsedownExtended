@@ -50,7 +50,7 @@ Table of contents
 
 ### Manuel
 Download the source code from the latest release
-You must include `parsedown.php` or `parsedownExtra.php`
+You must include `parsedown.php` 1.8+
 Include `ParsedownExtended.php`
 
 ```php
