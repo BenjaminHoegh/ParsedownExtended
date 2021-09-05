@@ -556,7 +556,6 @@ class ParsedownExtended extends DynamicParent
             return [
                 'extent' => strlen($matches[0]),
                 'element' => [
-                    // Transliterate characters to ASCII
                     'text' => str_replace(array_keys($emojiMap), $emojiMap, $matches[0]),
                 ],
             ];
