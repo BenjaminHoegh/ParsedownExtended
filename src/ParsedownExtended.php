@@ -19,7 +19,7 @@ if (class_exists('ParsedownExtra')) {
 
 class ParsedownExtended extends DynamicParent
 {
-    public const VERSION = '1.1';
+    public const VERSION = '1.1.1';
     public const VERSION_PARSEDOWN_REQUIRED = '1.8';
     public const ID_ATTRIBUTE_DEFAULT = 'toc';
     protected $tagToc = '[toc]';
