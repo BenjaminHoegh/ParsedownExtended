@@ -552,7 +552,7 @@ class ParsedownExtended extends DynamicParent
             ':white_large_square:' => '⬜',
         ];
 
-        if (preg_match('/^(:)([^:]*?)(:)/', $excerpt['text'], $matches)) {
+        if (preg_match('/^(:)([^: ]*?)(:)/', $excerpt['text'], $matches)) {
             return [
                 'extent' => strlen($matches[0]),
                 'element' => [
