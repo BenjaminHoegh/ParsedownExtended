@@ -8,7 +8,7 @@ title: Emoji Shortcodes
 ## Syntax
 
 ```php
-"emojis" => (boolean) $value // default false
+"emojis" => (boolean) $value // default true
 ```
 
 ## Description
