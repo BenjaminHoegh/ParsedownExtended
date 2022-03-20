@@ -7,7 +7,7 @@
   <h3 align="center">Parsedown Extended</h3>
 
   <p align="center">
-    <a href="https://benjaminhoegh.github.io/ParsedownExtended/configurations"><strong>Explore Documentation »</strong></a>
+    <a href="https://benjaminhoegh.github.io/ParsedownExtended/"><strong>Explore Documentation »</strong></a>
     <br>
     <br>
     <a href="https://github.com/BenjaminHoegh/ParsedownExtended/issues/new?template=bug_report.md">Report bug</a>
