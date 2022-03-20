@@ -48,7 +48,7 @@ Table of contents
 
 ## Getting started
 
-### Manuel
+### Manual
 Download the source code from the latest release
 You must include `parsedown.php` 1.8+
 Include `ParsedownExtended.php`
