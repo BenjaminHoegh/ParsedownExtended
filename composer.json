@@ -22,7 +22,7 @@
       "ext-mbstring": "*"
   },
   "autoload": {
-      "psr-4": {"BenjaminHoegh\\ParsedownMath\\": "src/"}
+      "psr-4": {"BenjaminHoegh\\ParsedownExtended\\": "src/"}
   }
 }
 
