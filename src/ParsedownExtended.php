@@ -10,6 +10,8 @@ use BenjaminHoegh\ParsedownExtended\Features\Highlights;
 use BenjaminHoegh\ParsedownExtended\Features\Keystrokes;
 use BenjaminHoegh\ParsedownExtended\Features\Superscripts;
 use BenjaminHoegh\ParsedownExtended\Features\Subscripts;
+use BenjaminHoegh\ParsedownExtended\Features\Emojis;
+use BenjaminHoegh\ParsedownExtended\Features\Typographers;
 
 final class ParsedownExtended implements StateBearer
 {
@@ -23,6 +25,8 @@ final class ParsedownExtended implements StateBearer
         $StateBearer = Keystrokes::from($StateBearer);
         $StateBearer = Superscripts::from($StateBearer);
         $StateBearer = Subscripts::from($StateBearer);
+        $StateBearer = Emojis::from($StateBearer);
+        $StateBearer = Typographers::from($StateBearer);
 
         $this->State = $StateBearer->state();
     }
