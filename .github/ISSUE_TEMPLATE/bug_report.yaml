@@ -46,17 +46,6 @@ body:
     validations:
       required: false
   
-  - type: dropdown
-    id: ParsedownExtended-version
-    attributes:
-      label: ParsedownExtended Version
-      description: What version of ParsedownExtended are you running?
-      options:
-        - 1.0.1
-        - 1.0
-    validations:
-      required: true
-  
   - type: checkboxes
     id: terms
     attributes:
