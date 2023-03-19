@@ -6,6 +6,7 @@ use Erusev\Parsedown\State;
 use Erusev\Parsedown\StateBearer;
 
 use BenjaminHoegh\ParsedownExtended\Features\Maths;
+// use BenjaminHoegh\ParsedownExtended\Features\TLists;
 use BenjaminHoegh\ParsedownExtended\Features\Highlights;
 use BenjaminHoegh\ParsedownExtended\Features\Keystrokes;
 use BenjaminHoegh\ParsedownExtended\Features\Superscripts;
@@ -21,6 +22,7 @@ final class ParsedownExtended implements StateBearer
     public function __construct(StateBearer $StateBearer = null)
     {
         $StateBearer = Maths::from($StateBearer ?? new State());
+        // $StateBearer = TLists::from($StateBearer);
         $StateBearer = Highlights::from($StateBearer);
         $StateBearer = Keystrokes::from($StateBearer);
         $StateBearer = Superscripts::from($StateBearer);

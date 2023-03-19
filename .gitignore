@@ -1,5 +1,6 @@
 .nova/
 vendor/
 lab/
+test/
 .php_cs.cache
 .php-cs-fixer.cache
