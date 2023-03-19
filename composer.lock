@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "be1620545f4e92732acf3f7e7d364846",
+    "content-hash": "7d069af519351249f2953fa039fd662f",
     "packages": [
         {
             "name": "erusev/parsedown",
@@ -12,12 +12,12 @@
             "source": {
                 "type": "git",
                 "url": "https://github.com/erusev/parsedown.git",
-                "reference": "79effc4ae2a7d0d999b3b18c7b14ad1d1333427a"
+                "reference": "32278afaf36c758de026b66661d3afd6dfbea743"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/erusev/parsedown/zipball/79effc4ae2a7d0d999b3b18c7b14ad1d1333427a",
-                "reference": "79effc4ae2a7d0d999b3b18c7b14ad1d1333427a",
+                "url": "https://api.github.com/repos/erusev/parsedown/zipball/32278afaf36c758de026b66661d3afd6dfbea743",
+                "reference": "32278afaf36c758de026b66661d3afd6dfbea743",
                 "shasum": ""
             },
             "require": {
@@ -58,7 +58,7 @@
                 "issues": "https://github.com/erusev/parsedown/issues",
                 "source": "https://github.com/erusev/parsedown/tree/2.0.x"
             },
-            "time": "2021-12-08T20:35:46+00:00"
+            "time": "2022-05-21T21:40:24+00:00"
         }
     ],
     "packages-dev": [],
