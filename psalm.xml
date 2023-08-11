@@ -1,0 +1,15 @@
+<?xml version="1.0"?>
+<psalm
+    errorLevel="1"
+    strictBinaryOperands="true"
+    checkForThrowsDocblock="true"
+    phpVersion="8.2"
+>
+    <projectFiles>
+        <file name="ParsedownExtended.php" />
+        <ignoreFiles>
+            <directory name="vendor" />
+        </ignoreFiles>
+    </projectFiles>
+
+</psalm>
