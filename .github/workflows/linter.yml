@@ -48,11 +48,9 @@ jobs:
       # Run Linter against code base #
       ################################
       - name: Lint Code Base
-        uses: docker://ghcr.io/github/super-linter:slim-v4
+        uses: super-linter/super-linter@v5
         env:
           VALIDATE_ALL_CODEBASE: false
+          VALIDATE_PHP_PSALM: true
           DEFAULT_BRANCH: main
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          # Exclude certain files
-          FILTER_REGEX_EXCLUDE: '(composer.lock)'
-          VALIDATE_JSCPD: false
