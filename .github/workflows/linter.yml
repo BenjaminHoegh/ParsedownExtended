@@ -15,11 +15,9 @@ name: Lint Code Base
 # Start the job on all push #
 #############################
 on:
-  push:
-    branches-ignore:
-      - [main, master]
   pull_request:
-    branches: [main]
+    paths:
+      - '**.php'
 
 ###############
 # Set the Job #
