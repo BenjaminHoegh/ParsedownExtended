@@ -12,10 +12,12 @@ name: Lint Code Base
 #
 
 #############################
-# Start the job on all push #
+# Start the job on pull requests to main branch with .php changes #
 #############################
 on:
   pull_request:
+    branches:
+      - main
     paths:
       - '**.php'
 
@@ -49,7 +51,7 @@ jobs:
         uses: docker://ghcr.io/github/super-linter:slim-v4
         env:
           VALIDATE_ALL_CODEBASE: false
-          DEFAULT_BRANCH: master
+          DEFAULT_BRANCH: main
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           # Exclude certain files
           FILTER_REGEX_EXCLUDE: '(composer.lock)'
