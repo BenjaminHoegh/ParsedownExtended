@@ -1165,6 +1165,7 @@ class ParsedownExtended extends DynamicParent
         return $block;
     }
 
+    // Parsedown Tablespan from @KENNYSOFT
     protected function blockTableComplete(array $block)
     {
         $state = $this->options['tables']['tablespan'] ?? false;
