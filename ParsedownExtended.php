@@ -27,6 +27,8 @@ class ParsedownExtended extends ParsedownExtendedParentAlias
     protected $isBlacklistInitialized = false;
     protected $anchorDuplicates = [];
 
+    private $legacyMode = false;
+
     private $options = [];
     private $defaultOptions = [
         'highlight' => true,
@@ -68,6 +70,13 @@ class ParsedownExtended extends ParsedownExtendedParentAlias
             // Get parent constructor
             parent::__construct();
         }
+
+        # Check if Parsedown 1.8 beta is installed (1.8.0-beta-1 to 1.8.0-beta-7)
+        if (version_compare(\Parsedown::version, '1.8.0-beta-1') >= 0 && version_compare(\Parsedown::version, '1.8.0-beta-7') <= 0) {
+            // set legacy mode to true
+            $this->legacyMode = true;
+        }
+
 
         // Merge user options with default options
         $this->options = array_merge($this->defaultOptions, $userOptions);
@@ -654,11 +663,10 @@ class ParsedownExtended extends ParsedownExtendedParentAlias
         return $this->processElement(['comments'], 'blockComment', $line);
     }
 
-    // TODO: Remeber to remove this if we create our own version of blockList
-    // protected function blockList($line, array $CurrentBlock = null)
-    // {
-    //     return $this->processElement(['lists'], 'blockList', $line, $CurrentBlock);
-    // }
+    protected function blockList($line, array $CurrentBlock = null)
+    {
+        return $this->processElement(['lists'], 'blockList', $line, $CurrentBlock);
+    }
 
     protected function blockQuote($line)
     {
@@ -788,6 +796,47 @@ class ParsedownExtended extends ParsedownExtendedParentAlias
             preg_replace('/^`{3}([^\s]+)(.+)?/s', '$1', $line['text'])
         );
 
+        // Legacy mode (for Parsedown 1.8.0 betas)
+        if ($this->legacyMode === true) {
+            // 1.8
+            // Mermaid.js https://mermaidjs.github.io
+            if ('mermaid' == strtolower($language)) {
+
+                return [
+                    'char' => $marker,
+                    'openerLength' => $openerLength,
+                    'element' => [
+                        'element' => [
+                            'text' => '',
+                        ],
+                        'name' => 'div',
+                        'attributes' => [
+                            'class' => 'mermaid',
+                        ],
+                    ],
+                ];
+            }
+
+            // Chart.js https://www.chartjs.org/
+            if ('chart' == strtolower($language)) {
+
+                return [
+                    'char' => $marker,
+                    'openerLength' => $openerLength,
+                    'element' => [
+                        'element' => [
+                            'text' => '',
+                        ],
+                        'name' => 'canvas',
+                        'attributes' => [
+                            'class' => 'chartjs',
+                        ],
+                    ],
+                ];
+            }
+
+        }
+
         if ($this->options['diagrams']) {
             // Mermaid.js https://mermaidjs.github.io
             if ('mermaid' == strtolower($language)) {
@@ -812,6 +861,7 @@ class ParsedownExtended extends ParsedownExtendedParentAlias
             if ('chart' == strtolower($language)) {
                 $block = array(
                     'char' => $marker,
+                    'openerLength' => $openerLength,
                     'element' => array(
                         'name' => 'canvas',
                         'handler' => 'element',
@@ -845,22 +895,42 @@ class ParsedownExtended extends ParsedownExtendedParentAlias
             return null;
         }
 
-        // header
-        $headerElements =& $block['element']['text'][0]['text'][0]['text'];
+        // Legacy mode (for Parsedown 1.8.0 betas)
+        if ($this->legacyMode === true) {
+            // header
+            $headerElements =& $block['element']['elements'][0]['elements'][0]['elements'];
+        } else {
+            // header
+            $headerElements =& $block['element']['text'][0]['text'][0]['text'];
+        }
 
         for ($index = count($headerElements) - 1; $index >= 0; --$index)
         {
             $colspan = 1;
             $headerElement =& $headerElements[$index];
 
-            while ($index && $headerElements[$index - 1]['text'] === '>')
-            {
-                $colspan++;
-                $PreviousHeaderElement =& $headerElements[--$index];
-                $PreviousHeaderElement['merged'] = true;
-                if (isset($PreviousHeaderElement['attributes']))
+            // Legacy mode (for Parsedown 1.8.0 betas)
+            if ($this->legacyMode === true) {
+                while ($index && '>' === $HeaderElements[$index - 1]['handler']['argument'])
                 {
-                    $headerElement['attributes'] = $PreviousHeaderElement['attributes'];
+                    $colspan++;
+                    $PreviousHeaderElement =& $headerElements[--$index];
+                    $PreviousHeaderElement['merged'] = true;
+                    if (isset($PreviousHeaderElement['attributes']))
+                    {
+                        $headerElement['attributes'] = $PreviousHeaderElement['attributes'];
+                    }
+                }
+            } else {
+                while ($index && $headerElements[$index - 1]['text'] === '>')
+                {
+                    $colspan++;
+                    $PreviousHeaderElement =& $headerElements[--$index];
+                    $PreviousHeaderElement['merged'] = true;
+                    if (isset($PreviousHeaderElement['attributes']))
+                    {
+                        $headerElement['attributes'] = $PreviousHeaderElement['attributes'];
+                    }
                 }
             }
 
@@ -883,27 +953,51 @@ class ParsedownExtended extends ParsedownExtendedParentAlias
         }
 
 
-        // body
-        $rows =& $block['element']['text'][1]['text'];
+        // Legacy mode (for Parsedown 1.8.0 betas)
+        if ($this->legacyMode === true) {
+            // body
+            $rows =& $block['element']['elements'][1]['elements'];
+        } else {
+            // body
+            $rows =& $block['element']['text'][1]['text'];
+        }
 
         // Colspan
         foreach ($rows as $rowNo => &$row)
         {
-            $elements =& $row['text'];
+            // Legacy mode (for Parsedown 1.8.0 betas)
+            if ($this->legacyMode === true) {
+                $elements =& $row['elements'];
+            } else {
+                $elements =& $row['text'];
+            }
 
             for ($index = count($elements) - 1; $index >= 0; --$index)
             {
                 $colspan = 1;
                 $element =& $elements[$index];
 
-                while ($index && $elements[$index - 1]['text'] === '>')
-                {
-                    $colspan++;
-                    $PreviousElement =& $elements[--$index];
-                    $PreviousElement['merged'] = true;
-                    if (isset($PreviousElement['attributes']))
+                // Legacy mode (for Parsedown 1.8.0 betas)
+                if ($this->legacyMode === true) {
+                    while ($index && '>' === $elements[$index - 1]['handler']['argument'])
                     {
-                        $element['attributes'] = $PreviousElement['attributes'];
+                        ++$colspan;
+                        $PreviousElement = &$elements[--$index];
+                        $PreviousElement['merged'] = true;
+                        if (isset($PreviousElement['attributes'])) {
+                            $element['attributes'] = $PreviousElement['attributes'];
+                        }
+                    }
+                } else {
+                    while ($index && $elements[$index - 1]['text'] === '>')
+                    {
+                        $colspan++;
+                        $PreviousElement =& $elements[--$index];
+                        $PreviousElement['merged'] = true;
+                        if (isset($PreviousElement['attributes']))
+                        {
+                            $element['attributes'] = $PreviousElement['attributes'];
+                        }
                     }
                 }
 
@@ -921,7 +1015,13 @@ class ParsedownExtended extends ParsedownExtendedParentAlias
         // Rowspan
         foreach ($rows as $rowNo => &$row)
         {
-            $elements =& $row['text'];
+
+            // Legacy mode (for Parsedown 1.8.0 betas)
+            if ($this->legacyMode === true) {
+                $elements = &$row['elements'];
+            } else {
+                $elements =& $row['text'];
+            }
 
             foreach ($elements as $index => &$element)
             {
@@ -932,10 +1032,19 @@ class ParsedownExtended extends ParsedownExtendedParentAlias
                     continue;
                 }
 
-                while ($rowNo + $rowspan < count($rows) && $index < count($rows[$rowNo + $rowspan]['text']) && $rows[$rowNo + $rowspan]['text'][$index]['text'] === '^' && (@$element['attributes']['colspan'] ?: null) === (@$rows[$rowNo + $rowspan]['text'][$index]['attributes']['colspan'] ?: null))
-                {
-                    $rows[$rowNo + $rowspan]['text'][$index]['merged'] = true;
-                    $rowspan++;
+                // Legacy mode (for Parsedown 1.8.0 betas)
+                if ($this->legacyMode === true) {
+                    while ($rowNo + $rowspan < count($rows) && $index < count($rows[$rowNo + $rowspan]['elements']) && '>' === $rows[$rowNo + $rowspan]['elements'][$index]['handler']['argument'] && (@$element['attributes']['colspan'] ?: null) === (@$rows[$rowNo + $rowspan]['elements'][$index]['attributes']['colspan'] ?: null))
+                    {
+                        $rows[$rowNo + $rowspan]['elements'][$index]['merged'] = true;
+                        $rowspan++;
+                    }
+                } else {
+                    while ($rowNo + $rowspan < count($rows) && $index < count($rows[$rowNo + $rowspan]['text']) && $rows[$rowNo + $rowspan]['text'][$index]['text'] === '^' && (@$element['attributes']['colspan'] ?: null) === (@$rows[$rowNo + $rowspan]['text'][$index]['attributes']['colspan'] ?: null))
+                    {
+                        $rows[$rowNo + $rowspan]['text'][$index]['merged'] = true;
+                        $rowspan++;
+                    }
                 }
 
                 if ($rowspan > 1)
@@ -951,7 +1060,12 @@ class ParsedownExtended extends ParsedownExtendedParentAlias
 
         foreach ($rows as $rowNo => &$row)
         {
-            $elements =& $row['text'];
+            // Legacy mode (for Parsedown 1.8.0 betas)
+            if ($this->legacyMode === true) {
+                $elements =& $row['elements'];
+            } else {
+                $elements =& $row['text'];
+            }
 
             for ($index = count($elements) - 1; $index >= 0; --$index)
             {
@@ -974,11 +1088,20 @@ class ParsedownExtended extends ParsedownExtendedParentAlias
         }
 
         $block = parent::blockHeader($line);
+
         if (!empty($block)) {
 
-            // Get the text of the heading
-            if (isset($block['element']['text'])) {
-                $text = $block['element']['text'];
+            // Legacy mode (for Parsedown 1.8.0 betas)
+            if ($this->legacyMode === true) {
+                // Get the text of the heading
+                if (isset($block['element']['handler']['argument'])) {
+                    $text = $block['element']['handler']['argument'];
+                }
+            } else {
+                // Get the text of the heading
+                if (isset($block['element']['text'])) {
+                    $text = $block['element']['text'];
+                }
             }
 
             // Get the heading level. Levels are h1, h2, ..., h6
@@ -1027,9 +1150,18 @@ class ParsedownExtended extends ParsedownExtendedParentAlias
         }
         $block = parent::blockSetextHeader($line, $block);
         if (!empty($block)) {
-            // Get the text of the heading
-            if (isset($block['element']['text'])) {
-                $text = $block['element']['text'];
+
+            // Legacy mode (for Parsedown 1.8.0 betas)
+            if ($this->legacyMode === true) {
+                // Get the text of the heading
+                if (isset($block['element']['handler']['argument'])) {
+                    $text = $block['element']['handler']['argument'];
+                }
+            } else {
+                // Get the text of the heading
+                if (isset($block['element']['text'])) {
+                    $text = $block['element']['text'];
+                }
             }
 
             // Get the heading level. Levels are h1, h2, ..., h6
@@ -1526,6 +1658,56 @@ class ParsedownExtended extends ParsedownExtendedParentAlias
         // Trim hyphens at the beginning and end of the string
         $str = trim($str, '-');
 
-        return $str;
+        return $this->incrementAnchorId($str);
+    }
+
+    /**
+     * Collect and count anchors in use to prevent duplicated ids. Return string
+     * with incremental, numeric suffix. Also init optional blacklist of ids.
+     */
+    protected function incrementAnchorId($str)
+    {
+        // add blacklist to list of used anchors
+        if (!$this->isBlacklistInitialized) {
+            $this->initBlacklist();
+        }
+
+        $this->anchorDuplicates[$str] = !isset($this->anchorDuplicates[$str]) ? 0 : ++$this->anchorDuplicates[$str];
+
+        $newStr = $str;
+
+        if ($count = $this->anchorDuplicates[$str]) {
+            $newStr .= "-{$count}";
+
+            // increment until conversion doesn't produce new duplicates anymore
+            if (isset($this->anchorDuplicates[$newStr])) {
+                $newStr = $this->incrementAnchorId($str);
+            } else {
+                $this->anchorDuplicates[$newStr] = 0;
+            }
+        }
+
+        return $newStr;
+    }
+
+    /**
+     * Add blacklisted ids to anchor list.
+     */
+    protected function initBlacklist()
+    {
+        if ($this->isBlacklistInitialized) {
+            return;
+        }
+
+        if (!empty($this->options['headings']['blacklist']) && is_array($this->options['headings']['blacklist'])) {
+            foreach ($this->options['headings']['blacklist'] as $v) {
+                if (is_string($v)) {
+                    $this->anchorDuplicates[$v] = 0;
+                }
+            }
+        }
+
+        $this->isBlacklistInitialized = true;
     }
 }
+
