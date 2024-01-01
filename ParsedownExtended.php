@@ -1,27 +1,23 @@
 <?php
+/**
+ *
+ * This code checks if the class 'ParsedownExtra' exists. If it does, it creates an alias for it called 'ParsedownExtendedParentAlias'.
+ * If 'ParsedownExtra' does not exist, it creates an alias for 'Parsedown' called 'ParsedownExtendedParentAlias'.
+ */
 
 if (class_exists('ParsedownExtra')) {
-    class DynamicParent extends \ParsedownExtra
-    {
-        public function __construct()
-        {
-            parent::__construct();
-        }
-    }
+    class_alias('ParsedownExtra', 'ParsedownExtendedParentAlias');
 } else {
-    class DynamicParent extends \Parsedown
-    {
-        public function __construct()
-        {
-        }
-    }
+    class_alias('Parsedown', 'ParsedownExtendedParentAlias');
 }
 
-class ParsedownExtended extends DynamicParent
+class ParsedownExtended extends ParsedownExtendedParentAlias
 {
-    public const VERSION = '1.1';
-    public const VERSION_PARSEDOWN_REQUIRED = '1.8';
-    public const ID_ATTRIBUTE_DEFAULT = 'toc';
+    const VERSION = '1.2';
+    const VERSION_PARSEDOWN_REQUIRED = '1.7.4';
+    const VERSION_PARSEDOWN_EXTRA_REQUIRED = '0.8.1';
+
+    const ID_ATTRIBUTE_DEFAULT = 'toc';
     protected $tagToc = '[toc]';
 
     protected $contentsListArray = [];
@@ -31,304 +27,375 @@ class ParsedownExtended extends DynamicParent
     protected $isBlacklistInitialized = false;
     protected $anchorDuplicates = [];
 
+    private $options = [];
+    private $defaultOptions = [
+        'highlight' => true,
+        'keystrokes' => true,
+        'math' => true,
+        'supscript' => true,
+        'subscript' => true,
+        'emojis' => true,
+        'typographer' => true,
+        'smartypants' => true,
+        'diagrams' => true,
+        'tasks' => true,
+    ];
     protected $specialCharacters = [
         '\\', '`', '*', '_', '{', '}', '[', ']', '(', ')', '>', '#', '+', '-', '.', '!', '|', '?', '"', "'", '<',
     ];
 
-    /**
-     * Version requirement check.
-     */
-    public function __construct(array $params = null)
+    public function __construct($userOptions = [])
     {
+        // Check if Parsedown is installed
         if (version_compare(\Parsedown::version, self::VERSION_PARSEDOWN_REQUIRED) < 0) {
-            $msgError = 'Version Error.'.PHP_EOL;
-            $msgError .= '  ParsedownExtended requires a later version of Parsedown.'.PHP_EOL;
-            $msgError .= '  - Current version : '.\Parsedown::version.PHP_EOL;
-            $msgError .= '  - Required version: '.self::VERSION_PARSEDOWN_REQUIRED.' and later'.PHP_EOL;
-
-            throw new Exception($msgError);
+            $msg_error  = 'Version Error.' . PHP_EOL;
+            $msg_error .= '  ParsedownExtended requires a later version of Parsedown.' . PHP_EOL;
+            $msg_error .= '  - Current version : ' . \Parsedown::version . PHP_EOL;
+            $msg_error .= '  - Required version: ' . self::VERSION_PARSEDOWN_REQUIRED .' and later'. PHP_EOL;
+            throw new Exception($msg_error);
         }
 
-        parent::__construct();
-
-        if (!empty($params)) {
-            $this->options = $params;
-        }
-
-        /*
-         * Inline
-         * ------------------------------------------------------------------------.
-         */
-
-        $this->options['toc'] = $this->options['toc'] ?? false;
-
-        // Marks
-        $state = $this->options['mark'] ?? true;
-        if ($state !== false) {
-            $this->InlineTypes['='][] = 'mark';
-            $this->inlineMarkerList .= '=';
-        }
-
-        // Keystrokes
-        $state = $this->options['keystrokes'] ?? true;
-        if ($state !== false) {
-            $this->InlineTypes['['][] = 'Keystrokes';
-            $this->inlineMarkerList .= '[';
-        }
-
-        // Inline Math
-        $state = $this->options['math'] ?? false;
-        if ($state !== false) {
-            $this->InlineTypes['\\'][] = 'Math';
-            $this->inlineMarkerList .= '\\';
-            $this->InlineTypes['$'][] = 'Math';
-            $this->inlineMarkerList .= '$';
-        }
-
-        // Superscript
-        $state = $this->options['sup'] ?? false;
-        if ($state !== false) {
-            $this->InlineTypes['^'][] = 'Superscript';
-            $this->inlineMarkerList .= '^';
-        }
-
-        // Subscript
-        $state = $this->options['sub'] ?? false;
-        if ($state !== false) {
-            $this->InlineTypes['~'][] = 'Subscript';
-        }
-
-        // Emojis
-        $state = $this->options['emojis'] ?? true;
-        if ($state !== false) {
-            $this->InlineTypes[':'][] = 'Emojis';
-            $this->inlineMarkerList .= ':';
-        }
-
-        // Typographer
-        $state = $this->options['typographer'] ?? false;
-        if ($state !== false) {
-            $this->InlineTypes['('][] = 'Typographer';
-            $this->inlineMarkerList .= '(';
-            $this->InlineTypes['.'][] = 'Typographer';
-            $this->inlineMarkerList .= '.';
-            $this->InlineTypes['+'][] = 'Typographer';
-            $this->inlineMarkerList .= '+';
-            $this->InlineTypes['!'][] = 'Typographer';
-            $this->inlineMarkerList .= '!';
-            $this->InlineTypes['?'][] = 'Typographer';
-            $this->inlineMarkerList .= '?';
-        }
-
-        // Smartypants
-        $state = $this->options['smarty'] ?? false;
-        if ($state !== false) {
-            $this->InlineTypes['<'][] = 'Smartypants';
-            $this->inlineMarkerList .= '<';
-            $this->InlineTypes['>'][] = 'Smartypants';
-            $this->inlineMarkerList .= '>';
-            $this->InlineTypes['-'][] = 'Smartypants';
-            $this->inlineMarkerList .= '-';
-            $this->InlineTypes['.'][] = 'Smartypants';
-            $this->inlineMarkerList .= '.';
-            $this->InlineTypes["'"][] = 'Smartypants';
-            $this->inlineMarkerList .= "'";
-            $this->InlineTypes['"'][] = 'Smartypants';
-            $this->inlineMarkerList .= '"';
-            $this->InlineTypes['`'][] = 'Smartypants';
-            $this->inlineMarkerList .= '`';
-        }
-
-        /*
-         * Blocks
-         * ------------------------------------------------------------------------
-         */
-
-        // Block Math
-        $state = $this->options['math'] ?? false;
-        if ($state !== false) {
-            $this->BlockTypes['\\'][] = 'Math';
-            $this->BlockTypes['$'][] = 'Math';
-        }
-
-        // Task
-        $state = $this->options['lists']['tasks'] ?? true;
-        if ($state !== false) {
-            $this->BlockTypes['['][] = 'Checkbox';
-        }
-    }
-
-    /**
-     * Parses the given markdown string to an HTML string but it leaves the ToC
-     * tag as is. It's an alias of the parent method "\DynamicParent::text()".
-     */
-    public function body($text): string
-    {
-        $text = $this->encodeTagToHash($text);  // Escapes ToC tag temporary
-        $html = DynamicParent::text($text);     // Parses the markdown text
-
-        return $this->decodeTagFromHash($html); // Unescape the ToC tag
-    }
-
-    /**
-     * Parses markdown string to HTML and also the "[toc]" tag as well.
-     * It overrides the parent method: \Parsedown::text().
-     */
-    public function text($text)
-    {
-        // Parses the markdown text except the ToC tag. This also searches
-        // the list of contents and available to get from "contentsList()"
-        // method.
-        $html = $this->body($text);
-
-        if (isset($this->options['toc']) && false == $this->options['toc']) {
-            return $html;
-        }
-
-        $tagOrigin = $this->getTagToC();
-
-        if (strpos($text, $tagOrigin) === false) {
-            return $html;
-        }
-
-        $tocData = $this->contentsList();
-        $tocId = $this->getIdAttributeToC();
-        $needle = '<p>'.$tagOrigin.'</p>';
-        $replace = "<div id=\"{$tocId}\">{$tocData}</div>";
-
-        return str_replace($needle, $replace, $html);
-    }
-
-    /**
-     * Returns the parsed ToC.
-     *
-     * @param string $typeReturn Type of the return format. "html" or "json".
-     *
-     * @return string HTML/JSON string of ToC
-     */
-    public function contentsList($typeReturn = 'html')
-    {
-        if ('html' === strtolower($typeReturn)) {
-            $result = '';
-            if (!empty($this->contentsListString)) {
-                // Parses the ToC list in markdown to HTML
-                $result = $this->body($this->contentsListString);
+        // If ParsedownExtra is installed, check its version
+        if (class_exists('ParsedownExtra')) {
+            if (version_compare(\ParsedownExtra::version, self::VERSION_PARSEDOWN_EXTRA_REQUIRED) < 0) {
+                $msg_error  = 'Version Error.' . PHP_EOL;
+                $msg_error .= '  ParsedownExtended requires a later version of ParsedownExtra.' . PHP_EOL;
+                $msg_error .= '  - Current version : ' . \ParsedownExtra::version . PHP_EOL;
+                $msg_error .= '  - Required version: ' . self::VERSION_PARSEDOWN_EXTRA_REQUIRED .' and later'. PHP_EOL;
+                throw new Exception($msg_error);
             }
 
-            return $result;
+            // Get parent constructor
+            parent::__construct();
         }
 
-        if ('json' === strtolower($typeReturn)) {
-            return json_encode($this->contentsListArray);
-        }
+        // Merge user options with default options
+        $this->options = array_merge($this->defaultOptions, $userOptions);
 
-        // Forces to return ToC as "html"
-        error_log(
-            'Unknown return type given while parsing ToC.'
-            .' At: '.__FUNCTION__.'() '
-            .' in Line:'.__LINE__.' (Using default type)'
-        );
+        // Handle Inlines
+        $this->addInlineType('highlight', '=', 'Highlight');
+        $this->addInlineType('keystrokes', '[', 'Keystrokes');
+        $this->addInlineType('math', ['\\', '$'], 'MathNotation');
+        $this->addInlineType('supscript', '^', 'Superscript');
+        $this->addInlineType('subscript', '~', 'Subscript');
+        $this->addInlineType('emojis', ':', 'Emojis');
+        $this->addInlineType('typographer', ['(','.','+','!','?'], 'typographer');
+        $this->addInlineType('smartypants', ['<', '>', '-', '.', "'", '"', '`'], 'Smartypants');
 
-        return $this->contentsList('html');
+        // Handle Blocks
+        $this->addBlockType('math', ['\\','$'], 'MathNotation');
+        $this->addBlockType('tasks','[', 'Checkbox');
     }
 
-    protected function inlineText($text)
-    {
-        $Inline = [
-            'extent' => strlen($text),
-            'element' => [],
-        ];
 
-        $Inline['element']['elements'] = self::pregReplaceElements(
-            $this->breaksEnabled ? '/[ ]*+\n/' : '/(?:[ ]*+\\\\|[ ]{2,}+)\n/',
-            [
-                ['name' => 'br'],
-                ['text' => "\n"],
-            ],
-            $text
-        );
+    // --------------------------------------------------------------------
+    // Inline Types
+    // --------------------------------------------------------------------
 
-        return DynamicParent::inlineText($text);
+    protected function inlineCode($excerpt) {
+        return $this->processElement(['code', 'code.inline'], 'inlineCode', $excerpt);
     }
 
-    /**
-     * ------------------------------------------------------------------------
-     * Inline
-     * ------------------------------------------------------------------------.
-     */
-
-    // inlineCode
-    protected function inlineCode($excerpt)
-    {
-        $codeSnippets = $this->options['code']['inline'] ?? true;
-        $codeMain = $this->options['code'] ?? true;
-        if ($codeSnippets === true and $codeMain === true) {
-            return DynamicParent::inlineCode($excerpt);
-        }
-    }
-
-    protected function inlineEmailTag($excerpt)
-    {
-        $mainState = $this->options['links'] ?? true;
-        $state = $this->options['links']['email_links'] ?? true;
-        if ($mainState and $state) {
-            return DynamicParent::inlineEmailTag($excerpt);
-        }
+    protected function inlineEmailTag($excerpt) {
+        return $this->processElement(['links', 'links.email_links'], 'inlineEmailTag', $excerpt);
     }
 
     protected function inlineEmphasis($excerpt)
     {
-        $state = $this->options['emphasis'] ?? true;
-        if ($state) {
-            return DynamicParent::inlineEmphasis($excerpt);
-        }
+        return $this->processElement(['emphasis'], 'inlineEmphasis', $excerpt);
     }
 
     protected function inlineImage($excerpt)
     {
-        $state = $this->options['images'] ?? true;
-        if ($state) {
-            return DynamicParent::inlineImage($excerpt);
-        }
+        return $this->processElement(['images'], 'inlineImage', $excerpt);
     }
 
     protected function inlineLink($excerpt)
     {
-        $state = $this->options['links'] ?? true;
-        if ($state) {
-            return DynamicParent::inlineLink($excerpt);
-        }
+        return $this->processElement(['links'], 'inlineLink', $excerpt);
     }
 
     protected function inlineMarkup($excerpt)
     {
-        $state = $this->options['markup'] ?? true;
-        if ($state) {
-            return DynamicParent::inlineMarkup($excerpt);
-        }
+        return $this->processElement(['markup'], 'inlineMarkup', $excerpt);
     }
 
     protected function inlineStrikethrough($excerpt)
     {
-        $state = $this->options['strikethroughs'] ?? true;
-        if ($state) {
-            return DynamicParent::inlineStrikethrough($excerpt);
-        }
+        return $this->processElement(['strikethroughs'], 'inlineStrikethrough', $excerpt);
     }
 
     protected function inlineUrl($excerpt)
     {
-        $state = $this->options['links'] ?? true;
-        if ($state) {
-            return DynamicParent::inlineUrl($excerpt);
-        }
+        return $this->processElement(['links'], 'inlineUrl', $excerpt);
     }
 
     protected function inlineUrlTag($excerpt)
     {
-        $state = $this->options['links'] ?? true;
+        return $this->processElement(['links'], 'inlineUrlTag', $excerpt);
+    }
+
+    // Highlight
+    protected function inlineHighlight($excerpt)
+    {
+        if (preg_match('/^(==)([^=]*?)(==)/', $excerpt['text'], $matches)) {
+            return [
+                'extent' => strlen($matches[0]),
+                'element' => [
+                    'name' => 'mark',
+                    'text' => $matches[2],
+                ],
+            ];
+        }
+    }
+
+    // Keysrokes
+    protected function inlineKeystrokes($excerpt)
+    {
+        if (preg_match('/^(?<!\[)(?:\[\[([^\[\]]*|[\[\]])\]\])(?!\])/s', $excerpt['text'], $matches)) {
+            return [
+                'extent' => strlen($matches[0]),
+                'element' => [
+                    'name' => 'kbd',
+                    'text' => $matches[1],
+                ],
+            ];
+        }
+    }
+
+    // Superscript
+    protected function inlineSuperscript($excerpt)
+    {
+        if (preg_match('/(?:\^(?!\^)([^\^ ]*)\^(?!\^))/', $excerpt['text'], $matches)) {
+            return [
+                'extent' => strlen($matches[0]),
+                'element' => [
+                    'name' => 'sup',
+                    'text' => $matches[1],
+                    'function' => 'lineElements',
+                ],
+            ];
+        }
+    }
+
+    // Subscript
+    protected function inlineSubscript($excerpt)
+    {
+        if (preg_match('/(?:~(?!~)([^~ ]*)~(?!~))/', $excerpt['text'], $matches)) {
+            return [
+                'extent' => strlen($matches[0]),
+                'element' => [
+                    'name' => 'sub',
+                    'text' => $matches[1],
+                    'function' => 'lineElements',
+                ],
+            ];
+        }
+    }
+
+    // Inline typographer
+    protected function inlineTypographer($excerpt)
+    {
+        $substitutions = [
+            '/\(c\)/i' => '&copy;',
+            '/\(r\)/i' => '&reg;',
+            '/\(tm\)/i' => '&trade;',
+            '/\(p\)/i' => '&para;',
+            '/\+-/i' => '&plusmn;',
+            '/\.{4,}|\.{2}/i' => '...',
+            '/\!\.{3,}/i' => '!..',
+            '/\?\.{3,}/i' => '?..',
+        ];
+
+        if (preg_match('/\+-|\(p\)|\(tm\)|\(r\)|\(c\)|\.{2,}|\!\.{3,}|\?\.{3,}/i', $excerpt['text'], $matches)) {
+            return [
+                'extent' => strlen($matches[0]),
+                'element' => [
+                    'rawHtml' => preg_replace(array_keys($substitutions), array_values($substitutions), $matches[0]),
+                ],
+            ];
+        }
+    }
+
+    // Inline Smartypants
+    protected function inlineSmartypants($excerpt)
+    {
+        // Substitutions
+        $backtickDoublequoteOpen = $this->options['smartypants']['substitutions']['left-double-quote'] ?? '&ldquo;';
+        $backtickDoublequoteClose = $this->options['smartypants']['substitutions']['right-double-quote'] ?? '&rdquo;';
+
+        $smartDoublequoteOpen = $this->options['smartypants']['substitutions']['left-double-quote'] ?? '&ldquo;';
+        $smartDoublequoteClose = $this->options['smartypants']['substitutions']['right-double-quote'] ?? '&rdquo;';
+        $smartSinglequoteOpen = $this->options['smartypants']['substitutions']['left-single-quote'] ?? '&lsquo;';
+        $smartSinglequoteClose = $this->options['smartypants']['substitutions']['right-single-quote'] ?? '&rsquo;';
+
+        $leftAngleQuote = $this->options['smartypants']['substitutions']['left-angle-quote'] ?? '&laquo;';
+        $rightAngleQuote = $this->options['smartypants']['substitutions']['right-angle-quote'] ?? '&raquo;';
+
+        if (!isset($excerpt['before'])) {
+            $excerpt['before'] = '';
+        }
+
+
+        if (preg_match('/(``)(?!\s)([^"\'`]{1,})(\'\')|(\")(?!\s)([^\"]{1,})(\")|(\')(?!\s)([^\']{1,})(\')|(<{2})(?!\s)([^<>]{1,})(>{2})|(\.{3})|(-{3})|(-{2})/i', $excerpt['text'], $matches)) {
+            $matches = array_values(array_filter($matches));
+
+            // Smart backticks
+            $smartBackticks = $this->options['smartypants']['smart_backticks'] ?? false;
+
+            if ($smartBackticks) {
+                if ('``' === $matches[1]) {
+                    $length = strlen(trim($excerpt['before']));
+                    if ($length > 0) {
+                        return;
+                    }
+
+                    return [
+                        'extent' => strlen($matches[0]),
+                        'element' => [
+                            'text' => html_entity_decode($backtickDoublequoteOpen).$matches[2].html_entity_decode($backtickDoublequoteClose),
+                        ],
+                    ];
+                }
+            }
+
+            // Smart quotes
+            $smartQuotes = $this->options['smartypants']['smart_quotes'] ?? true;
+
+            if ($smartQuotes) {
+                if ("'" === $matches[1]) {
+                    $length = strlen(trim($excerpt['before']));
+                    if ($length > 0) {
+                        return;
+                    }
+
+                    return [
+                        'extent' => strlen($matches[0]),
+                        'element' => [
+                            'text' => html_entity_decode($smartSinglequoteOpen).$matches[2].html_entity_decode($smartSinglequoteClose),
+                        ],
+                    ];
+                }
+
+                if ('"' === $matches[1]) {
+                    $length = strlen(trim($excerpt['before']));
+                    if ($length > 0) {
+                        return;
+                    }
+
+                    return [
+                        'extent' => strlen($matches[0]),
+                        'element' => [
+                            'text' => html_entity_decode($smartDoublequoteOpen).$matches[2].html_entity_decode($smartDoublequoteClose),
+                        ],
+                    ];
+                }
+            }
+
+            // Smart angled quotes
+            $smartAngledQuotes = $this->options['smartypants']['smart_angled_quotes'] ?? true;
+
+            if ($smartAngledQuotes) {
+                if ('<<' === $matches[1]) {
+                    $length = strlen(trim($excerpt['before']));
+                    if ($length > 0) {
+                        return;
+                    }
+
+                    return [
+                        'extent' => strlen($matches[0]),
+                        'element' => [
+                            'text' => html_entity_decode($leftAngleQuote).$matches[2].html_entity_decode($rightAngleQuote),
+                        ],
+                    ];
+                }
+            }
+
+            // Smart dashes
+            $smartDashes = $this->options['smartypants']['smart_dashes'] ?? true;
+
+            if ($smartDashes) {
+                if ('---' === $matches[1]) {
+                    return [
+                        'extent' => strlen($matches[0]),
+                        'element' => [
+                            'rawHtml' => $this->options['smartypants']['substitutions']['mdash'] ?? '&mdash;',
+                        ],
+                    ];
+                }
+
+                if ('--' === $matches[1]) {
+                    return [
+                        'extent' => strlen($matches[0]),
+                        'element' => [
+                            'rawHtml' => $this->options['smartypants']['substitutions']['ndash'] ?? '&ndash;',
+                        ],
+                    ];
+                }
+            }
+
+            // Smart ellipses
+            $smartEllipses = $this->options['smartypants']['smart_ellipses'] ?? true;
+
+            if ($smartEllipses) {
+                if ('...' === $matches[1]) {
+                    return [
+                        'extent' => strlen($matches[0]),
+                        'element' => [
+                            'rawHtml' => $this->options['smartypants']['substitutions']['ellipses'] ?? '&hellip;',
+                        ],
+                    ];
+                }
+            }
+        }
+    }
+
+    // Math Notation
+    protected function inlineMathNotation($excerpt)
+    {
+        $matchSingleDollar = $this->options['math']['single_dollar'] ?? false;
+        // Inline Matches
+        if ($matchSingleDollar) {
+            // Match single dollar - experimental
+            if (preg_match('/^(?<!\\\\)((?<!\$)\$(?!\$)(.*?)(?<!\$)\$(?!\$)|(?<!\\\\\()\\\\\((.*?)(?<!\\\\\()\\\\\)(?!\\\\\)))/s', $excerpt['text'], $matches)) {
+                $mathMatch = $matches[0];
+            }
+        } else {
+            if (preg_match('/^(?<!\\\\\()\\\\\((.*?)(?<!\\\\\()\\\\\)(?!\\\\\))/s', $excerpt['text'], $matches)) {
+                $mathMatch = $matches[0];
+            }
+        }
+
+        if (isset($mathMatch)) {
+            return [
+                'extent' => strlen($mathMatch),
+                'element' => [
+                    'name' => '',
+                    'text' => $mathMatch,
+                ],
+            ];
+        }
+    }
+
+    protected function inlineEscapeSequence($excerpt)
+    {
+        $element = [
+            'element' => [
+                'rawHtml' => $excerpt['text'][1],
+            ],
+            'extent' => 2,
+        ];
+
+        $state = $this->options['math'] ?? false;
+
         if ($state) {
-            return DynamicParent::inlineUrlTag($excerpt);
+            if (isset($excerpt['text'][1]) && in_array($excerpt['text'][1], $this->specialCharacters) && !preg_match('/^(?<!\\\\)(?<!\\\\\()\\\\\((.{2,}?)(?<!\\\\\()\\\\\)(?!\\\\\))/s', $excerpt['text'])) {
+                return $element;
+            }
+        } else {
+            if (isset($excerpt['text'][1]) && in_array($excerpt['text'][1], $this->specialCharacters)) {
+                return $element;
+            }
         }
     }
 
@@ -556,315 +623,349 @@ class ParsedownExtended extends DynamicParent
             return [
                 'extent' => strlen($matches[0]),
                 'element' => [
+                    'name' => '',
                     'text' => str_replace(array_keys($emojiMap), $emojiMap, $matches[0]),
                 ],
             ];
         }
     }
 
-    // Inline Marks
 
-    protected function inlineMark($excerpt)
-    {
-        if (preg_match('/^(==)([^=]*?)(==)/', $excerpt['text'], $matches)) {
-            return [
-                'extent' => strlen($matches[0]),
-                'element' => [
-                    'name' => 'mark',
-                    'text' => $matches[2],
-                ],
-            ];
-        }
-    }
+    // --------------------------------------------------------------------
+    // Block Types
+    // --------------------------------------------------------------------
 
-    // Inline Keystrokes
-
-    protected function inlineKeystrokes($excerpt)
-    {
-        if (preg_match('/^(?<!\[)(?:\[\[([^\[\]]*|[\[\]])\]\])(?!\])/s', $excerpt['text'], $matches)) {
-            return [
-                'extent' => strlen($matches[0]),
-                'element' => [
-                    'name' => 'kbd',
-                    'text' => $matches[1],
-                ],
-            ];
-        }
-    }
-
-    // Inline Superscript
-
-    protected function inlineSuperscript($excerpt)
-    {
-        if (preg_match('/(?:\^(?!\^)([^\^ ]*)\^(?!\^))/', $excerpt['text'], $matches)) {
-            return [
-                'extent' => strlen($matches[0]),
-                'element' => [
-                    'name' => 'sup',
-                    'text' => $matches[1],
-                    'function' => 'lineElements',
-                ],
-            ];
-        }
-    }
-
-    // Inline Subscript
-
-    protected function inlineSubscript($excerpt)
-    {
-        if (preg_match('/(?:~(?!~)([^~ ]*)~(?!~))/', $excerpt['text'], $matches)) {
-            return [
-                'extent' => strlen($matches[0]),
-                'element' => [
-                    'name' => 'sub',
-                    'text' => $matches[1],
-                    'function' => 'lineElements',
-                ],
-            ];
-        }
-    }
-
-    // Inline typographer
-
-    protected function inlineTypographer($excerpt)
-    {
-        $substitutions = [
-            '/\(c\)/i' => '&copy;',
-            '/\(r\)/i' => '&reg;',
-            '/\(tm\)/i' => '&trade;',
-            '/\(p\)/i' => '&para;',
-            '/\+-/i' => '&plusmn;',
-            '/\.{4,}|\.{2}/i' => '...',
-            '/\!\.{3,}/i' => '!..',
-            '/\?\.{3,}/i' => '?..',
-        ];
-
-        if (preg_match('/\+-|\(p\)|\(tm\)|\(r\)|\(c\)|\.{2,}|\!\.{3,}|\?\.{3,}/i', $excerpt['text'], $matches)) {
-            return [
-                'extent' => strlen($matches[0]),
-                'element' => [
-                    'rawHtml' => preg_replace(array_keys($substitutions), array_values($substitutions), $matches[0]),
-                ],
-            ];
-        }
-    }
-
-    // Inline Smartypants
-
-    protected function inlineSmartypants($excerpt)
-    {
-        // Substitutions
-        $backtickDoublequoteOpen = $this->options['smarty']['substitutions']['left-double-quote'] ?? '&ldquo;';
-        $backtickDoublequoteClose = $this->options['smarty']['substitutions']['right-double-quote'] ?? '&rdquo;';
-
-        $smartDoublequoteOpen = $this->options['smarty']['substitutions']['left-double-quote'] ?? '&ldquo;';
-        $smartDoublequoteClose = $this->options['smarty']['substitutions']['right-double-quote'] ?? '&rdquo;';
-        $smartSinglequoteOpen = $this->options['smarty']['substitutions']['left-single-quote'] ?? '&lsquo;';
-        $smartSinglequoteClose = $this->options['smarty']['substitutions']['right-single-quote'] ?? '&rsquo;';
-
-        $leftAngleQuote = $this->options['smarty']['substitutions']['left-angle-quote'] ?? '&laquo;';
-        $rightAngleQuote = $this->options['smarty']['substitutions']['right-angle-quote'] ?? '&raquo;';
-
-        if (preg_match('/(``)(?!\s)([^"\'`]{1,})(\'\')|(\")(?!\s)([^\"]{1,})(\")|(\')(?!\s)([^\']{1,})(\')|(<{2})(?!\s)([^<>]{1,})(>{2})|(\.{3})|(-{3})|(-{2})/i', $excerpt['text'], $matches)) {
-            $matches = array_values(array_filter($matches));
-
-            // Smart backticks
-            $smartBackticks = $this->options['smarty']['smart_backticks'] ?? false;
-
-            if ($smartBackticks) {
-                if ('``' === $matches[1]) {
-                    $length = strlen(trim($excerpt['before']));
-                    if ($length > 0) {
-                        return;
-                    }
-
-                    return [
-                        'extent' => strlen($matches[0]),
-                        'element' => [
-                            'text' => html_entity_decode($backtickDoublequoteOpen).$matches[2].html_entity_decode($backtickDoublequoteClose),
-                        ],
-                    ];
-                }
-            }
-
-            // Smart quotes
-            $smartQuotes = $this->options['smarty']['smart_quotes'] ?? true;
-
-            if ($smartQuotes) {
-                if ("'" === $matches[1]) {
-                    $length = strlen(trim($excerpt['before']));
-                    if ($length > 0) {
-                        return;
-                    }
-
-                    return [
-                        'extent' => strlen($matches[0]),
-                        'element' => [
-                            'text' => html_entity_decode($smartSinglequoteOpen).$matches[2].html_entity_decode($smartSinglequoteClose),
-                        ],
-                    ];
-                }
-
-                if ('"' === $matches[1]) {
-                    $length = strlen(trim($excerpt['before']));
-                    if ($length > 0) {
-                        return;
-                    }
-
-                    return [
-                        'extent' => strlen($matches[0]),
-                        'element' => [
-                            'text' => html_entity_decode($smartDoublequoteOpen).$matches[2].html_entity_decode($smartDoublequoteClose),
-                        ],
-                    ];
-                }
-            }
-
-            // Smart angled quotes
-            $smartAngledQuotes = $this->options['smarty']['smart_angled_quotes'] ?? true;
-
-            if ($smartAngledQuotes) {
-                if ('<<' === $matches[1]) {
-                    $length = strlen(trim($excerpt['before']));
-                    if ($length > 0) {
-                        return;
-                    }
-
-                    return [
-                        'extent' => strlen($matches[0]),
-                        'element' => [
-                            'text' => html_entity_decode($leftAngleQuote).$matches[2].html_entity_decode($rightAngleQuote),
-                        ],
-                    ];
-                }
-            }
-
-            // Smart dashes
-            $smartDashes = $this->options['smarty']['smart_dashes'] ?? true;
-
-            if ($smartDashes) {
-                if ('---' === $matches[1]) {
-                    return [
-                        'extent' => strlen($matches[0]),
-                        'element' => [
-                            'rawHtml' => $this->options['smarty']['substitutions']['mdash'] ?? '&mdash;',
-                        ],
-                    ];
-                }
-
-                if ('--' === $matches[1]) {
-                    return [
-                        'extent' => strlen($matches[0]),
-                        'element' => [
-                            'rawHtml' => $this->options['smarty']['substitutions']['ndash'] ?? '&ndash;',
-                        ],
-                    ];
-                }
-            }
-
-            // Smart ellipses
-            $smartEllipses = $this->options['smarty']['smart_ellipses'] ?? true;
-
-            if ($smartEllipses) {
-                if ('...' === $matches[1]) {
-                    return [
-                        'extent' => strlen($matches[0]),
-                        'element' => [
-                            'rawHtml' => $this->options['smarty']['substitutions']['ellipses'] ?? '&hellip;',
-                        ],
-                    ];
-                }
-            }
-        }
-    }
-
-    // Inline Math
-
-    protected function inlineMath($excerpt)
-    {
-        $matchSingleDollar = $this->options['math']['single_dollar'] ?? false;
-        // Inline Matches
-        if ($matchSingleDollar) {
-            // Match single dollar - experimental
-            if (preg_match('/^(?<!\\\\)((?<!\$)\$(?!\$)(.*?)(?<!\$)\$(?!\$)|(?<!\\\\\()\\\\\((.*?)(?<!\\\\\()\\\\\)(?!\\\\\)))/s', $excerpt['text'], $matches)) {
-                $mathMatch = $matches[0];
-            }
-        } else {
-            if (preg_match('/^(?<!\\\\\()\\\\\((.*?)(?<!\\\\\()\\\\\)(?!\\\\\))/s', $excerpt['text'], $matches)) {
-                $mathMatch = $matches[0];
-            }
-        }
-
-        if (isset($mathMatch)) {
-            return [
-                'extent' => strlen($mathMatch),
-                'element' => [
-                    'text' => $mathMatch,
-                ],
-            ];
-        }
-    }
-
-    protected function inlineEscapeSequence($excerpt)
-    {
-        $element = [
-            'element' => [
-                'rawHtml' => $excerpt['text'][1],
-            ],
-            'extent' => 2,
-        ];
-
-        $state = $this->options['math'] ?? false;
-
-        if ($state) {
-            if (isset($excerpt['text'][1]) && in_array($excerpt['text'][1], $this->specialCharacters) && !preg_match('/^(?<!\\\\)(?<!\\\\\()\\\\\((.{2,}?)(?<!\\\\\()\\\\\)(?!\\\\\))/s', $excerpt['text'])) {
-                return $element;
-            }
-        } else {
-            if (isset($excerpt['text'][1]) && in_array($excerpt['text'][1], $this->specialCharacters)) {
-                return $element;
-            }
-        }
-    }
-
-    /**
-     * ------------------------------------------------------------------------
-     *  Blocks.
-     * ------------------------------------------------------------------------
-     */
-    protected function blockFootnote($line)
-    {
-        $state = $this->options['footnotes'] ?? true;
-        if ($state) {
-            return DynamicParent::blockFootnote($line);
-        }
+    protected function blockFootnote($line) {
+        return $this->processElement(['footnotes'], 'blockFootnote', $line);
     }
 
     protected function blockDefinitionList($line, $block)
     {
-        $state = $this->options['definition_lists'] ?? true;
-        if ($state) {
-            return DynamicParent::blockDefinitionList($line, $block);
-        }
+        return $this->processElement(['definition_lists'], 'blockDefinitionList', $line, $block);
     }
 
     protected function blockCode($line, $block = null)
     {
-        $codeBlock = $this->options['code']['blocks'] ?? true;
-        $codeMain = $this->options['code'] ?? true;
-        if ($codeBlock === true and $codeMain === true) {
-            return DynamicParent::blockCode($line, $block);
-        }
+        return $this->processElement(['code', 'code.blocks'], 'blockCode', $line, $block);
     }
 
     protected function blockComment($line)
     {
-        $state = $this->options['comments'] ?? true;
-        if ($state) {
-            return DynamicParent::blockComment($line);
-        }
+        return $this->processElement(['comments'], 'blockComment', $line);
     }
 
+    // TODO: Remeber to remove this if we create our own version of blockList
+    // protected function blockList($line, array $CurrentBlock = null)
+    // {
+    //     return $this->processElement(['lists'], 'blockList', $line, $CurrentBlock);
+    // }
+
+    protected function blockQuote($line)
+    {
+        return $this->processElement(['quotes'], 'blockQuote', $line);
+    }
+
+    protected function blockRule($line)
+    {
+        return $this->processElement(['thematic_breaks'], 'blockRule', $line);
+    }
+
+    protected function blockMarkup($line)
+    {
+        $state = $this->options['markup'] ?? true;
+        return $this->processElement(['markup'], 'blockMarkup', $line);
+    }
+
+    protected function blockReference($line)
+    {
+        return $this->processElement(['references'], 'blockReference', $line);
+    }
+
+    protected function blockTable($line, $block = null)
+    {
+        $state = $this->options['tables'] ?? true;
+        return $this->processElement(['tables'], 'blockTable', $line, $block);
+    }
+
+    // Block MathNotation
+    protected function blockMathNotation($line)
+    {
+
+        $block = [
+            'element' => [
+                'text' => '',
+            ],
+        ];
+
+        if (preg_match('/^(?<!\\\\)(\\\\\[)(?!.)$/', $line['text'])) {
+            $block['end'] = '\]';
+
+            return $block;
+        }
+
+        // One line display math
+        if (preg_match('/^(?<!\\\\\[)\\\\\[(.*?)(?<!\\\\\[)\\\\\](?!\\\\\])$/', $line['text'], $matches)) {
+            $block['end'] = '\]';
+            $block['element']['text'] = $matches[0];
+
+            return $block;
+        }
+
+        if (preg_match('/^(?<!\\\\)(\$\$)(?!.)$/', $line['text'])) {
+            $block['end'] = '$$';
+
+            return $block;
+        }
+
+    }
+
+    // ~
+
+    protected function blockMathNotationContinue($line, $block)
+    {
+        if (isset($block['complete'])) {
+            return;
+        }
+
+        if (isset($block['interrupted'])) {
+            $block['element']['text'] .= str_repeat(
+                "\n",
+                $block['interrupted']
+            );
+
+            unset($block['interrupted']);
+        }
+
+
+        if (preg_match('/^(?<!\\\\)(\\\\\])$/', $line['text']) && '\]' === $block['end']) {
+            $block['complete'] = true;
+            $block['math'] = true;
+            $block['element']['text'] = '\\['.$block['element']['text'].'\\]';
+
+            return $block;
+        }
+
+        // One line display mathh
+        if (preg_match('/(?<!\\\\)(\\\\\])$/', $block['element']['text']) && '\]' === $block['end']) {
+            $block['complete'] = true;
+            $block['math'] = true;
+            $block['element']['text'] = $block['element']['text'];
+
+            return $block;
+        }
+
+        if (preg_match('/^(?<!\\\\)(\$\$)$/', $line['text']) && '$$' === $block['end']) {
+            $block['complete'] = true;
+            $block['math'] = true;
+            $block['element']['text'] = '$$'.$block['element']['text'].'$$';
+
+            return $block;
+        }
+
+        $block['element']['text'] .= "\n".$line['body'];
+
+        // ~
+
+        return $block;
+    }
+
+    // ~
+
+    protected function blockMathNotationComplete($block)
+    {
+        return $block;
+    }
+
+    // Block Fenced Code (Overwrite) to allow for diagrams
+    protected function blockFencedCode($line)
+    {
+
+        $block = parent::blockFencedCode($line);
+
+        $marker = $line['text'][0];
+        $openerLength = strspn($line['text'], $marker);
+        $language = trim(
+            preg_replace('/^`{3}([^\s]+)(.+)?/s', '$1', $line['text'])
+        );
+
+        if ($this->options['diagrams']) {
+            // Mermaid.js https://mermaidjs.github.io
+            if ('mermaid' == strtolower($language)) {
+
+                $block = array(
+                    'char' => $marker,
+                    'openerLength' => $openerLength,
+                    'element' => array(
+                        'name' => 'div',
+                        'handler' => 'element',
+                        'text' => [
+                            'text' => '',
+                        ],
+                        'attributes' => [
+                            'class' => 'mermaid',
+                        ],
+                    ),
+                );
+            }
+
+            // Chart.js https://www.chartjs.org/
+            if ('chart' == strtolower($language)) {
+                $block = array(
+                    'char' => $marker,
+                    'element' => array(
+                        'name' => 'canvas',
+                        'handler' => 'element',
+                        'text' => [
+                            'text' => '',
+                        ],
+                        'attributes' => [
+                            'class' => 'chartjs',
+                        ],
+                    ),
+                );
+            }
+        }
+
+        return $block;
+    }
+
+    /**
+     * (Override)
+     * Tablespan
+     * Modifyed version of Tablespan by @KENNYSOFT
+     */
+    protected function blockTableComplete(array $block)
+    {
+        $state = $this->options['tables']['tablespan'] ?? true;
+        if ($state === false) {
+            return $block;
+        }
+
+        if (!isset($block)) {
+            return null;
+        }
+
+        // header
+        $headerElements =& $block['element']['text'][0]['text'][0]['text'];
+
+        for ($index = count($headerElements) - 1; $index >= 0; --$index)
+        {
+            $colspan = 1;
+            $headerElement =& $headerElements[$index];
+
+            while ($index && $headerElements[$index - 1]['text'] === '>')
+            {
+                $colspan++;
+                $PreviousHeaderElement =& $headerElements[--$index];
+                $PreviousHeaderElement['merged'] = true;
+                if (isset($PreviousHeaderElement['attributes']))
+                {
+                    $headerElement['attributes'] = $PreviousHeaderElement['attributes'];
+                }
+            }
+
+            if ($colspan > 1)
+            {
+                if ( ! isset($headerElement['attributes']))
+                {
+                    $headerElement['attributes'] = array();
+                }
+                $headerElement['attributes']['colspan'] = $colspan;
+            }
+        }
+
+        for ($index = count($headerElements) - 1; $index >= 0; --$index)
+        {
+            if (isset($headerElements[$index]['merged']))
+            {
+                array_splice($headerElements, $index, 1);
+            }
+        }
+
+
+        // body
+        $rows =& $block['element']['text'][1]['text'];
+
+        // Colspan
+        foreach ($rows as $rowNo => &$row)
+        {
+            $elements =& $row['text'];
+
+            for ($index = count($elements) - 1; $index >= 0; --$index)
+            {
+                $colspan = 1;
+                $element =& $elements[$index];
+
+                while ($index && $elements[$index - 1]['text'] === '>')
+                {
+                    $colspan++;
+                    $PreviousElement =& $elements[--$index];
+                    $PreviousElement['merged'] = true;
+                    if (isset($PreviousElement['attributes']))
+                    {
+                        $element['attributes'] = $PreviousElement['attributes'];
+                    }
+                }
+
+                if ($colspan > 1)
+                {
+                    if ( ! isset($element['attributes']))
+                    {
+                        $element['attributes'] = array();
+                    }
+                    $element['attributes']['colspan'] = $colspan;
+                }
+            }
+        }
+
+        // Rowspan
+        foreach ($rows as $rowNo => &$row)
+        {
+            $elements =& $row['text'];
+
+            foreach ($elements as $index => &$element)
+            {
+                $rowspan = 1;
+
+                if (isset($element['merged']))
+                {
+                    continue;
+                }
+
+                while ($rowNo + $rowspan < count($rows) && $index < count($rows[$rowNo + $rowspan]['text']) && $rows[$rowNo + $rowspan]['text'][$index]['text'] === '^' && (@$element['attributes']['colspan'] ?: null) === (@$rows[$rowNo + $rowspan]['text'][$index]['attributes']['colspan'] ?: null))
+                {
+                    $rows[$rowNo + $rowspan]['text'][$index]['merged'] = true;
+                    $rowspan++;
+                }
+
+                if ($rowspan > 1)
+                {
+                    if ( ! isset($element['attributes']))
+                    {
+                        $element['attributes'] = array();
+                    }
+                    $element['attributes']['rowspan'] = $rowspan;
+                }
+            }
+        }
+
+        foreach ($rows as $rowNo => &$row)
+        {
+            $elements =& $row['text'];
+
+            for ($index = count($elements) - 1; $index >= 0; --$index)
+            {
+                if (isset($elements[$index]['merged']))
+                {
+                    array_splice($elements, $index, 1);
+                }
+            }
+        }
+
+        return $block;
+    }
+
+    // (Override)
     protected function blockHeader($line)
     {
         $state = $this->options['headings'] ?? true;
@@ -872,11 +973,12 @@ class ParsedownExtended extends DynamicParent
             return;
         }
 
-        $block = DynamicParent::blockHeader($line);
+        $block = parent::blockHeader($line);
         if (!empty($block)) {
+
             // Get the text of the heading
-            if (isset($block['element']['handler']['argument'])) {
-                $text = $block['element']['handler']['argument'];
+            if (isset($block['element']['text'])) {
+                $text = $block['element']['text'];
             }
 
             // Get the heading level. Levels are h1, h2, ..., h6
@@ -916,41 +1018,18 @@ class ParsedownExtended extends DynamicParent
         }
     }
 
-    protected function blockList($line, array $CurrentBlock = null)
-    {
-        $state = $this->options['lists'] ?? true;
-        if ($state) {
-            return DynamicParent::blockList($line, $CurrentBlock);
-        }
-    }
-
-    protected function blockQuote($line)
-    {
-        $state = $this->options['qoutes'] ?? true;
-        if ($state) {
-            return DynamicParent::blockQuote($line);
-        }
-    }
-
-    protected function blockRule($line)
-    {
-        $state = $this->options['thematic_breaks'] ?? true;
-        if ($state) {
-            return DynamicParent::blockRule($line);
-        }
-    }
-
+    // (Override)
     protected function blockSetextHeader($line, $block = null)
     {
         $state = $this->options['headings'] ?? true;
         if (!$state) {
             return;
         }
-        $block = DynamicParent::blockSetextHeader($line, $block);
+        $block = parent::blockSetextHeader($line, $block);
         if (!empty($block)) {
             // Get the text of the heading
-            if (isset($block['element']['handler']['argument'])) {
-                $text = $block['element']['handler']['argument'];
+            if (isset($block['element']['text'])) {
+                $text = $block['element']['text'];
             }
 
             // Get the heading level. Levels are h1, h2, ..., h6
@@ -991,321 +1070,34 @@ class ParsedownExtended extends DynamicParent
         }
     }
 
-    protected function blockMarkup($line)
-    {
-        $state = $this->options['markup'] ?? true;
-        if ($state) {
-            return DynamicParent::blockMarkup($line);
-        }
-    }
 
-    protected function blockReference($line)
-    {
-        $state = $this->options['references'] ?? true;
-        if ($state) {
-            return DynamicParent::blockReference($line);
-        }
-    }
 
-    protected function blockTable($line, $block = null)
-    {
-        $state = $this->options['tables'] ?? true;
-        if ($state) {
-            return DynamicParent::blockTable($line, $block);
-        }
-    }
+    // Dev space
+    // --------------------------------------------------------------------
 
-    protected function blockAbbreviation($line)
-    {
-        $allowCustomAbbr = $this->options['abbreviations']['allow_custom_abbr'] ?? true;
-
-        $state = $this->options['abbreviations'] ?? true;
-        if ($state) {
-            if (isset($this->options['abbreviations']['predefine'])) {
-                foreach ($this->options['abbreviations']['predefine'] as $abbreviations => $description) {
-                    $this->DefinitionData['Abbreviation'][$abbreviations] = $description;
-                }
-            }
-
-            if ($allowCustomAbbr == true) {
-                return DynamicParent::blockAbbreviation($line);
-            }
-
-            return;
-        }
-    }
-
-    // Block Math
-
-    protected function blockMath($line)
-    {
-        $block = [
-            'element' => [
-                'text' => '',
-            ],
-        ];
-
-        if (preg_match('/^(?<!\\\\)(\\\\\[)(?!.)$/', $line['text'])) {
-            $block['end'] = '\]';
-
-            return $block;
-        }
-        if (preg_match('/^(?<!\\\\)(\$\$)(?!.)$/', $line['text'])) {
-            $block['end'] = '$$';
-
-            return $block;
-        }
-    }
-
-    // ~
-
-    protected function blockMathContinue($line, $block)
-    {
-        if (isset($block['complete'])) {
-            return;
-        }
-
-        if (isset($block['interrupted'])) {
-            $block['element']['text'] .= str_repeat(
-                "\n",
-                $block['interrupted']
-            );
-
-            unset($block['interrupted']);
-        }
-
-        if (preg_match('/^(?<!\\\\)(\\\\\])$/', $line['text']) && '\]' === $block['end']) {
-            $block['complete'] = true;
-            $block['math'] = true;
-            $block['element']['text'] =
-             '\\['.$block['element']['text'].'\\]';
-
-            return $block;
-        }
-        if (preg_match('/^(?<!\\\\)(\$\$)$/', $line['text']) && '$$' === $block['end']) {
-            $block['complete'] = true;
-            $block['math'] = true;
-            $block['element']['text'] = '$$'.$block['element']['text'].'$$';
-
-            return $block;
-        }
-
-        $block['element']['text'] .= "\n".$line['body'];
-
-        // ~
-
-        return $block;
-    }
-
-    // ~
-
-    protected function blockMathComplete($block)
-    {
-        return $block;
-    }
-
-    // Block Fenced Code
-
-    protected function blockFencedCode($line)
-    {
-        $codeBlock = $this->options['code']['blocks'] ?? true;
-        $codeMain = $this->options['code'] ?? true;
-        if ($codeBlock === false or $codeMain === false) {
-            return;
-        }
-        $block = DynamicParent::blockFencedCode($line);
-
-        $marker = $line['text'][0];
-        $openerLength = strspn($line['text'], $marker);
-        $language = trim(
-            preg_replace('/^`{3}([^\s]+)(.+)?/s', '$1', $line['text'])
-        );
-
-        $state = $this->options['diagrams'] ?? true;
-        if ($state) {
-            // Mermaid.js https://mermaidjs.github.io
-            if ('mermaid' == strtolower($language)) {
-                $element = [
-                    'text' => '',
-                ];
-
-                return [
-                    'char' => $marker,
-                    'openerLength' => $openerLength,
-                    'element' => [
-                        'element' => $element,
-                        'name' => 'div',
-                        'attributes' => [
-                            'class' => 'mermaid',
-                        ],
-                    ],
-                ];
-            }
-
-            // Chart.js https://www.chartjs.org/
-            if ('chart' == strtolower($language)) {
-                $element = [
-                    'text' => '',
-                ];
-
-                return [
-                    'char' => $marker,
-                    'openerLength' => $openerLength,
-                    'element' => [
-                        'element' => $element,
-                        'name' => 'canvas',
-                        'attributes' => [
-                            'class' => 'chartjs',
-                        ],
-                    ],
-                ];
-            }
-        }
-
-        return $block;
-    }
-
-    // Parsedown Tablespan from @KENNYSOFT
-    protected function blockTableComplete(array $block)
-    {
-        $state = $this->options['tables']['tablespan'] ?? false;
-        if ($state === false) {
-            return $block;
-        }
-
-        if (!isset($block)) {
-            return null;
-        }
-
-        $HeaderElements = &$block['element']['elements'][0]['elements'][0]['elements'];
-
-        for ($index = count($HeaderElements) - 1; $index >= 0; --$index) {
-            $colspan = 1;
-            $HeaderElement = &$HeaderElements[$index];
-
-            while ($index && '>' === $HeaderElements[$index - 1]['handler']['argument']) {
-                ++$colspan;
-                $PreviousHeaderElement = &$HeaderElements[--$index];
-                $PreviousHeaderElement['merged'] = true;
-                if (isset($PreviousHeaderElement['attributes'])) {
-                    $HeaderElement['attributes'] = $PreviousHeaderElement['attributes'];
-                }
-            }
-
-            if ($colspan > 1) {
-                if (!isset($HeaderElement['attributes'])) {
-                    $HeaderElement['attributes'] = [];
-                }
-                $HeaderElement['attributes']['colspan'] = $colspan;
-            }
-        }
-
-        for ($index = count($HeaderElements) - 1; $index >= 0; --$index) {
-            if (isset($HeaderElements[$index]['merged'])) {
-                array_splice($HeaderElements, $index, 1);
-            }
-        }
-
-        $rows = &$block['element']['elements'][1]['elements'];
-
-        foreach ($rows as $rowNo => &$row) {
-            $elements = &$row['elements'];
-
-            for ($index = count($elements) - 1; $index >= 0; --$index) {
-                $colspan = 1;
-                $element = &$elements[$index];
-
-                while ($index && '>' === $elements[$index - 1]['handler']['argument']) {
-                    ++$colspan;
-                    $PreviousElement = &$elements[--$index];
-                    $PreviousElement['merged'] = true;
-                    if (isset($PreviousElement['attributes'])) {
-                        $element['attributes'] = $PreviousElement['attributes'];
-                    }
-                }
-
-                if ($colspan > 1) {
-                    if (!isset($element['attributes'])) {
-                        $element['attributes'] = [];
-                    }
-                    $element['attributes']['colspan'] = $colspan;
-                }
-            }
-        }
-
-        foreach ($rows as $rowNo => &$row) {
-            $elements = &$row['elements'];
-
-            foreach ($elements as $index => &$element) {
-                $rowspan = 1;
-
-                if (isset($element['merged'])) {
-                    continue;
-                }
-
-                while ($rowNo + $rowspan < count($rows) && $index < count($rows[$rowNo + $rowspan]['elements']) && '^' === $rows[$rowNo + $rowspan]['elements'][$index]['handler']['argument'] && (@$element['attributes']['colspan'] ?: null) === (@$rows[$rowNo + $rowspan]['elements'][$index]['attributes']['colspan'] ?: null)) {
-                    $rows[$rowNo + $rowspan]['elements'][$index]['merged'] = true;
-                    ++$rowspan;
-                }
-
-                if ($rowspan > 1) {
-                    if (!isset($element['attributes'])) {
-                        $element['attributes'] = [];
-                    }
-                    $element['attributes']['rowspan'] = $rowspan;
-                }
-            }
-        }
-
-        foreach ($rows as $rowNo => &$row) {
-            $elements = &$row['elements'];
-
-            for ($index = count($elements) - 1; $index >= 0; --$index) {
-                if (isset($elements[$index]['merged'])) {
-                    array_splice($elements, $index, 1);
-                }
-            }
-        }
-
-        return $block;
-    }
-
-    /*
-    * Checkbox
-    * -------------------------------------------------------------------------
-    */
     protected function blockCheckbox($line)
     {
         $text = trim($line['text']);
         $beginLine = substr($text, 0, 4);
         if ('[ ] ' === $beginLine) {
             return [
-                'handler' => 'checkboxUnchecked',
-                'text' => substr(trim($text), 4),
+                'element' => [
+                    'name' => 'p',
+                    'handler' => 'checkboxUnchecked',
+                    'text' => substr(trim($text), 4),
+                ],
             ];
         }
 
         if ('[x] ' === $beginLine) {
             return [
-                'handler' => 'checkboxChecked',
-                'text' => substr(trim($text), 4),
+                'element' => [
+                    'name' => 'p',
+                    'handler' => 'checkboxChecked',
+                    'text' => substr(trim($text), 4),
+                ],
             ];
         }
-    }
-
-    protected function blockCheckboxContinue(array $block)
-    {
-        // This is here because Parsedown require it.
-    }
-
-    protected function blockCheckboxComplete(array $block)
-    {
-        $block['element'] = [
-            'rawHtml' => $this->{$block['handler']}($block['text']),
-            'allowRawHtmlInSafeMode' => true,
-        ];
-
-        return $block;
     }
 
     protected function checkboxUnchecked($text)
@@ -1325,12 +1117,6 @@ class ParsedownExtended extends DynamicParent
 
         return '<input type="checkbox" checked disabled /> '.$this->format($text);
     }
-
-    /**
-     * ------------------------------------------------------------------------
-     *  Helpers.
-     * ------------------------------------------------------------------------.
-     */
 
     /**
      * Formats the checkbox label without double escaping.
@@ -1355,14 +1141,130 @@ class ParsedownExtended extends DynamicParent
         return $text;
     }
 
-    protected function parseAttributeData($attributeString)
+
+    // --------------------------------------------------------------------
+    // Helper Functions
+    // --------------------------------------------------------------------
+
+    private function addInlineType($optionKey, $markers, $funcName) {
+        $isEnabled = $this->options[$optionKey] ?? false;
+        if ($isEnabled !== false) {
+            // Ensure $markers is an array, even if it's a single marker
+            $markers = (array) $markers;
+
+            foreach ($markers as $marker) {
+                if (!isset($this->InlineTypes[$marker])) {
+                    $this->InlineTypes[$marker] = [];
+                }
+                array_unshift($this->InlineTypes[$marker], $funcName);
+                $this->inlineMarkerList .= $marker;
+            }
+        }
+    }
+
+    private function addBlockType($optionKey, $markers, $funcName) {
+        $isEnabled = $this->options[$optionKey] ?? false;
+        if ($isEnabled !== false) {
+            // Ensure $markers is an array, even if it's a single marker
+            $markers = (array) $markers;
+
+            foreach ($markers as $marker) {
+                if (!isset($this->BlockTypes[$marker])) {
+                    $this->BlockTypes[$marker] = [];
+                }
+                array_unshift($this->BlockTypes[$marker], $funcName);
+            }
+        }
+    }
+
+
+    protected function processElement(array $optionKeys, $methodName, ...$args) {
+        foreach ($optionKeys as $optionKey) {
+            // Split the option key based on dot notation to access nested values
+            $keys = explode('.', $optionKey);
+
+            // Start with the main options array
+            $value = $this->options;
+
+            // Navigate through the array based on the split keys
+            foreach ($keys as $key) {
+                if (!isset($value[$key])) {
+                    $value = null;  // Set to null if the key doesn't exist
+                    break;  // Exit the inner loop early
+                }
+                $value = $value[$key];
+            }
+
+            // Use the final value or default to true
+            $state = $value ?? true;
+
+            if (!$state) {
+                return;
+            }
+        }
+        return parent::$methodName(...$args);
+    }
+
+    /**
+     * Get only the text from a markdown string.
+     * It parses to HTML once then trims the tags to get the text.
+     */
+    protected function fetchText($text)
     {
-        $state = $this->options['special_attributes'] ?? true;
-        if ($state) {
-            return DynamicParent::parseAttributeData($attributeString);
+        return trim(strip_tags($this->line($text)));
+    }
+
+    /**
+     * Set/stores the heading block to ToC list in a string and array format.
+     */
+    protected function setContentsList(array $Content)
+    {
+        // Stores as an array
+        $this->setContentsListAsArray($Content);
+        // Stores as string in markdown list format.
+        $this->setContentsListAsString($Content);
+    }
+
+    /**
+     * Sets/stores the heading block info as an array.
+     */
+    protected function setContentsListAsArray(array $Content)
+    {
+        $this->contentsListArray[] = $Content;
+    }
+
+    /**
+     * Sets/stores the heading block info as a list in markdown format.
+     *
+     * Modifyed version of ToC by @KEINOS
+     * @link
+     */
+    protected function setContentsListAsString(array $Content)
+    {
+        $text = $this->fetchText($Content['text']);
+        $id = $Content['id'];
+        $level = (int) trim($Content['level'], 'h');
+        $link = "[{$text}](#{$id})";
+
+        if (0 === $this->firstHeadLevel) {
+            $this->firstHeadLevel = $level;
+        }
+        $cutIndent = $this->firstHeadLevel - 1;
+        if ($cutIndent > $level) {
+            $level = 1;
+        } else {
+            $level = $level - $cutIndent;
         }
 
-        return [];
+        $indent = str_repeat('  ', $level);
+
+        // Stores in markdown list format as below:
+        // - [Header1](#Header1)
+        //   - [Header2-1](#Header2-1)
+        //     - [Header3](#Header3)
+        //   - [Header2-2](#Header2-2)
+        // ...
+        $this->contentsListString .= "{$indent}- {$link}".PHP_EOL;
     }
 
     /**
@@ -1371,6 +1273,8 @@ class ParsedownExtended extends DynamicParent
      * This is used to avoid parsing user defined ToC tag which includes "_" in
      * their tag such as "[[_toc_]]". Unless it will be parsed as:
      *   "<p>[[<em>TOC</em>]]</p>"
+     *
+     * Modifyed version of ToC by @KEINOS
      */
     protected function encodeTagToHash($text)
     {
@@ -1384,6 +1288,26 @@ class ParsedownExtended extends DynamicParent
         $tagHashed = hash('sha256', $salt.$tagOrigin);
 
         return str_replace($tagOrigin, $tagHashed, $text);
+    }
+
+    /**
+     * Gets the markdown tag for ToC.
+     */
+    protected function getTagToC()
+    {
+        return $this->options['toc']['set_toc_tag'] ?? '[toc]';
+    }
+
+    /**
+     * Gets the ID attribute of the ToC for HTML tags.
+     */
+    protected function getIdAttributeToC()
+    {
+        if (isset($this->idToc) && !empty($this->idToc)) {
+            return $this->idToc;
+        }
+
+        return self::ID_ATTRIBUTE_DEFAULT;
     }
 
     /**
@@ -1422,23 +1346,83 @@ class ParsedownExtended extends DynamicParent
     }
 
     /**
-     * Gets the markdown tag for ToC.
+     * Parses the given markdown string to an HTML string but it leaves the ToC
+     * tag as is. It's an alias of the parent method "\parent::text()".
      */
-    protected function getTagToC()
+    public function body($text): string
     {
-        return $this->options['toc']['set_toc_tag'] ?? '[toc]';
+        $text = $this->encodeTagToHash($text);  // Escapes ToC tag temporary
+        $html = parent::text($text);     // Parses the markdown text
+
+        return $this->decodeTagFromHash($html); // Unescape the ToC tag
     }
 
     /**
-     * Gets the ID attribute of the ToC for HTML tags.
+     * Parses markdown string to HTML and also the "[toc]" tag as well.
+     * It overrides the parent method: \Parsedown::text().
      */
-    protected function getIdAttributeToC()
+    public function text($text)
     {
-        if (isset($this->idToc) && !empty($this->idToc)) {
-            return $this->idToc;
+        // Parses the markdown text except the ToC tag. This also searches
+        // the list of contents and available to get from "getContentsList()"
+        // method.
+        $html = $this->body($text);
+
+        if (isset($this->options['toc']) && false == $this->options['toc']) {
+            return $html;
         }
 
-        return self::ID_ATTRIBUTE_DEFAULT;
+        $tagOrigin = $this->getTagToC();
+
+        if (strpos($text, $tagOrigin) === false) {
+            return $html;
+        }
+
+        $tocData = $this->getContentsList();
+        $tocId = $this->getIdAttributeToC();
+        $needle = '<p>'.$tagOrigin.'</p>';
+        $replace = "<div id=\"{$tocId}\">{$tocData}</div>";
+
+        return str_replace($needle, $replace, $html);
+    }
+
+    /**
+     * Returns the parsed ToC.
+     *
+     * @param string $typeReturn Type of the return format. "html" or "json".
+     *
+     * @return string HTML/JSON string of ToC
+     */
+    public function getContentsList($typeReturn = 'html')
+    {
+        if ('html' === strtolower($typeReturn)) {
+            $result = '';
+            if (!empty($this->contentsListString)) {
+                // Parses the ToC list in markdown to HTML
+                $result = $this->body($this->contentsListString);
+            }
+
+            return $result;
+        }
+
+        if ('json' === strtolower($typeReturn)) {
+            return json_encode($this->contentsListArray);
+        }
+
+        return $this->getContentsList('html');
+    }
+
+    // Overwrite to allow for custom block types
+    protected function element(array $element)
+    {
+
+        // Check if the name is empty or not set
+        if (empty($element['name'])) {
+            return isset($element['text']) ? $element['text'] : '';
+        }
+
+        // Use the parent
+        return parent::element($element);
     }
 
     /**
@@ -1458,6 +1442,10 @@ class ParsedownExtended extends DynamicParent
             return urlencode($str);
         }
 
+        // Convert string to lowercase
+        $str = strtolower($str);
+
+        // Character map
         $charMap = [
             // Latin
             'À' => 'A', 'Á' => 'A', 'Â' => 'A', 'Ã' => 'A', 'Ä' => 'A', 'Å' => 'AA', 'Æ' => 'AE', 'Ç' => 'C',
@@ -1475,15 +1463,15 @@ class ParsedownExtended extends DynamicParent
             '©' => '(c)', '®' => '(r)', '™' => '(tm)',
 
             // Greek
-            'Α' => 'A', 'Β' => 'B', 'Γ' => 'G', 'Δ' => 'D', 'Ε' => 'E', 'Ζ' => 'Z', 'Η' => 'H', 'Θ' => '8',
-            'Ι' => 'I', 'Κ' => 'K', 'Λ' => 'L', 'Μ' => 'M', 'Ν' => 'N', 'Ξ' => '3', 'Ο' => 'O', 'Π' => 'P',
-            'Ρ' => 'R', 'Σ' => 'S', 'Τ' => 'T', 'Υ' => 'Y', 'Φ' => 'F', 'Χ' => 'X', 'Ψ' => 'PS', 'Ω' => 'W',
-            'Ά' => 'A', 'Έ' => 'E', 'Ί' => 'I', 'Ό' => 'O', 'Ύ' => 'Y', 'Ή' => 'H', 'Ώ' => 'W', 'Ϊ' => 'I',
+            'Α' => 'A', 'Β' => 'B', 'Γ' => 'G', 'Δ' => 'D', 'Ε' => 'E', 'Ζ' => 'Z', 'Η' => 'H', 'Θ' => 'TH',
+            'Ι' => 'I', 'Κ' => 'K', 'Λ' => 'L', 'Μ' => 'M', 'Ν' => 'N', 'Ξ' => 'X', 'Ο' => 'O', 'Π' => 'P',
+            'Ρ' => 'R', 'Σ' => 'S', 'Τ' => 'T', 'Υ' => 'Y', 'Φ' => 'F', 'Χ' => 'X', 'Ψ' => 'PS', 'Ω' => 'O',
+            'Ά' => 'A', 'Έ' => 'E', 'Ί' => 'I', 'Ό' => 'O', 'Ύ' => 'Y', 'Ή' => 'H', 'Ώ' => 'O', 'Ϊ' => 'I',
             'Ϋ' => 'Y',
-            'α' => 'a', 'β' => 'b', 'γ' => 'g', 'δ' => 'd', 'ε' => 'e', 'ζ' => 'z', 'η' => 'h', 'θ' => '8',
-            'ι' => 'i', 'κ' => 'k', 'λ' => 'l', 'μ' => 'm', 'ν' => 'n', 'ξ' => '3', 'ο' => 'o', 'π' => 'p',
-            'ρ' => 'r', 'σ' => 's', 'τ' => 't', 'υ' => 'y', 'φ' => 'f', 'χ' => 'x', 'ψ' => 'ps', 'ω' => 'w',
-            'ά' => 'a', 'έ' => 'e', 'ί' => 'i', 'ό' => 'o', 'ύ' => 'y', 'ή' => 'h', 'ώ' => 'w', 'ς' => 's',
+            'α' => 'a', 'β' => 'b', 'γ' => 'g', 'δ' => 'd', 'ε' => 'e', 'ζ' => 'z', 'η' => 'h', 'θ' => 'th',
+            'ι' => 'i', 'κ' => 'k', 'λ' => 'l', 'μ' => 'm', 'ν' => 'n', 'ξ' => 'x', 'ο' => 'o', 'π' => 'p',
+            'ρ' => 'r', 'σ' => 's', 'τ' => 't', 'υ' => 'y', 'φ' => 'f', 'χ' => 'x', 'ψ' => 'ps', 'ω' => 'o',
+            'ά' => 'a', 'έ' => 'e', 'ί' => 'i', 'ό' => 'o', 'ύ' => 'y', 'ή' => 'h', 'ώ' => 'o', 'ς' => 's',
             'ϊ' => 'i', 'ΰ' => 'y', 'ϋ' => 'y', 'ΐ' => 'i',
 
             // Turkish
@@ -1493,13 +1481,13 @@ class ParsedownExtended extends DynamicParent
             // Russian
             'А' => 'A', 'Б' => 'B', 'В' => 'V', 'Г' => 'G', 'Д' => 'D', 'Е' => 'E', 'Ё' => 'Yo', 'Ж' => 'Zh',
             'З' => 'Z', 'И' => 'I', 'Й' => 'J', 'К' => 'K', 'Л' => 'L', 'М' => 'M', 'Н' => 'N', 'О' => 'O',
-            'П' => 'P', 'Р' => 'R', 'С' => 'S', 'Т' => 'T', 'У' => 'U', 'Ф' => 'F', 'Х' => 'H', 'Ц' => 'C',
-            'Ч' => 'Ch', 'Ш' => 'Sh', 'Щ' => 'Sh', 'Ъ' => '', 'Ы' => 'Y', 'Ь' => '', 'Э' => 'E', 'Ю' => 'Yu',
+            'П' => 'P', 'Р' => 'R', 'С' => 'S', 'Т' => 'T', 'У' => 'U', 'Ф' => 'F', 'Х' => 'Kh', 'Ц' => 'Ts',
+            'Ч' => 'Ch', 'Ш' => 'Sh', 'Щ' => 'Shch', 'Ъ' => 'U', 'Ы' => 'Y', 'Ь' => '', 'Э' => 'E', 'Ю' => 'Yu',
             'Я' => 'Ya',
             'а' => 'a', 'б' => 'b', 'в' => 'v', 'г' => 'g', 'д' => 'd', 'е' => 'e', 'ё' => 'yo', 'ж' => 'zh',
             'з' => 'z', 'и' => 'i', 'й' => 'j', 'к' => 'k', 'л' => 'l', 'м' => 'm', 'н' => 'n', 'о' => 'o',
-            'п' => 'p', 'р' => 'r', 'с' => 's', 'т' => 't', 'у' => 'u', 'ф' => 'f', 'х' => 'h', 'ц' => 'c',
-            'ч' => 'ch', 'ш' => 'sh', 'щ' => 'sh', 'ъ' => '', 'ы' => 'y', 'ь' => '', 'э' => 'e', 'ю' => 'yu',
+            'п' => 'p', 'р' => 'r', 'с' => 's', 'т' => 't', 'у' => 'u', 'ф' => 'f', 'х' => 'kh', 'ц' => 'ts',
+            'ч' => 'ch', 'ш' => 'sh', 'щ' => 'shch', 'ъ' => 'u', 'ы' => 'y', 'ь' => '', 'э' => 'e', 'ю' => 'yu',
             'я' => 'ya',
 
             // Ukrainian
@@ -1513,249 +1501,31 @@ class ParsedownExtended extends DynamicParent
             'ž' => 'z',
 
             // Polish
-            'Ą' => 'A', 'Ć' => 'C', 'Ę' => 'e', 'Ł' => 'L', 'Ń' => 'N', 'Ś' => 'S', 'Ź' => 'Z',
+            'Ą' => 'A', 'Ć' => 'C', 'Ę' => 'E', 'Ł' => 'L', 'Ń' => 'N', 'Ś' => 'S', 'Ź' => 'Z',
             'Ż' => 'Z',
             'ą' => 'a', 'ć' => 'c', 'ę' => 'e', 'ł' => 'l', 'ń' => 'n', 'ś' => 's', 'ź' => 'z',
             'ż' => 'z',
 
             // Latvian
-            'Ā' => 'A', 'Ē' => 'E', 'Ģ' => 'G', 'Ī' => 'i', 'Ķ' => 'k', 'Ļ' => 'L', 'Ņ' => 'N', 'Ū' => 'u',
+            'Ā' => 'A', 'Ē' => 'E', 'Ģ' => 'G', 'Ī' => 'I', 'Ķ' => 'K', 'Ļ' => 'L', 'Ņ' => 'N', 'Ū' => 'U',
             'ā' => 'a', 'ē' => 'e', 'ģ' => 'g', 'ī' => 'i', 'ķ' => 'k', 'ļ' => 'l', 'ņ' => 'n', 'ū' => 'u',
         ];
 
-        // Transliterate characters to ASCII
-        $optionTransliterate = $this->options['toc']['transliterate'] ?? false;
-        if ($optionTransliterate) {
-            $str = str_replace(array_keys($charMap), $charMap, $str);
-        }
+        // Replace special characters using the character map
+        $str = strtr($str, $charMap);
 
-        // Replace non-alphanumeric characters with our delimiter
-        $optionDelimiter = $this->options['toc']['delimiter'] ?? '-';
-        $str = preg_replace('/[^\p{L}\p{Nd}]+/u', $optionDelimiter, $str);
+        // Remove any remaining special characters and replace them with a space
+        $str = preg_replace('/[^a-z0-9\s]/', '', $str);
 
-        // Remove duplicate delimiters
-        $str = preg_replace('/('.preg_quote($optionDelimiter, '/').'){2,}/', '$1', $str);
+        // Replace spaces with hyphens
+        $str = str_replace(' ', '-', $str);
 
-        // Truncate slug to max. characters
-        $optionLimit = $this->options['toc']['limit'] ?? mb_strlen($str, 'UTF-8');
-        $str = mb_substr($str, 0, $optionLimit, 'UTF-8');
+        // Remove multiple hyphens
+        $str = preg_replace('/-+/', '-', $str);
 
-        // Remove delimiter from ends
-        $str = trim($str, $optionDelimiter);
+        // Trim hyphens at the beginning and end of the string
+        $str = trim($str, '-');
 
-        $urlLowercase = $this->options['toc']['lowercase'] ?? true;
-        $str = $urlLowercase ? mb_strtolower($str, 'UTF-8') : $str;
-
-        return $this->incrementAnchorId($str);
-    }
-
-    /**
-     * Get only the text from a markdown string.
-     * It parses to HTML once then trims the tags to get the text.
-     */
-    protected function fetchText($text)
-    {
-        return trim(strip_tags($this->line($text)));
-    }
-
-    /**
-     * Set/stores the heading block to ToC list in a string and array format.
-     */
-    protected function setContentsList(array $Content)
-    {
-        // Stores as an array
-        $this->setContentsListAsArray($Content);
-        // Stores as string in markdown list format.
-        $this->setContentsListAsString($Content);
-    }
-
-    /**
-     * Sets/stores the heading block info as an array.
-     */
-    protected function setContentsListAsArray(array $Content)
-    {
-        $this->contentsListArray[] = $Content;
-    }
-
-    /**
-     * Sets/stores the heading block info as a list in markdown format.
-     */
-    protected function setContentsListAsString(array $Content)
-    {
-        $text = $this->fetchText($Content['text']);
-        $id = $Content['id'];
-        $level = (int) trim($Content['level'], 'h');
-        $link = "[{$text}](#{$id})";
-
-        if (0 === $this->firstHeadLevel) {
-            $this->firstHeadLevel = $level;
-        }
-        $cutIndent = $this->firstHeadLevel - 1;
-        if ($cutIndent > $level) {
-            $level = 1;
-        } else {
-            $level = $level - $cutIndent;
-        }
-
-        $indent = str_repeat('  ', $level);
-
-        // Stores in markdown list format as below:
-        // - [Header1](#Header1)
-        //   - [Header2-1](#Header2-1)
-        //     - [Header3](#Header3)
-        //   - [Header2-2](#Header2-2)
-        // ...
-        $this->contentsListString .= "{$indent}- {$link}".PHP_EOL;
-    }
-
-    /**
-     * Collect and count anchors in use to prevent duplicated ids. Return string
-     * with incremental, numeric suffix. Also init optional blacklist of ids.
-     */
-    protected function incrementAnchorId($str)
-    {
-        // add blacklist to list of used anchors
-        if (!$this->isBlacklistInitialized) {
-            $this->initBlacklist();
-        }
-
-        $this->anchorDuplicates[$str] = !isset($this->anchorDuplicates[$str]) ? 0 : ++$this->anchorDuplicates[$str];
-
-        $newStr = $str;
-
-        if ($count = $this->anchorDuplicates[$str]) {
-            $newStr .= "-{$count}";
-
-            // increment until conversion doesn't produce new duplicates anymore
-            if (isset($this->anchorDuplicates[$newStr])) {
-                $newStr = $this->incrementAnchorId($str);
-            } else {
-                $this->anchorDuplicates[$newStr] = 0;
-            }
-        }
-
-        return $newStr;
-    }
-
-    /**
-     * Add blacklisted ids to anchor list.
-     */
-    protected function initBlacklist()
-    {
-        if ($this->isBlacklistInitialized) {
-            return;
-        }
-
-        if (!empty($this->options['headings']['blacklist']) && is_array($this->options['headings']['blacklist'])) {
-            foreach ($this->options['headings']['blacklist'] as $v) {
-                if (is_string($v)) {
-                    $this->anchorDuplicates[$v] = 0;
-                }
-            }
-        }
-
-        $this->isBlacklistInitialized = true;
-    }
-
-    protected function lineElements($text, $nonNestables = [])
-    {
-        $Elements = [];
-
-        $nonNestables = (
-            empty($nonNestables)
-            ? []
-            : array_combine($nonNestables, $nonNestables)
-        );
-
-        // $excerpt is based on the first occurrence of a marker
-
-        while ($excerpt = strpbrk($text, $this->inlineMarkerList)) {
-            $marker = $excerpt[0];
-
-            $markerPosition = strlen($text) - strlen($excerpt);
-
-            // Get the first char before the marker
-            $beforeMarkerPosition = $markerPosition - 1;
-            if ($beforeMarkerPosition >= 0) {
-                $charBeforeMarker = $text[$markerPosition - 1];
-            } else {
-                $charBeforeMarker = '';
-            }
-
-            $Excerpt = ['text' => $excerpt, 'context' => $text, 'before' => $charBeforeMarker];
-
-            foreach ($this->InlineTypes[$marker] as $inlineType) {
-                // check to see if the current inline type is nestable in the current context
-
-                if (isset($nonNestables[$inlineType])) {
-                    continue;
-                }
-
-                $Inline = $this->{"inline{$inlineType}"}($Excerpt);
-
-                if (!isset($Inline)) {
-                    continue;
-                }
-
-                // makes sure that the inline belongs to "our" marker
-
-                if (isset($Inline['position']) and $Inline['position'] > $markerPosition) {
-                    continue;
-                }
-
-                // sets a default inline position
-
-                if (!isset($Inline['position'])) {
-                    $Inline['position'] = $markerPosition;
-                }
-
-                // cause the new element to 'inherit' our non nestables
-
-                $Inline['element']['nonNestables'] = isset($Inline['element']['nonNestables'])
-                    ? array_merge($Inline['element']['nonNestables'], $nonNestables)
-                    : $nonNestables
-                ;
-
-                // the text that comes before the inline
-                $unmarkedText = substr($text, 0, $Inline['position']);
-
-                // compile the unmarked text
-                $InlineText = $this->inlineText($unmarkedText);
-                $Elements[] = $InlineText['element'];
-
-                // compile the inline
-                $Elements[] = $this->extractElement($Inline);
-
-                // remove the examined text
-                $text = substr($text, $Inline['position'] + $Inline['extent']);
-
-                continue 2;
-            }
-
-            // the marker does not belong to an inline
-
-            $unmarkedText = substr($text, 0, $markerPosition + 1);
-
-            $InlineText = $this->inlineText($unmarkedText);
-            $Elements[] = $InlineText['element'];
-
-            $text = substr($text, $markerPosition + 1);
-        }
-
-        $InlineText = $this->inlineText($text);
-        $Elements[] = $InlineText['element'];
-
-        foreach ($Elements as &$Element) {
-            if (!isset($Element['autobreak'])) {
-                $Element['autobreak'] = false;
-            }
-        }
-
-        return $Elements;
-    }
-
-    private function pregReplaceAssoc(array $replace, $subject)
-    {
-        return preg_replace(array_keys($replace), array_values($replace), $subject);
+        return $str;
     }
 }
