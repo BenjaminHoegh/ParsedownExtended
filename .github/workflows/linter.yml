@@ -15,12 +15,8 @@ jobs:
     steps:
       - name: checkout
         uses: actions/checkout@v4
-
-      # Set up PHP 7.4
-      - name: Set up PHP 7.4
-        uses: shivammathur/setup-php@v2
         with:
-          php-version: '7.4'
+          fetch-depth: 0
 
       - name: Run Super-Linter
         uses: super-linter/super-linter/slim@v5
