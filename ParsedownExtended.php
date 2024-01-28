@@ -13,41 +13,152 @@ if (class_exists('ParsedownExtra')) {
 
 class ParsedownExtended extends ParsedownExtendedParentAlias
 {
-    const VERSION = '1.2';
-    const VERSION_PARSEDOWN_REQUIRED = '1.7.4';
-    const VERSION_PARSEDOWN_EXTRA_REQUIRED = '0.8.1';
+    public const VERSION = '1.2.0';
+    public const VERSION_PARSEDOWN_REQUIRED = '1.7.4';
+    public const VERSION_PARSEDOWN_EXTRA_REQUIRED = '0.8.1';
+    public const MIN_PHP_VERSION = '7.4';
 
-    const ID_ATTRIBUTE_DEFAULT = 'toc';
-    protected $tagToc = '[toc]';
+    private const TOC_TAG_DEFAULT = '[toc]';
+    private const TOC_ID_ATTRIBUTE_DEFAULT = 'toc';
 
-    protected $contentsListArray = [];
-    protected $contentsListString = '';
-    protected $firstHeadLevel = 0;
+    private array $anchorBlacklist = [];
+    private array $anchorDuplicates = [];
+    private array $contentsListArray = [];
+    private int $firstHeadLevel = 0;
+    private string $contentsListString = '';
+    private string $id_toc = '';
+    private string $tag_toc = '';
+    private $createAnchorIDCallback = null; // User-defined callback
 
-    protected $isBlacklistInitialized = false;
-    protected $anchorDuplicates = [];
 
-    private $legacyMode = false;
-
-    private $options = [];
-    private $defaultOptions = [
-        'highlight' => true,
-        'keystrokes' => true,
-        'math' => true,
-        'supscript' => true,
-        'subscript' => true,
-        'emojis' => true,
-        'typographer' => true,
-        'smartypants' => true,
-        'diagrams' => true,
-        'tasks' => true,
-    ];
+    private bool $legacyMode = false;
+    private array $settings;
     protected $specialCharacters = [
         '\\', '`', '*', '_', '{', '}', '[', ']', '(', ')', '>', '#', '+', '-', '.', '!', '|', '?', '"', "'", '<',
     ];
 
-    public function __construct($userOptions = [])
+    // Standard settings
+    private array $defaultSettings = [
+        'abbreviations' => [ // Requires ParsedownExtra
+            'enabled' => true,
+            'allow_custom_abbr' => true,
+            'predefine' => [],
+        ],
+        'code' => [
+            'enabled' => true,
+            'blocks' => true,
+            'inline' => true,
+        ],
+        'comments' => true,
+        'definition_lists' => true,
+        'diagrams' => [
+            'enabled' => false,
+            'chartjs' => true,
+            'mermaid' => true,
+        ],
+        'emojis' => true,
+        'emphasis' => [
+            'enabled' => true,
+            'bold' => true,
+            'italic' => true,
+            'marked' => true,
+            'strikethroughs' => true,
+            'insertions' => true,
+            'subscript' => false,
+            'superscript' => false,
+        ],
+        'footnotes' => true,
+        'headings' => [
+            'enabled' => true,
+            'allowed' => ['h1', 'h2', 'h3', 'h4', 'h5', 'h6'],
+            'auto_anchors' => [
+                'enabled' => true,
+                'delimiter' => '-',
+                'limit' => null, // TODO: Implement limit for auto_anchors
+                'lowercase' => true,
+                'replacements' => array(), // TODO: Implement replacements for auto_anchors
+                'transliterate' => false,
+                'blacklist' => [],
+            ],
+        ],
+        'images' => true,
+        'keystrokes' => true,
+        'links' => [
+            'enabled' => true,
+            'email_links' => true,
+        ],
+        'lists' => [
+            'enabled' => true,
+            'tasks' => true,
+        ],
+        'markup' => true,
+        'math' => [
+            'enabled' => false,
+            'inline' => [
+                'enabled' => true,
+                'delimiters' => [
+                    ['left' => '\\(', 'right' => '\\)'],
+                ],
+            ],
+            'block' => [
+                'enabled' => true,
+                'delimiters' => [
+                    ['left' => '$$', 'right' => '$$'],
+                    ['left' => '\\begin{equation}', 'right' => '\\end{equation}'],
+                    ['left' => '\\begin{align}', 'right' => '\\end{align}'],
+                    ['left' => '\\begin{alignat}', 'right' => '\\end{alignat}'],
+                    ['left' => '\\begin{gather}', 'right' => '\\end{gather}'],
+                    ['left' => '\\begin{CD}', 'right' => '\\end{CD}'],
+                    ['left' => '\\[', 'right' => '\\]'],
+                ],
+            ],
+        ],
+        'quotes' => true,
+        'references' => true,
+        'smarty' => [
+            'enabled' => false,
+            'smart_angled_quotes' => true,
+            'smart_backticks' => true,
+            'smart_dashes' => true,
+            'smart_ellipses' => true,
+            'smart_quotes' => true,
+            'substitutions' => [
+                'ellipses' => '&hellip;',
+                'left-angle-quote' => '&laquo;',
+                'left-double-quote' => '&ldquo;',
+                'left-single-quote' => '&lsquo;',
+                'mdash' => '&mdash;',
+                'ndash' => '&ndash;',
+                'right-angle-quote' => '&raquo;',
+                'right-double-quote' => '&rdquo;',
+                'right-single-quote' => '&rsquo;',
+            ],
+        ],
+        'special_attributes' => true,
+        'tables' => [
+            'enabled' => true,
+            'tablespan' => true,
+        ],
+        'thematic_breaks' => true,
+        'toc' => [
+            'enabled' => true,
+            'headings' => ['h1', 'h2', 'h3', 'h4', 'h5', 'h6'],
+            'set_toc_tag' => '[toc]',
+        ],
+        'typographer' => true,
+    ];
+
+    public function __construct(array $userSettings = [])
     {
+        // Check if PHP version is supported
+        if (version_compare(PHP_VERSION, self::MIN_PHP_VERSION) < 0) {
+            $msg_error  = 'Version Error.' . PHP_EOL;
+            $msg_error .= '  ParsedownExtended requires PHP version ' . self::MIN_PHP_VERSION . ' or later.' . PHP_EOL;
+            $msg_error .= '  - Current version : ' . PHP_VERSION . PHP_EOL;
+            $msg_error .= '  - Required version: ' . self::MIN_PHP_VERSION . PHP_EOL;
+            throw new Exception($msg_error);
+        }
+
         // Check if Parsedown is installed
         if (version_compare(\Parsedown::version, self::VERSION_PARSEDOWN_REQUIRED) < 0) {
             $msg_error  = 'Version Error.' . PHP_EOL;
@@ -69,99 +180,258 @@ class ParsedownExtended extends ParsedownExtendedParentAlias
 
             // Get parent constructor
             parent::__construct();
+
         }
 
-        # Check if Parsedown 1.8 beta is installed (1.8.0-beta-1 to 1.8.0-beta-7)
-        if (version_compare(\Parsedown::version, '1.8.0-beta-1') >= 0 && version_compare(\Parsedown::version, '1.8.0-beta-7') <= 0) {
+        # Check if Parsedown 1.7.4 or later is installed but not 1.8
+        if (version_compare(\Parsedown::version, '1.8.0') < 0 && version_compare(\Parsedown::version, '1.7.4') >= 0) {
             // set legacy mode to true
             $this->legacyMode = true;
         }
 
+        $this->settings = $this->defaultSettings; // Start with default settings
+        $this->initializeSettings($userSettings);
 
-        // Merge user options with default options
-        $this->options = array_merge($this->defaultOptions, $userOptions);
+        // Add inline types
+        $this->addInlineType('=', 'Marked');
+        $this->addInlineType('+', 'Insertions');
+        $this->addInlineType('[', 'Keystrokes');
+        $this->addInlineType(['\\', '$'], 'MathNotation');
+        $this->addInlineType('^', 'Superscript');
+        $this->addInlineType('~', 'Subscript');
+        $this->addInlineType(':', 'Emojis');
+        $this->addInlineType(['<', '>', '-', '.', "'", '"', '`'], 'Smartypants');
+        $this->addInlineType(['(','.','+','!','?'], 'Typographer');
 
-        // Handle Inlines
-        $this->addInlineType('highlight', '=', 'Highlight');
-        $this->addInlineType('keystrokes', '[', 'Keystrokes');
-        $this->addInlineType('math', ['\\', '$'], 'MathNotation');
-        $this->addInlineType('supscript', '^', 'Superscript');
-        $this->addInlineType('subscript', '~', 'Subscript');
-        $this->addInlineType('emojis', ':', 'Emojis');
-        $this->addInlineType('typographer', ['(','.','+','!','?'], 'typographer');
-        $this->addInlineType('smartypants', ['<', '>', '-', '.', "'", '"', '`'], 'Smartypants');
+        // Add block types
+        $this->addBlockType(['\\','$'], 'MathNotation');
 
-        // Handle Blocks
-        $this->addBlockType('math', ['\\','$'], 'MathNotation');
-        $this->addBlockType('tasks','[', 'Checkbox');
+
+        /**
+         * This function iterates through each inline type list and moves the 'SpecialCharacter' element
+         * to the end of the list if it exists. This ensures that 'SpecialCharacter' is always processed last
+         * when parsing the markdown content. This is necessary to prevent the parser from interfering with
+         * other inline types.
+         */
+        foreach ($this->InlineTypes as &$list) {
+            if (($key = array_search('SpecialCharacter', $list)) !== false) {
+                unset($list[$key]);
+                $list[] = 'SpecialCharacter'; // Append 'SpecialCharacter' at the end
+            }
+        }
     }
 
-
-    // --------------------------------------------------------------------
-    // Inline Types
-    // --------------------------------------------------------------------
-
-    protected function inlineCode($excerpt) {
-        return $this->processElement(['code', 'code.inline'], 'inlineCode', $excerpt);
-    }
-
-    protected function inlineEmailTag($excerpt) {
-        return $this->processElement(['links', 'links.email_links'], 'inlineEmailTag', $excerpt);
-    }
-
-    protected function inlineEmphasis($excerpt)
+    /**
+     * Initializes the settings of the ParsedownExtended class.
+     *
+     * @param array $userSettings The user-defined settings.
+     *
+     * @throws InvalidArgumentException If a non-existent setting is provided or if the provided value has an incorrect type.
+     */
+    private function initializeSettings(array $userSettings): void
     {
-        return $this->processElement(['emphasis'], 'inlineEmphasis', $excerpt);
+        foreach ($userSettings as $key => $value) {
+            if (!isset($this->settings[$key])) {
+                // Throw an error for non-existent setting
+                throw new InvalidArgumentException("Setting '$key' does not exist.");
+            }
+
+            if (is_array($this->settings[$key])) {
+                if (!is_array($value) && !is_bool($value)) {
+                    // Throw an error for incorrect type for complex settings
+                    throw new InvalidArgumentException("Invalid type for setting '$key'. Expected array or boolean.");
+                }
+
+                if (is_bool($value)) {
+                    // Set the entire feature to the boolean value
+                    $this->settings[$key]['enabled'] = $value;
+                } else {
+                    // Merge or replace the settings array
+                    foreach ($value as $subKey => $subValue) {
+                        if (!isset($this->settings[$key][$subKey])) {
+                            // Throw an error for non-existent sub-setting
+                            throw new InvalidArgumentException("Sub-setting '$subKey' does not exist in '$key'.");
+                        }
+                        // Optionally validate $subValue type here
+                        $this->settings[$key][$subKey] = $subValue;
+                    }
+                }
+            } else {
+                if (!is_bool($value)) {
+                    // Throw an error for incorrect type for simple settings
+                    throw new InvalidArgumentException("Invalid type for setting '$key'. Expected boolean.");
+                }
+                $this->settings[$key] = $value;
+            }
+        }
     }
 
-    protected function inlineImage($excerpt)
+    // Inline types
+    // -------------------------------------------------------------------------
+
+    protected function inlineCode($Excerpt)
     {
-        return $this->processElement(['images'], 'inlineImage', $excerpt);
+        if ($this->getSetting('code') && $this->getSetting('code.inline')) {
+            return parent::inlineCode($Excerpt);
+        }
     }
 
-    protected function inlineLink($excerpt)
+
+    protected function inlineEmailTag($Excerpt)
     {
-        return $this->processElement(['links'], 'inlineLink', $excerpt);
+        if ($this->getSetting('links') && $this->getSetting('links.email_links')) {
+            return parent::inlineEmailTag($Excerpt);
+        }
     }
 
-    protected function inlineMarkup($excerpt)
+    protected function inlineImage($Excerpt)
     {
-        return $this->processElement(['markup'], 'inlineMarkup', $excerpt);
+        if ($this->getSetting('images')) {
+            return parent::inlineImage($Excerpt);
+        }
     }
 
-    protected function inlineStrikethrough($excerpt)
+    protected function inlineLink($Excerpt)
     {
-        return $this->processElement(['strikethroughs'], 'inlineStrikethrough', $excerpt);
+        if ($this->getSetting('links')) {
+            return parent::inlineLink($Excerpt);
+        }
     }
 
-    protected function inlineUrl($excerpt)
+    protected function inlineMarkup($Excerpt)
     {
-        return $this->processElement(['links'], 'inlineUrl', $excerpt);
+        if ($this->getSetting('markup')) {
+            return parent::inlineMarkup($Excerpt);
+        }
     }
 
-    protected function inlineUrlTag($excerpt)
+    protected function inlineStrikethrough($Excerpt)
     {
-        return $this->processElement(['links'], 'inlineUrlTag', $excerpt);
+        if ($this->getSetting('emphasis.strikethroughs') && $this->getSetting('emphasis')) {
+            return parent::inlineStrikethrough($Excerpt);
+        }
     }
 
-    // Highlight
-    protected function inlineHighlight($excerpt)
+    protected function inlineUrl($Excerpt)
     {
-        if (preg_match('/^(==)([^=]*?)(==)/', $excerpt['text'], $matches)) {
+        if ($this->getSetting('links')) {
+            return parent::inlineUrl($Excerpt);
+        }
+    }
+
+    protected function inlineUrlTag($Excerpt)
+    {
+        if ($this->getSetting('links')) {
+            return parent::inlineUrlTag($Excerpt);
+        }
+    }
+
+    /**
+     * Overwrites inlineEmphasis in order to give more control over
+     * which emphasis elements are parsed.
+     *
+     * @param array $Excerpt The excerpt containing the text to parse.
+     *
+     * @return (int|string[])[]|null
+     *
+     */
+    protected function inlineEmphasis($Excerpt)
+    {
+        if (!$this->getSetting('emphasis') || !isset($Excerpt['text'][1])) {
+            return;
+        }
+
+        $marker = $Excerpt['text'][0];
+
+        // Check if the emphasis bold is enabled
+        if ($this->getSetting('emphasis.bold') and preg_match($this->StrongRegex[$marker], $Excerpt['text'], $matches)) {
+            $emphasis = 'strong';
+        } elseif ($this->getSetting('emphasis.italic') and preg_match($this->EmRegex[$marker], $Excerpt['text'], $matches)) {
+            $emphasis = 'em';
+        } else {
+            return;
+        }
+
+        return array(
+            'extent' => strlen($matches[0]),
+            'element' => array(
+                'name' => $emphasis,
+                'handler' => 'line',
+                'text' => $matches[1],
+            ),
+        );
+    }
+
+
+    /**
+     * Inline Marked function.
+     *
+     * This function is responsible for handling inline mark in the parsed text.
+     * It searches for text enclosed in double equal signs (==) and wraps it in a <mark> element.
+     *
+     * @param array $Excerpt The excerpt containing the text to be highlighted.
+     *
+     * @return (int|string[])[]|null
+     *
+     */
+    protected function inlineMarked(array $Excerpt): ?array
+    {
+        if (!$this->getSetting('emphasis.marked') || !$this->getSetting('emphasis')) {
+            return null;
+        }
+
+        if (preg_match('/^==((?:\\\\\=|[^=]|=[^=]*=)+?)==(?!=)/s', $Excerpt['text'], $matches)) {
             return [
                 'extent' => strlen($matches[0]),
                 'element' => [
                     'name' => 'mark',
-                    'text' => $matches[2],
+                    'text' => $matches[1],
                 ],
             ];
         }
+
+        return null;
     }
 
-    // Keysrokes
-    protected function inlineKeystrokes($excerpt)
+    /**
+     * @return (int|string[])[]|null
+     *
+     */
+    protected function inlineInsertions(array $Excerpt): ?array
     {
-        if (preg_match('/^(?<!\[)(?:\[\[([^\[\]]*|[\[\]])\]\])(?!\])/s', $excerpt['text'], $matches)) {
+        if (!$this->getSetting('emphasis.insertions') || !$this->getSetting('emphasis')) {
+            return null;
+        }
+
+        if (preg_match('/^\+\+((?:\\\\\+|[^\+]|\+[^\+]*\+)+?)\+\+(?!\+)/s', $Excerpt['text'], $matches)) {
+            return [
+                'extent' => strlen($matches[0]),
+                'element' => [
+                    'name' => 'ins',
+                    'text' => $matches[1],
+                ],
+            ];
+        }
+
+        return null;
+    }
+
+    /**
+     * Parses inline keystrokes in the given excerpt.
+     * It searches for text enclosed in double square brackets (e.g. [[Ctrl+Alt+Del]]) and wraps it in a <kbd> element.
+     *
+     * @param array $Excerpt The excerpt to parse.
+     *
+     * @return (int|string[])[]|null
+     *
+     */
+    protected function inlineKeystrokes(array $Excerpt): ?array
+    {
+        if (!$this->getSetting('keystrokes')) {
+            return null;
+        }
+
+        if (preg_match('/^(?<!\[)(?:\[\[([^\[\]]*|[\[\]])\]\])(?!\])/s', $Excerpt['text'], $matches)) {
             return [
                 'extent' => strlen($matches[0]),
                 'element' => [
@@ -170,12 +440,27 @@ class ParsedownExtended extends ParsedownExtendedParentAlias
                 ],
             ];
         }
+
+        return null;
     }
 
-    // Superscript
-    protected function inlineSuperscript($excerpt)
+
+    /**
+     * Parses inline superscript elements in the given excerpt.
+     * It searches for text enclosed in double carets (e.g. ^superscript^) and wraps it in a <sup> element.
+     *
+     * @param array $Excerpt The excerpt to parse.
+     *
+     * @return (int|string[])[]|null
+     *
+     */
+    protected function inlineSuperscript(array $Excerpt): ?array
     {
-        if (preg_match('/(?:\^(?!\^)([^\^ ]*)\^(?!\^))/', $excerpt['text'], $matches)) {
+        if (!$this->getSetting('emphasis.superscript') || !$this->getSetting('emphasis')) {
+            return null;
+        }
+
+        if (preg_match('/^[\^]((?:\\\\\\^|[^\^]|[\^][^\^]+?[\^][\^])+?)[\^](?![\^])/s', $Excerpt['text'], $matches)) {
             return [
                 'extent' => strlen($matches[0]),
                 'element' => [
@@ -185,12 +470,27 @@ class ParsedownExtended extends ParsedownExtendedParentAlias
                 ],
             ];
         }
+
+        return null;
     }
 
-    // Subscript
-    protected function inlineSubscript($excerpt)
+
+    /**
+     * Parses inline subscript elements in the given excerpt.
+     * It searches for text enclosed in double tildes (e.g. ~subscript~) and wraps it in a <sub> element.
+     *
+     * @param array $Excerpt The excerpt to parse.
+     *
+     * @return (int|string[])[]|null
+     *
+     */
+    protected function inlineSubscript(array $Excerpt): ?array
     {
-        if (preg_match('/(?:~(?!~)([^~ ]*)~(?!~))/', $excerpt['text'], $matches)) {
+        if (!$this->getSetting('emphasis.subscript') || !$this->getSetting('emphasis')) {
+            return null;
+        }
+
+        if (preg_match('/^~((?:\\\\~|[^~]|~~[^~]*~~)+?)~(?!~)/s', $Excerpt['text'], $matches)) {
             return [
                 'extent' => strlen($matches[0]),
                 'element' => [
@@ -200,80 +500,188 @@ class ParsedownExtended extends ParsedownExtendedParentAlias
                 ],
             ];
         }
+
+        return null;
     }
 
-    // Inline typographer
-    protected function inlineTypographer($excerpt)
+
+    /**
+     * Parses inline math notation in the given excerpt.
+     *
+     * @param array $Excerpt The excerpt to parse.
+     *
+     * @return (int|string[])[]|null
+     *
+     */
+    protected function inlineMathNotation($Excerpt)
     {
+        if (!$this->getSetting('math') || !$this->getSetting('math.inline')) {
+            return null;
+        }
+
+        if (!isset($Excerpt['text'][1])) {
+            return;
+        }
+
+        if ($Excerpt['before'] !== '' && preg_match('/\s/', $Excerpt['before']) === 0) {
+            return;
+        }
+
+        foreach ($this->settings['math']['inline']['delimiters'] as $config) {
+            $leftMarker = preg_quote($config['left'], '/');
+            $rightMarker = preg_quote($config['right'], '/');
+
+            if ($config['left'][0] === '\\' || strlen($config['left']) > 1) {
+                $regex = '/^(?<!\S)' . $leftMarker . '(?![\r\n])((?:\\\\' . $rightMarker . '|\\\\' . $leftMarker . '|[^\r\n])+?)' . $rightMarker . '(?![^\s,.])/s';
+            } else {
+                $regex = '/^(?<!\S)' . $leftMarker . '(?![\r\n])((?:\\\\' . $rightMarker . '|\\\\' . $leftMarker . '|[^' . $rightMarker . '\r\n])+?)' . $rightMarker . '(?![^\s,.])/s';
+            }
+
+            if (preg_match($regex, $Excerpt['text'], $matches)) {
+                return array(
+                    'extent' => strlen($matches[0]),
+                    'element' => array(
+                        'text' => $matches[0],
+                    ),
+                );
+            }
+        }
+
+        return;
+    }
+
+
+    /**
+     * Escapes inline escape sequences in the parsedown text.
+     *
+     * @param array $Excerpt The excerpt containing the escape sequence.
+     *
+     * @return (int|mixed)[]|null
+     *
+     */
+    protected function inlineEscapeSequence($Excerpt)
+    {
+
+        if ($this->settings['math']) {
+            foreach ($this->settings['math']['inline']['delimiters'] as $config) {
+
+                $leftMarker = preg_quote($config['left'], '/');
+                $rightMarker = preg_quote($config['right'], '/');
+
+                if ($config['left'][0] === '\\' || strlen($config['left']) > 1) {
+                    $regex = '/^(?<!\S)' . $leftMarker . '(?![\r\n])((?:\\\\' . $rightMarker . '|\\\\' . $leftMarker . '|[^\r\n])+?)' . $rightMarker . '(?![^\s,.])/s';
+                } else {
+                    $regex = '/^(?<!\S)' . $leftMarker . '(?![\r\n])((?:\\\\' . $rightMarker . '|\\\\' . $leftMarker . '|[^' . $rightMarker . '\r\n])+?)' . $rightMarker . '(?![^\s,.])/s';
+                }
+
+                if (preg_match($regex, $Excerpt['text'])) {
+                    return;
+                }
+            }
+        }
+
+        if (isset($Excerpt['text'][1]) && in_array($Excerpt['text'][1], $this->specialCharacters)) {
+            return array(
+                'markup' => $Excerpt['text'][1],
+                'extent' => 2,
+            );
+        }
+    }
+
+
+    /**
+     * Applies typographic substitutions to the inline text.
+     * It searches for typographic substitutions and replaces them with their HTML entities.
+     *
+     * @param array $Excerpt The excerpt containing the inline text.
+     *
+     * @return ((null|string)[]|int)[]|null
+     *
+     */
+    protected function inlineTypographer(array $Excerpt): ?array
+    {
+        if (!$this->getSetting('typographer')) {
+            return null;
+        }
+
+        // Check if smartypants and smart ellipses settings are enabled
+        $ellipses = $this->getSetting('smarty') && $this->getSetting('smarty.smart_ellipses') ? html_entity_decode($this->getSetting('smarty.substitutions.ellipses')) : '...';
+
         $substitutions = [
-            '/\(c\)/i' => '&copy;',
-            '/\(r\)/i' => '&reg;',
-            '/\(tm\)/i' => '&trade;',
-            '/\(p\)/i' => '&para;',
-            '/\+-/i' => '&plusmn;',
-            '/\.{4,}|\.{2}/i' => '...',
+            '/\(c\)/i' => html_entity_decode('&copy;'),
+            '/\(r\)/i' => html_entity_decode('&reg;'),
+            '/\(tm\)/i' => html_entity_decode('&trade;'),
+            '/\(p\)/i' => html_entity_decode('&para;'),
+            '/\+-/i' => html_entity_decode('&plusmn;'),
             '/\!\.{3,}/i' => '!..',
             '/\?\.{3,}/i' => '?..',
+            '/\.{4,}/i' => $ellipses,
+            '/(?<![\.!?])(\.{2})(?!\.)/i' => $ellipses,
+
         ];
 
-        if (preg_match('/\+-|\(p\)|\(tm\)|\(r\)|\(c\)|\.{2,}|\!\.{3,}|\?\.{3,}/i', $excerpt['text'], $matches)) {
+        if (preg_match('/\+-|\(p\)|\(tm\)|\(r\)|\(c\)|\.{2,}|\!\.{3,}|\?\.{3,}/i', $Excerpt['text'], $matches)) {
             return [
                 'extent' => strlen($matches[0]),
                 'element' => [
-                    'rawHtml' => preg_replace(array_keys($substitutions), array_values($substitutions), $matches[0]),
+                    'text' => preg_replace(array_keys($substitutions), array_values($substitutions), $matches[0]),
                 ],
             ];
         }
+        return null;
     }
 
-    // Inline Smartypants
-    protected function inlineSmartypants($excerpt)
+    /**
+     * Applies smartypants substitutions to the inline text.
+     *
+     * @param array $Excerpt The excerpt containing the inline text.
+     *
+     * @return (int|string[])[]|null
+     *
+     */
+    protected function inlineSmartypants($Excerpt)
     {
+        if (!$this->getSetting('smarty')) {
+            return null;
+        }
+
         // Substitutions
-        $backtickDoublequoteOpen = $this->options['smartypants']['substitutions']['left-double-quote'] ?? '&ldquo;';
-        $backtickDoublequoteClose = $this->options['smartypants']['substitutions']['right-double-quote'] ?? '&rdquo;';
+        $backtickDoublequoteOpen = $this->getSetting('smarty.substitutions.left-double-quote');
+        $backtickDoublequoteClose = $this->getSetting('smarty.substitutions.right-double-quote');
+        $smartDoublequoteOpen = $this->getSetting('smarty.substitutions.left-double-quote');
+        $smartDoublequoteClose = $this->getSetting('smarty.substitutions.right-double-quote');
+        $smartSinglequoteOpen = $this->getSetting('smarty.substitutions.left-single-quote');
+        $smartSinglequoteClose = $this->getSetting('smarty.substitutions.right-single-quote');
+        $leftAngleQuote = $this->getSetting('smarty.substitutions.left-angle-quote');
+        $rightAngleQuote = $this->getSetting('smarty.substitutions.right-angle-quote');
 
-        $smartDoublequoteOpen = $this->options['smartypants']['substitutions']['left-double-quote'] ?? '&ldquo;';
-        $smartDoublequoteClose = $this->options['smartypants']['substitutions']['right-double-quote'] ?? '&rdquo;';
-        $smartSinglequoteOpen = $this->options['smartypants']['substitutions']['left-single-quote'] ?? '&lsquo;';
-        $smartSinglequoteClose = $this->options['smartypants']['substitutions']['right-single-quote'] ?? '&rsquo;';
-
-        $leftAngleQuote = $this->options['smartypants']['substitutions']['left-angle-quote'] ?? '&laquo;';
-        $rightAngleQuote = $this->options['smartypants']['substitutions']['right-angle-quote'] ?? '&raquo;';
-
-        if (!isset($excerpt['before'])) {
-            $excerpt['before'] = '';
+        if (!isset($Excerpt['before'])) {
+            $Excerpt['before'] = '';
         }
 
 
-        if (preg_match('/(``)(?!\s)([^"\'`]{1,})(\'\')|(\")(?!\s)([^\"]{1,})(\")|(\')(?!\s)([^\']{1,})(\')|(<{2})(?!\s)([^<>]{1,})(>{2})|(\.{3})|(-{3})|(-{2})/i', $excerpt['text'], $matches)) {
+        if (preg_match('/(``)(?!\s)([^"\'`]{1,})(\'\')|(\")(?!\s)([^\"]{1,})(\")|(\')(?!\s)([^\']{1,})(\')|(<{2})(?!\s)([^<>]{1,})(>{2})|(?<!\.)(\.{3})(?!\.)|(-{3})|(-{2})/i', $Excerpt['text'], $matches)) {
             $matches = array_values(array_filter($matches));
 
             // Smart backticks
-            $smartBackticks = $this->options['smartypants']['smart_backticks'] ?? false;
-
-            if ($smartBackticks) {
-                if ('``' === $matches[1]) {
-                    $length = strlen(trim($excerpt['before']));
-                    if ($length > 0) {
-                        return;
-                    }
-
-                    return [
-                        'extent' => strlen($matches[0]),
-                        'element' => [
-                            'text' => html_entity_decode($backtickDoublequoteOpen).$matches[2].html_entity_decode($backtickDoublequoteClose),
-                        ],
-                    ];
+            if ($this->getSetting('smarty.smart_backticks') && '``' === $matches[1]) {
+                $length = strlen(trim($Excerpt['before']));
+                if ($length > 0) {
+                    return;
                 }
+
+                return [
+                    'extent' => strlen($matches[0]),
+                    'element' => [
+                        'text' => html_entity_decode($backtickDoublequoteOpen).$matches[2].html_entity_decode($backtickDoublequoteClose),
+                    ],
+                ];
             }
 
             // Smart quotes
-            $smartQuotes = $this->options['smartypants']['smart_quotes'] ?? true;
-
-            if ($smartQuotes) {
+            if ($this->getSetting('smarty.smart_quotes')) {
                 if ("'" === $matches[1]) {
-                    $length = strlen(trim($excerpt['before']));
+                    $length = strlen(trim($Excerpt['before']));
                     if ($length > 0) {
                         return;
                     }
@@ -287,7 +695,7 @@ class ParsedownExtended extends ParsedownExtendedParentAlias
                 }
 
                 if ('"' === $matches[1]) {
-                    $length = strlen(trim($excerpt['before']));
+                    $length = strlen(trim($Excerpt['before']));
                     if ($length > 0) {
                         return;
                     }
@@ -302,33 +710,27 @@ class ParsedownExtended extends ParsedownExtendedParentAlias
             }
 
             // Smart angled quotes
-            $smartAngledQuotes = $this->options['smartypants']['smart_angled_quotes'] ?? true;
-
-            if ($smartAngledQuotes) {
-                if ('<<' === $matches[1]) {
-                    $length = strlen(trim($excerpt['before']));
-                    if ($length > 0) {
-                        return;
-                    }
-
-                    return [
-                        'extent' => strlen($matches[0]),
-                        'element' => [
-                            'text' => html_entity_decode($leftAngleQuote).$matches[2].html_entity_decode($rightAngleQuote),
-                        ],
-                    ];
+            if ($this->getSetting('smarty.smart_angled_quotes') && '<<' === $matches[1]) {
+                $length = strlen(trim($Excerpt['before']));
+                if ($length > 0) {
+                    return;
                 }
+
+                return [
+                    'extent' => strlen($matches[0]),
+                    'element' => [
+                        'text' => html_entity_decode($leftAngleQuote).$matches[2].html_entity_decode($rightAngleQuote),
+                    ],
+                ];
             }
 
             // Smart dashes
-            $smartDashes = $this->options['smartypants']['smart_dashes'] ?? true;
-
-            if ($smartDashes) {
+            if ($this->getSetting('smarty.smart_dashes')) {
                 if ('---' === $matches[1]) {
                     return [
                         'extent' => strlen($matches[0]),
                         'element' => [
-                            'rawHtml' => $this->options['smartypants']['substitutions']['mdash'] ?? '&mdash;',
+                            'text' => html_entity_decode($this->getSetting('smarty.substitutions.mdash')),
                         ],
                     ];
                 }
@@ -337,79 +739,38 @@ class ParsedownExtended extends ParsedownExtendedParentAlias
                     return [
                         'extent' => strlen($matches[0]),
                         'element' => [
-                            'rawHtml' => $this->options['smartypants']['substitutions']['ndash'] ?? '&ndash;',
+                            'text' => html_entity_decode($this->getSetting('smarty.substitutions.ndash')),
                         ],
                     ];
                 }
             }
 
             // Smart ellipses
-            $smartEllipses = $this->options['smartypants']['smart_ellipses'] ?? true;
-
-            if ($smartEllipses) {
-                if ('...' === $matches[1]) {
-                    return [
-                        'extent' => strlen($matches[0]),
-                        'element' => [
-                            'rawHtml' => $this->options['smartypants']['substitutions']['ellipses'] ?? '&hellip;',
-                        ],
-                    ];
-                }
+            if ($this->getSetting('smarty.smart_ellipses') && '...' === $matches[1]) {
+                return [
+                    'extent' => strlen($matches[0]),
+                    'element' => [
+                        'text' => html_entity_decode($this->getSetting('smarty.substitutions.ellipses')),
+                    ],
+                ];
             }
         }
     }
 
-    // Math Notation
-    protected function inlineMathNotation($excerpt)
+    /**
+     * Replaces emoji codes with corresponding emoji characters.
+     *
+     * @param string $Excerpt The text to process.
+     *
+     * @return (int|string[])[]|null
+     *
+     */
+    protected function inlineEmojis(array $Excerpt): ?array
     {
-        $matchSingleDollar = $this->options['math']['single_dollar'] ?? false;
-        // Inline Matches
-        if ($matchSingleDollar) {
-            // Match single dollar - experimental
-            if (preg_match('/^(?<!\\\\)((?<!\$)\$(?!\$)(.*?)(?<!\$)\$(?!\$)|(?<!\\\\\()\\\\\((.*?)(?<!\\\\\()\\\\\)(?!\\\\\)))/s', $excerpt['text'], $matches)) {
-                $mathMatch = $matches[0];
-            }
-        } else {
-            if (preg_match('/^(?<!\\\\\()\\\\\((.*?)(?<!\\\\\()\\\\\)(?!\\\\\))/s', $excerpt['text'], $matches)) {
-                $mathMatch = $matches[0];
-            }
+        if (!$this->getSetting('emojis')) {
+            return null;
         }
 
-        if (isset($mathMatch)) {
-            return [
-                'extent' => strlen($mathMatch),
-                'element' => [
-                    'name' => '',
-                    'text' => $mathMatch,
-                ],
-            ];
-        }
-    }
-
-    protected function inlineEscapeSequence($excerpt)
-    {
-        $element = [
-            'element' => [
-                'rawHtml' => $excerpt['text'][1],
-            ],
-            'extent' => 2,
-        ];
-
-        $state = $this->options['math'] ?? false;
-
-        if ($state) {
-            if (isset($excerpt['text'][1]) && in_array($excerpt['text'][1], $this->specialCharacters) && !preg_match('/^(?<!\\\\)(?<!\\\\\()\\\\\((.{2,}?)(?<!\\\\\()\\\\\)(?!\\\\\))/s', $excerpt['text'])) {
-                return $element;
-            }
-        } else {
-            if (isset($excerpt['text'][1]) && in_array($excerpt['text'][1], $this->specialCharacters)) {
-                return $element;
-            }
-        }
-    }
-
-    protected function inlineEmojis($excerpt)
-    {
         $emojiMap = [
             ':smile:' => '😄', ':laughing:' => '😆', ':blush:' => '😊', ':smiley:' => '😃',
             ':relaxed:' => '☺️', ':smirk:' => '😏', ':heart_eyes:' => '😍', ':kissing_heart:' => '😘',
@@ -628,255 +989,398 @@ class ParsedownExtended extends ParsedownExtendedParentAlias
             ':white_large_square:' => '⬜',
         ];
 
-        if (preg_match('/^(:)([^: ]*?)(:)/', $excerpt['text'], $matches)) {
+        // Check there is no character before the emoji marker
+        if (!preg_match('/^(\s|)$/', $Excerpt['before'])) {
+            return null;
+        }
+
+        if (preg_match('/^(:)([a-zA-Z0-9_]+)(:)/', $Excerpt['text'], $matches)) {
             return [
                 'extent' => strlen($matches[0]),
                 'element' => [
-                    'name' => '',
                     'text' => str_replace(array_keys($emojiMap), $emojiMap, $matches[0]),
                 ],
             ];
         }
+
+        return null;
     }
 
+    // Block types
+    // -------------------------------------------------------------------------
 
-    // --------------------------------------------------------------------
-    // Block Types
-    // --------------------------------------------------------------------
-
-    protected function blockFootnote($line) {
-        return $this->processElement(['footnotes'], 'blockFootnote', $line);
-    }
-
-    protected function blockDefinitionList($line, $block)
+    protected function parseAttributeData($attributeString)
     {
-        return $this->processElement(['definition_lists'], 'blockDefinitionList', $line, $block);
-    }
-
-    protected function blockCode($line, $block = null)
-    {
-        return $this->processElement(['code', 'code.blocks'], 'blockCode', $line, $block);
-    }
-
-    protected function blockComment($line)
-    {
-        return $this->processElement(['comments'], 'blockComment', $line);
-    }
-
-    protected function blockList($line, array $CurrentBlock = null)
-    {
-        return $this->processElement(['lists'], 'blockList', $line, $CurrentBlock);
-    }
-
-    protected function blockQuote($line)
-    {
-        return $this->processElement(['quotes'], 'blockQuote', $line);
-    }
-
-    protected function blockRule($line)
-    {
-        return $this->processElement(['thematic_breaks'], 'blockRule', $line);
-    }
-
-    protected function blockMarkup($line)
-    {
-        $state = $this->options['markup'] ?? true;
-        return $this->processElement(['markup'], 'blockMarkup', $line);
-    }
-
-    protected function blockReference($line)
-    {
-        return $this->processElement(['references'], 'blockReference', $line);
-    }
-
-    protected function blockTable($line, $block = null)
-    {
-        $state = $this->options['tables'] ?? true;
-        return $this->processElement(['tables'], 'blockTable', $line, $block);
-    }
-
-    // Block MathNotation
-    protected function blockMathNotation($line)
-    {
-
-        $block = [
-            'element' => [
-                'text' => '',
-            ],
-        ];
-
-        if (preg_match('/^(?<!\\\\)(\\\\\[)(?!.)$/', $line['text'])) {
-            $block['end'] = '\]';
-
-            return $block;
+        if($this->getSetting('special_attributes')) {
+            return parent::parseAttributeData($attributeString);
         }
 
-        // One line display math
-        if (preg_match('/^(?<!\\\\\[)\\\\\[(.*?)(?<!\\\\\[)\\\\\](?!\\\\\])$/', $line['text'], $matches)) {
-            $block['end'] = '\]';
-            $block['element']['text'] = $matches[0];
-
-            return $block;
-        }
-
-        if (preg_match('/^(?<!\\\\)(\$\$)(?!.)$/', $line['text'])) {
-            $block['end'] = '$$';
-
-            return $block;
-        }
-
+        return [];
     }
 
-    // ~
-
-    protected function blockMathNotationContinue($line, $block)
+    protected function blockFootnote($Line)
     {
-        if (isset($block['complete'])) {
+        if ($this->getSetting('footnotes')) {
+            return parent::blockFootnote($Line);
+        }
+    }
+
+    protected function blockDefinitionList($Line, $Block)
+    {
+        if ($this->getSetting('definition_lists')) {
+            return parent::blockDefinitionList($Line, $Block);
+        }
+    }
+
+    protected function blockCode($Line, $Block = null)
+    {
+        if ($this->getSetting('code') && $this->getSetting('code.blocks')) {
+            return parent::blockCode($Line, $Block);
+        }
+    }
+
+    protected function blockComment($Line)
+    {
+        if ($this->getSetting('comments')) {
+            return parent::blockComment($Line);
+        }
+    }
+
+    protected function blockList($Line, array $CurrentBlock = null)
+    {
+        if ($this->getSetting('lists')) {
+            return parent::blockList($Line, $CurrentBlock);
+        }
+    }
+
+    protected function blockQuote($Line)
+    {
+        if ($this->getSetting('quotes')) {
+            return parent::blockQuote($Line);
+        }
+    }
+
+    protected function blockRule($Line)
+    {
+        if ($this->getSetting('thematic_breaks')) {
+            return parent::blockRule($Line);
+        }
+    }
+
+    protected function blockMarkup($Line)
+    {
+        if ($this->getSetting('markup')) {
+            return parent::blockMarkup($Line);
+        }
+    }
+
+    protected function blockReference($Line)
+    {
+        if ($this->getSetting('references')) {
+            return parent::blockReference($Line);
+        }
+    }
+
+    protected function blockTable($Line, $Block = null)
+    {
+        if ($this->getSetting('tables')) {
+            return parent::blockTable($Line, $Block);
+        }
+    }
+
+    /**
+     * This method is responsible for handling block-level math expressions in the parsed Markdown.
+     * It checks if the given line contains a block-level math expression and returns the appropriate block structure.
+     *
+     * @param array $Line The line to be processed.
+     *
+     * @return (mixed|string[])[]|null
+     *
+     */
+    protected function blockMathNotation($Line)
+    {
+        if (!$this->getSetting('math') || !$this->getSetting('math.block')) {
+            return null;
+        }
+
+        foreach ($this->settings['math']['block']['delimiters'] as $config) {
+
+            $leftMarker = preg_quote($config['left'], '/');
+            $regex = '/^(?<!\\\\)(' . $leftMarker . ')(?!.)$/';
+
+
+            if (preg_match($regex, $Line['text'])) {
+                return [
+                    'element' => [
+                        'text' => '',
+                    ],
+                    'start' => $config['left'], // Store the start marker
+                    'end' => $config['right'], // Store the end marker
+                ];
+            }
+        }
+
+        return;
+    }
+
+    /**
+     * Continues the block math notation parsing.
+     *
+     * @param array $Line The current line being parsed.
+     * @param array $Block The current block being parsed.
+     * @return array|null The updated block or null if the block is complete.
+     */
+    protected function blockMathNotationContinue($Line, $Block)
+    {
+        if (isset($Block['complete'])) {
             return;
         }
 
-        if (isset($block['interrupted'])) {
-            $block['element']['text'] .= str_repeat(
-                "\n",
-                $block['interrupted']
-            );
-
-            unset($block['interrupted']);
+        if (isset($Block['interrupted'])) {
+            $Block['element']['text'] .= str_repeat("\n", $Block['interrupted']);
+            unset($Block['interrupted']);
         }
 
+        // Double escape the backslashes for regex pattern
+        $rightMarker = preg_quote($Block['end'], '/');
+        $regex = '/^(?<!\\\\)(' . $rightMarker . ')$/';
 
-        if (preg_match('/^(?<!\\\\)(\\\\\])$/', $line['text']) && '\]' === $block['end']) {
-            $block['complete'] = true;
-            $block['math'] = true;
-            $block['element']['text'] = '\\['.$block['element']['text'].'\\]';
-
-            return $block;
+        if (preg_match($regex, $Line['text'])) {
+            $Block['complete'] = true;
+            $Block['math'] = true;
+            $Block['element']['text'] = $Block['start'] . $Block['element']['text'] . $Block['end'];
+            return $Block;
         }
 
-        // One line display mathh
-        if (preg_match('/(?<!\\\\)(\\\\\])$/', $block['element']['text']) && '\]' === $block['end']) {
-            $block['complete'] = true;
-            $block['math'] = true;
-            $block['element']['text'] = $block['element']['text'];
+        $Block['element']['text'] .= "\n" . $Line['body'];
 
-            return $block;
-        }
-
-        if (preg_match('/^(?<!\\\\)(\$\$)$/', $line['text']) && '$$' === $block['end']) {
-            $block['complete'] = true;
-            $block['math'] = true;
-            $block['element']['text'] = '$$'.$block['element']['text'].'$$';
-
-            return $block;
-        }
-
-        $block['element']['text'] .= "\n".$line['body'];
-
-        // ~
-
-        return $block;
+        return $Block;
     }
 
-    // ~
-
-    protected function blockMathNotationComplete($block)
+    /**
+     * Returns the complete block of math notation.
+     *
+     * @param string $Block The block of math notation.
+     * @return string The complete block of math notation.
+     */
+    protected function blockMathNotationComplete($Block)
     {
-        return $block;
+        return $Block;
     }
 
-    // Block Fenced Code (Overwrite) to allow for diagrams
-    protected function blockFencedCode($line)
+
+    /**
+     * This method handles the parsing of fenced code blocks in the ParsedownExtended class.
+     *
+     * @param array $Line The current line being parsed.
+     *
+     * @return array|null The parsed block or null if code blocks are disabled.
+     */
+    protected function blockFencedCode($Line)
     {
+        if (!$this->getSetting('code') or !$this->getSetting('code.blocks')) {
+            return;
+        }
 
-        $block = parent::blockFencedCode($line);
+        $Block = parent::blockFencedCode($Line);
+        $marker = $Line['text'][0];
+        $openerLength = strspn($Line['text'], $marker);
 
-        $marker = $line['text'][0];
-        $openerLength = strspn($line['text'], $marker);
-        $language = trim(
-            preg_replace('/^`{3}([^\s]+)(.+)?/s', '$1', $line['text'])
-        );
+        // Extract language from the line
+        $parts = explode(' ', trim(substr($Line['text'], $openerLength)), 2);
+        $language = strtolower($parts[0]);
 
-        // Legacy mode (for Parsedown 1.8.0 betas)
-        if ($this->legacyMode === true) {
-            // 1.8
-            // Mermaid.js https://mermaidjs.github.io
-            if ('mermaid' == strtolower($language)) {
+        // Check if diagrams are enabled
+        if (!$this->getSetting('diagrams')) {
+            return $Block;
+        }
 
+        $extensions = [
+            'mermaid' => ['div', 'mermaid'],
+            'chart' => ['canvas', 'chartjs'],
+            // Add more languages here as needed
+        ];
+
+        if (isset($extensions[$language])) {
+            list($elementName, $class) = $extensions[$language];
+
+            if(!$this->legacyMode) {
+                // 1.8
                 return [
                     'char' => $marker,
                     'openerLength' => $openerLength,
                     'element' => [
+                        'name' => $elementName,
                         'element' => [
                             'text' => '',
                         ],
-                        'name' => 'div',
                         'attributes' => [
-                            'class' => 'mermaid',
+                            'class' => $class,
                         ],
                     ],
                 ];
-            }
-
-            // Chart.js https://www.chartjs.org/
-            if ('chart' == strtolower($language)) {
-
+            } else {
+                // 1.7
                 return [
-                    'char' => $marker,
+                    "char" => $marker,
                     'openerLength' => $openerLength,
-                    'element' => [
-                        'element' => [
-                            'text' => '',
+                    "element" => [
+                        "name" => $elementName,
+                        "handler" => "element",
+                        "text" => [
+                            "text" => "",
                         ],
-                        'name' => 'canvas',
-                        'attributes' => [
-                            'class' => 'chartjs',
+                        "attributes" => [
+                            "class" => $class,
                         ],
                     ],
                 ];
             }
-
         }
 
-        if ($this->options['diagrams']) {
-            // Mermaid.js https://mermaidjs.github.io
-            if ('mermaid' == strtolower($language)) {
+        return $Block;
+    }
 
-                $block = array(
-                    'char' => $marker,
-                    'openerLength' => $openerLength,
-                    'element' => array(
-                        'name' => 'div',
-                        'handler' => 'element',
-                        'text' => [
-                            'text' => '',
-                        ],
-                        'attributes' => [
-                            'class' => 'mermaid',
-                        ],
-                    ),
-                );
-            }
-
-            // Chart.js https://www.chartjs.org/
-            if ('chart' == strtolower($language)) {
-                $block = array(
-                    'char' => $marker,
-                    'openerLength' => $openerLength,
-                    'element' => array(
-                        'name' => 'canvas',
-                        'handler' => 'element',
-                        'text' => [
-                            'text' => '',
-                        ],
-                        'attributes' => [
-                            'class' => 'chartjs',
-                        ],
-                    ),
-                );
-            }
+    /**
+     * This function is used to generate list items and tasked list items.
+     * It handles both legacy mode and non-legacy mode.
+     *
+     * @param array $Lines The lines of text to be processed.
+     * @return mixed The processed list items.
+     */
+    protected function li($Lines)
+    {
+        if (!$this->getSetting('lists.tasks')) {
+            return parent::li($Lines);
         }
 
-        return $block;
+        if ($this->legacyMode) {
+            $markup = $this->lines($Lines);
+
+            // Get first 4 charhacters of the markup
+            $firstFourChars = substr($markup, 4, 4);
+            // if it is a checkbox
+            if (preg_match('/^\[[x ]\]/i', $firstFourChars, $matches)) {
+                // check if it is checked
+                if (strtolower($matches[0]) === '[x]') {
+                    // replace from the 4th character and 4 characters after with a checkbox
+                    $markup = substr_replace($markup, '<input type="checkbox" disabled="disabled" checked="checked" />', 4, 4);
+                } else {
+                    // replace from the 4th character and 4 characters after with a checkbox
+                    $markup = substr_replace($markup, '<input type="checkbox" disabled="disabled" />', 4, 4);
+                }
+            }
+
+            $trimmedMarkup = trim($markup);
+
+            if (! in_array('', $Lines) and substr($trimmedMarkup, 0, 3) === '<p>') {
+                $markup = $trimmedMarkup;
+                $markup = substr($markup, 3);
+
+                $position = strpos($markup, "</p>");
+
+                $markup = substr_replace($markup, '', $position, 4);
+            }
+
+            return $markup;
+        } else {
+            $Elements = $this->linesElements($Lines);
+
+            $text = $Elements[0]['handler']['argument'];
+            $firstFourChars = substr($text, 0, 4);
+            if (preg_match('/^\[[x ]\]/i', $firstFourChars, $matches)) {
+                $Elements[0]['handler']['argument'] = substr_replace($text, '', 0, 4);
+                if (strtolower($matches[0]) === '[x]') {
+                    $Elements[0]['attributes'] = [
+                        'checked' => 'checked',
+                        'type' => 'checkbox',
+                        'disabled' => 'disabled',
+                    ];
+                } else {
+                    $Elements[0]['attributes'] = [
+                        'type' => 'checkbox',
+                        'disabled' => 'disabled',
+                    ];
+                }
+                $Elements[0]['name'] = 'input';
+            }
+
+
+            if (! in_array('', $Lines)
+                and isset($Elements[0]) and isset($Elements[0]['name'])
+                and $Elements[0]['name'] === 'p'
+            ) {
+                unset($Elements[0]['name']);
+            }
+
+            return $Elements;
+        }
+    }
+
+
+    /**
+     * Heading process.
+     * Creates heading block element and stores to the ToC list. It overrides
+     * the parent method: \Parsedown::blockHeader() and returns $Block array if
+     * the $Line is a heading element.
+     *
+     * @param  array $Line  Array that Parsedown detected as a block type element.
+     * @return void|array   Array of Heading Block.
+     */
+    protected function blockHeader($Line)
+    {
+        if (!$this->getSetting('headings')) {
+            return;
+        }
+
+        $Block = parent::blockHeader($Line);
+
+        if (! empty($Block)) {
+            $text = $Block['element']['text'] ?? $Block['element']['handler']['argument'] ?? '';
+            $level = $Block['element']['name'];
+            $id = $Block['element']['attributes']['id'] ?? $this->createAnchorID($text);
+
+            $Block['element']['attributes'] = ['id' => $id];
+            $this->setContentsList(['text' => $text, 'id' => $id, 'level' => $level]);
+
+            return $Block;
+        }
+    }
+
+    protected function blockSetextHeader($Line, $Block = null)
+    {
+        if (!$this->getSetting('headings')) {
+            return;
+        }
+
+        $Block = parent::blockSetextHeader($Line, $Block);
+
+        if (! empty($Block)) {
+            $text = $Block['element']['text'] ?? $Block['element']['handler']['argument'] ?? '';
+            $level = $Block['element']['name'];
+            $id = $Block['element']['attributes']['id'] ?? $this->createAnchorID($text);
+
+            $Block['element']['attributes'] = ['id' => $id];
+            $this->setContentsList(['text' => $text, 'id' => $id, 'level' => $level]);
+
+            return $Block;
+        }
+    }
+
+
+    protected function blockAbbreviation($line)
+    {
+        if ($this->getSetting('abbreviations')) {
+            foreach ($this->getSetting('abbreviations.predefine') as $abbreviations => $description) {
+                $this->DefinitionData['Abbreviation'][$abbreviations] = $description;
+            }
+
+            if ($this->getSetting('abbreviations.allow_custom_abbr')) {
+                return parent::blockAbbreviation($line);
+            }
+
+            return;
+        }
     }
 
     /**
@@ -884,103 +1388,95 @@ class ParsedownExtended extends ParsedownExtendedParentAlias
      * Tablespan
      * Modifyed version of Tablespan by @KENNYSOFT
      */
-    protected function blockTableComplete(array $block)
+    protected function blockTableComplete(array $block): array
     {
-        $state = $this->options['tables']['tablespan'] ?? true;
-        if ($state === false) {
+        if (!$this->getSetting('tables.tablespan')) {
             return $block;
         }
 
-        if (!isset($block)) {
-            return null;
-        }
-
-        // Legacy mode (for Parsedown 1.8.0 betas)
         if ($this->legacyMode === true) {
-            // header
-            $headerElements =& $block['element']['elements'][0]['elements'][0]['elements'];
+            // 1.7
+            $headerElements = & $block['element']['text'][0]['text'][0]['text'];
         } else {
-            // header
-            $headerElements =& $block['element']['text'][0]['text'][0]['text'];
+            // 1.8
+            $headerElements = & $block['element']['elements'][0]['elements'][0]['elements'];
         }
 
-        for ($index = count($headerElements) - 1; $index >= 0; --$index)
-        {
+        for ($index = count($headerElements) - 1; $index >= 0; --$index) {
             $colspan = 1;
-            $headerElement =& $headerElements[$index];
+            $headerElement = & $headerElements[$index];
 
-            // Legacy mode (for Parsedown 1.8.0 betas)
             if ($this->legacyMode === true) {
-                while ($index && '>' === $HeaderElements[$index - 1]['handler']['argument'])
-                {
+                // 1.7
+                while ($index && $headerElements[$index - 1]['text'] === '>') {
                     $colspan++;
-                    $PreviousHeaderElement =& $headerElements[--$index];
+                    $PreviousHeaderElement = & $headerElements[--$index];
                     $PreviousHeaderElement['merged'] = true;
-                    if (isset($PreviousHeaderElement['attributes']))
-                    {
+                    if (isset($PreviousHeaderElement['attributes'])) {
                         $headerElement['attributes'] = $PreviousHeaderElement['attributes'];
                     }
                 }
             } else {
-                while ($index && $headerElements[$index - 1]['text'] === '>')
-                {
+                // 1.8
+                while ($index && '>' === $HeaderElements[$index - 1]['handler']['argument']) {
                     $colspan++;
-                    $PreviousHeaderElement =& $headerElements[--$index];
+                    $PreviousHeaderElement = & $headerElements[--$index];
                     $PreviousHeaderElement['merged'] = true;
-                    if (isset($PreviousHeaderElement['attributes']))
-                    {
+                    if (isset($PreviousHeaderElement['attributes'])) {
                         $headerElement['attributes'] = $PreviousHeaderElement['attributes'];
                     }
                 }
             }
 
-            if ($colspan > 1)
-            {
-                if ( ! isset($headerElement['attributes']))
-                {
+            if ($colspan > 1) {
+                if (! isset($headerElement['attributes'])) {
                     $headerElement['attributes'] = array();
                 }
                 $headerElement['attributes']['colspan'] = $colspan;
             }
         }
 
-        for ($index = count($headerElements) - 1; $index >= 0; --$index)
-        {
-            if (isset($headerElements[$index]['merged']))
-            {
+        for ($index = count($headerElements) - 1; $index >= 0; --$index) {
+            if (isset($headerElements[$index]['merged'])) {
                 array_splice($headerElements, $index, 1);
             }
         }
 
-
-        // Legacy mode (for Parsedown 1.8.0 betas)
         if ($this->legacyMode === true) {
-            // body
-            $rows =& $block['element']['elements'][1]['elements'];
+            // 1.7
+            $rows = & $block['element']['text'][1]['text'];
         } else {
-            // body
-            $rows =& $block['element']['text'][1]['text'];
+            // 1.8
+            $rows = & $block['element']['elements'][1]['elements'];
         }
 
         // Colspan
-        foreach ($rows as $rowNo => &$row)
-        {
-            // Legacy mode (for Parsedown 1.8.0 betas)
+        foreach ($rows as $rowNo => &$row) {
             if ($this->legacyMode === true) {
-                $elements =& $row['elements'];
+                // 1.7
+                $elements = & $row['text'];
             } else {
-                $elements =& $row['text'];
+                // 1.8
+                $elements = & $row['elements'];
             }
 
-            for ($index = count($elements) - 1; $index >= 0; --$index)
-            {
+            for ($index = count($elements) - 1; $index >= 0; --$index) {
                 $colspan = 1;
-                $element =& $elements[$index];
+                $element = & $elements[$index];
 
-                // Legacy mode (for Parsedown 1.8.0 betas)
                 if ($this->legacyMode === true) {
-                    while ($index && '>' === $elements[$index - 1]['handler']['argument'])
-                    {
+                    // 1.7
+                    while ($index && $elements[$index - 1]['text'] === '>') {
+                        $colspan++;
+                        $PreviousElement = & $elements[--$index];
+                        $PreviousElement['merged'] = true;
+                        if (isset($PreviousElement['attributes'])) {
+                            $element['attributes'] = $PreviousElement['attributes'];
+                        }
+                    }
+                } else {
+                    // 1.8
+                    while ($index && '>' === $elements[$index - 1]['handler']['argument']) {
                         ++$colspan;
                         $PreviousElement = &$elements[--$index];
                         $PreviousElement['merged'] = true;
@@ -988,23 +1484,10 @@ class ParsedownExtended extends ParsedownExtendedParentAlias
                             $element['attributes'] = $PreviousElement['attributes'];
                         }
                     }
-                } else {
-                    while ($index && $elements[$index - 1]['text'] === '>')
-                    {
-                        $colspan++;
-                        $PreviousElement =& $elements[--$index];
-                        $PreviousElement['merged'] = true;
-                        if (isset($PreviousElement['attributes']))
-                        {
-                            $element['attributes'] = $PreviousElement['attributes'];
-                        }
-                    }
                 }
 
-                if ($colspan > 1)
-                {
-                    if ( ! isset($element['attributes']))
-                    {
+                if ($colspan > 1) {
+                    if (! isset($element['attributes'])) {
                         $element['attributes'] = array();
                     }
                     $element['attributes']['colspan'] = $colspan;
@@ -1013,44 +1496,39 @@ class ParsedownExtended extends ParsedownExtendedParentAlias
         }
 
         // Rowspan
-        foreach ($rows as $rowNo => &$row)
-        {
+        foreach ($rows as $rowNo => &$row) {
 
-            // Legacy mode (for Parsedown 1.8.0 betas)
             if ($this->legacyMode === true) {
-                $elements = &$row['elements'];
+                // 1.7
+                $elements = & $row['text'];
             } else {
-                $elements =& $row['text'];
+                // 1.8
+                $elements = &$row['elements'];
             }
 
-            foreach ($elements as $index => &$element)
-            {
+            foreach ($elements as $index => &$element) {
                 $rowspan = 1;
 
-                if (isset($element['merged']))
-                {
+                if (isset($element['merged'])) {
                     continue;
                 }
 
-                // Legacy mode (for Parsedown 1.8.0 betas)
                 if ($this->legacyMode === true) {
-                    while ($rowNo + $rowspan < count($rows) && $index < count($rows[$rowNo + $rowspan]['elements']) && '>' === $rows[$rowNo + $rowspan]['elements'][$index]['handler']['argument'] && (@$element['attributes']['colspan'] ?: null) === (@$rows[$rowNo + $rowspan]['elements'][$index]['attributes']['colspan'] ?: null))
-                    {
-                        $rows[$rowNo + $rowspan]['elements'][$index]['merged'] = true;
+                    // 1.7
+                    while ($rowNo + $rowspan < count($rows) && $index < count($rows[$rowNo + $rowspan]['text']) && $rows[$rowNo + $rowspan]['text'][$index]['text'] === '^' && (@$element['attributes']['colspan'] ?: null) === (@$rows[$rowNo + $rowspan]['text'][$index]['attributes']['colspan'] ?: null)) {
+                        $rows[$rowNo + $rowspan]['text'][$index]['merged'] = true;
                         $rowspan++;
                     }
                 } else {
-                    while ($rowNo + $rowspan < count($rows) && $index < count($rows[$rowNo + $rowspan]['text']) && $rows[$rowNo + $rowspan]['text'][$index]['text'] === '^' && (@$element['attributes']['colspan'] ?: null) === (@$rows[$rowNo + $rowspan]['text'][$index]['attributes']['colspan'] ?: null))
-                    {
-                        $rows[$rowNo + $rowspan]['text'][$index]['merged'] = true;
+                    // 1.8
+                    while ($rowNo + $rowspan < count($rows) && $index < count($rows[$rowNo + $rowspan]['elements']) && '>' === $rows[$rowNo + $rowspan]['elements'][$index]['handler']['argument'] && (@$element['attributes']['colspan'] ?: null) === (@$rows[$rowNo + $rowspan]['elements'][$index]['attributes']['colspan'] ?: null)) {
+                        $rows[$rowNo + $rowspan]['elements'][$index]['merged'] = true;
                         $rowspan++;
                     }
                 }
 
-                if ($rowspan > 1)
-                {
-                    if ( ! isset($element['attributes']))
-                    {
+                if ($rowspan > 1) {
+                    if (! isset($element['attributes'])) {
                         $element['attributes'] = array();
                     }
                     $element['attributes']['rowspan'] = $rowspan;
@@ -1058,19 +1536,18 @@ class ParsedownExtended extends ParsedownExtendedParentAlias
             }
         }
 
-        foreach ($rows as $rowNo => &$row)
-        {
-            // Legacy mode (for Parsedown 1.8.0 betas)
+        foreach ($rows as $rowNo => &$row) {
+
             if ($this->legacyMode === true) {
-                $elements =& $row['elements'];
+                // 1.7
+                $elements = & $row['text'];
             } else {
-                $elements =& $row['text'];
+                // 1.8
+                $elements = & $row['elements'];
             }
 
-            for ($index = count($elements) - 1; $index >= 0; --$index)
-            {
-                if (isset($elements[$index]['merged']))
-                {
+            for ($index = count($elements) - 1; $index >= 0; --$index) {
+                if (isset($elements[$index]['merged'])) {
                     array_splice($elements, $index, 1);
                 }
             }
@@ -1079,506 +1556,115 @@ class ParsedownExtended extends ParsedownExtendedParentAlias
         return $block;
     }
 
-    // (Override)
-    protected function blockHeader($line)
-    {
-        $state = $this->options['headings'] ?? true;
-        if (!$state) {
-            return;
-        }
 
-        $block = parent::blockHeader($line);
 
-        if (!empty($block)) {
-
-            // Legacy mode (for Parsedown 1.8.0 betas)
-            if ($this->legacyMode === true) {
-                // Get the text of the heading
-                if (isset($block['element']['handler']['argument'])) {
-                    $text = $block['element']['handler']['argument'];
-                }
-            } else {
-                // Get the text of the heading
-                if (isset($block['element']['text'])) {
-                    $text = $block['element']['text'];
-                }
-            }
-
-            // Get the heading level. Levels are h1, h2, ..., h6
-            $level = $block['element']['name'];
-
-            $headersAllowed = $this->options['headings']['allowed'] ?? ['h1', 'h2', 'h3', 'h4', 'h5', 'h6'];
-            if (!in_array($level, $headersAllowed)) {
-                return;
-            }
-
-            // Checks if auto generated anchors is allowed
-            $autoAnchors = $this->options['headings']['auto_anchors'] ?? true;
-
-            if ($autoAnchors) {
-                // Get the anchor of the heading to link from the ToC list
-                $id = $block['element']['attributes']['id'] ?? $this->createAnchorID($text);
-            } else {
-                // Get the anchor of the heading to link from the ToC list
-                $id = $block['element']['attributes']['id'] ?? null;
-            }
-
-            // Set attributes to head tags
-            $block['element']['attributes']['id'] = $id;
-
-            $tocHeaders = $this->options['toc']['headings'] ?? ['h1', 'h2', 'h3', 'h4', 'h5', 'h6'];
-            // Check if level are defined as a heading
-            if (in_array($level, $tocHeaders)) {
-                // Add/stores the heading element info to the ToC list
-                $this->setContentsList([
-                    'text' => $text,
-                    'id' => $id,
-                    'level' => $level,
-                ]);
-            }
-
-            return $block;
-        }
-    }
-
-    // (Override)
-    protected function blockSetextHeader($line, $block = null)
-    {
-        $state = $this->options['headings'] ?? true;
-        if (!$state) {
-            return;
-        }
-        $block = parent::blockSetextHeader($line, $block);
-        if (!empty($block)) {
-
-            // Legacy mode (for Parsedown 1.8.0 betas)
-            if ($this->legacyMode === true) {
-                // Get the text of the heading
-                if (isset($block['element']['handler']['argument'])) {
-                    $text = $block['element']['handler']['argument'];
-                }
-            } else {
-                // Get the text of the heading
-                if (isset($block['element']['text'])) {
-                    $text = $block['element']['text'];
-                }
-            }
-
-            // Get the heading level. Levels are h1, h2, ..., h6
-            $level = $block['element']['name'];
-
-            $headersAllowed = $this->options['headings']['allowed'] ?? ['h1', 'h2', 'h3', 'h4', 'h5', 'h6'];
-            if (!in_array($level, $headersAllowed)) {
-                return;
-            }
-
-            // Checks if auto generated anchors is allowed
-            $autoAnchors = $this->options['headings']['auto_anchors'] ?? true;
-
-            if ($autoAnchors) {
-                // Get the anchor of the heading to link from the ToC list
-                $id = $block['element']['attributes']['id'] ?? $this->createAnchorID($text);
-            } else {
-                // Get the anchor of the heading to link from the ToC list
-                $id = $block['element']['attributes']['id'] ?? null;
-            }
-
-            // Set attributes to head tags
-            $block['element']['attributes']['id'] = $id;
-
-            $headersAllowed = $this->options['headings']['allowed'] ?? ['h1', 'h2', 'h3', 'h4', 'h5', 'h6'];
-
-            // Check if level are defined as a heading
-            if (in_array($level, $headersAllowed)) {
-                // Add/stores the heading element info to the ToC list
-                $this->setContentsList([
-                    'text' => $text,
-                    'id' => $id,
-                    'level' => $level,
-                ]);
-            }
-
-            return $block;
-        }
-    }
-
-
-
-    // Dev space
-    // --------------------------------------------------------------------
-
-    protected function blockCheckbox($line)
-    {
-        $text = trim($line['text']);
-        $beginLine = substr($text, 0, 4);
-        if ('[ ] ' === $beginLine) {
-            return [
-                'element' => [
-                    'name' => 'p',
-                    'handler' => 'checkboxUnchecked',
-                    'text' => substr(trim($text), 4),
-                ],
-            ];
-        }
-
-        if ('[x] ' === $beginLine) {
-            return [
-                'element' => [
-                    'name' => 'p',
-                    'handler' => 'checkboxChecked',
-                    'text' => substr(trim($text), 4),
-                ],
-            ];
-        }
-    }
-
-    protected function checkboxUnchecked($text)
-    {
-        if ($this->markupEscaped || $this->safeMode) {
-            $text = self::escape($text);
-        }
-
-        return '<input type="checkbox" disabled /> '.$this->format($text);
-    }
-
-    protected function checkboxChecked($text)
-    {
-        if ($this->markupEscaped || $this->safeMode) {
-            $text = self::escape($text);
-        }
-
-        return '<input type="checkbox" checked disabled /> '.$this->format($text);
-    }
-
-    /**
-     * Formats the checkbox label without double escaping.
-     */
-    protected function format($text)
-    {
-        // backup settings
-        $markupEscaped = $this->markupEscaped;
-        $safeMode = $this->safeMode;
-
-        // disable rules to prevent double escaping.
-        $this->setMarkupEscaped(false);
-        $this->setSafeMode(false);
-
-        // format line
-        $text = $this->line($text);
-
-        // reset old values
-        $this->setMarkupEscaped($markupEscaped);
-        $this->setSafeMode($safeMode);
-
-        return $text;
-    }
-
-
-    // --------------------------------------------------------------------
-    // Helper Functions
-    // --------------------------------------------------------------------
-
-    private function addInlineType($optionKey, $markers, $funcName) {
-        $isEnabled = $this->options[$optionKey] ?? false;
-        if ($isEnabled !== false) {
-            // Ensure $markers is an array, even if it's a single marker
-            $markers = (array) $markers;
-
-            foreach ($markers as $marker) {
-                if (!isset($this->InlineTypes[$marker])) {
-                    $this->InlineTypes[$marker] = [];
-                }
-                array_unshift($this->InlineTypes[$marker], $funcName);
-                $this->inlineMarkerList .= $marker;
-            }
-        }
-    }
-
-    private function addBlockType($optionKey, $markers, $funcName) {
-        $isEnabled = $this->options[$optionKey] ?? false;
-        if ($isEnabled !== false) {
-            // Ensure $markers is an array, even if it's a single marker
-            $markers = (array) $markers;
-
-            foreach ($markers as $marker) {
-                if (!isset($this->BlockTypes[$marker])) {
-                    $this->BlockTypes[$marker] = [];
-                }
-                array_unshift($this->BlockTypes[$marker], $funcName);
-            }
-        }
-    }
-
-
-    protected function processElement(array $optionKeys, $methodName, ...$args) {
-        foreach ($optionKeys as $optionKey) {
-            // Split the option key based on dot notation to access nested values
-            $keys = explode('.', $optionKey);
-
-            // Start with the main options array
-            $value = $this->options;
-
-            // Navigate through the array based on the split keys
-            foreach ($keys as $key) {
-                if (!isset($value[$key])) {
-                    $value = null;  // Set to null if the key doesn't exist
-                    break;  // Exit the inner loop early
-                }
-                $value = $value[$key];
-            }
-
-            // Use the final value or default to true
-            $state = $value ?? true;
-
-            if (!$state) {
-                return;
-            }
-        }
-        return parent::$methodName(...$args);
-    }
-
-    /**
-     * Get only the text from a markdown string.
-     * It parses to HTML once then trims the tags to get the text.
-     */
-    protected function fetchText($text)
-    {
-        return trim(strip_tags($this->line($text)));
-    }
-
-    /**
-     * Set/stores the heading block to ToC list in a string and array format.
-     */
-    protected function setContentsList(array $Content)
-    {
-        // Stores as an array
-        $this->setContentsListAsArray($Content);
-        // Stores as string in markdown list format.
-        $this->setContentsListAsString($Content);
-    }
-
-    /**
-     * Sets/stores the heading block info as an array.
-     */
-    protected function setContentsListAsArray(array $Content)
-    {
-        $this->contentsListArray[] = $Content;
-    }
-
-    /**
-     * Sets/stores the heading block info as a list in markdown format.
-     *
-     * Modifyed version of ToC by @KEINOS
-     * @link
-     */
-    protected function setContentsListAsString(array $Content)
-    {
-        $text = $this->fetchText($Content['text']);
-        $id = $Content['id'];
-        $level = (int) trim($Content['level'], 'h');
-        $link = "[{$text}](#{$id})";
-
-        if (0 === $this->firstHeadLevel) {
-            $this->firstHeadLevel = $level;
-        }
-        $cutIndent = $this->firstHeadLevel - 1;
-        if ($cutIndent > $level) {
-            $level = 1;
-        } else {
-            $level = $level - $cutIndent;
-        }
-
-        $indent = str_repeat('  ', $level);
-
-        // Stores in markdown list format as below:
-        // - [Header1](#Header1)
-        //   - [Header2-1](#Header2-1)
-        //     - [Header3](#Header3)
-        //   - [Header2-2](#Header2-2)
-        // ...
-        $this->contentsListString .= "{$indent}- {$link}".PHP_EOL;
-    }
-
-    /**
-     * Encodes the ToC tag to a hashed tag and replace.
-     *
-     * This is used to avoid parsing user defined ToC tag which includes "_" in
-     * their tag such as "[[_toc_]]". Unless it will be parsed as:
-     *   "<p>[[<em>TOC</em>]]</p>"
-     *
-     * Modifyed version of ToC by @KEINOS
-     */
-    protected function encodeTagToHash($text)
-    {
-        $salt = $this->getSalt();
-        $tagOrigin = $this->getTagToC();
-
-        if (strpos($text, $tagOrigin) === false) {
-            return $text;
-        }
-
-        $tagHashed = hash('sha256', $salt.$tagOrigin);
-
-        return str_replace($tagOrigin, $tagHashed, $text);
-    }
-
-    /**
-     * Gets the markdown tag for ToC.
-     */
-    protected function getTagToC()
-    {
-        return $this->options['toc']['set_toc_tag'] ?? '[toc]';
-    }
-
-    /**
-     * Gets the ID attribute of the ToC for HTML tags.
-     */
-    protected function getIdAttributeToC()
-    {
-        if (isset($this->idToc) && !empty($this->idToc)) {
-            return $this->idToc;
-        }
-
-        return self::ID_ATTRIBUTE_DEFAULT;
-    }
-
-    /**
-     * Decodes the hashed ToC tag to an original tag and replaces.
-     *
-     * This is used to avoid parsing user defined ToC tag which includes "_" in
-     * their tag such as "[[_toc_]]". Unless it will be parsed as:
-     *   "<p>[[<em>TOC</em>]]</p>"
-     */
-    protected function decodeTagFromHash($text)
-    {
-        $salt = $this->getSalt();
-        $tagOrigin = $this->getTagToC();
-        $tagHashed = hash('sha256', $salt.$tagOrigin);
-
-        if (strpos($text, $tagHashed) === false) {
-            return $text;
-        }
-
-        return str_replace($tagHashed, $tagOrigin, $text);
-    }
-
-    /**
-     * Unique string to use as a salt value.
-     */
-    protected function getSalt()
-    {
-        static $salt;
-        if (isset($salt)) {
-            return $salt;
-        }
-
-        $salt = hash('md5', time());
-
-        return $salt;
-    }
+    // Functions related to Table of Contents
+    // A slightly modified version of ToC by @KEINOS
+    // -------------------------------------------------------------------------
 
     /**
      * Parses the given markdown string to an HTML string but it leaves the ToC
      * tag as is. It's an alias of the parent method "\parent::text()".
+     *
+     * @param  string $text  Markdown string to be parsed.
+     * @return string        Parsed HTML string.
      */
     public function body($text): string
     {
-        $text = $this->encodeTagToHash($text);  // Escapes ToC tag temporary
-        $html = parent::text($text);     // Parses the markdown text
-
-        return $this->decodeTagFromHash($html); // Unescape the ToC tag
-    }
-
-    /**
-     * Parses markdown string to HTML and also the "[toc]" tag as well.
-     * It overrides the parent method: \Parsedown::text().
-     */
-    public function text($text)
-    {
-        // Parses the markdown text except the ToC tag. This also searches
-        // the list of contents and available to get from "getContentsList()"
-        // method.
-        $html = $this->body($text);
-
-        if (isset($this->options['toc']) && false == $this->options['toc']) {
-            return $html;
-        }
-
-        $tagOrigin = $this->getTagToC();
-
-        if (strpos($text, $tagOrigin) === false) {
-            return $html;
-        }
-
-        $tocData = $this->getContentsList();
-        $tocId = $this->getIdAttributeToC();
-        $needle = '<p>'.$tagOrigin.'</p>';
-        $replace = "<div id=\"{$tocId}\">{$tocData}</div>";
-
-        return str_replace($needle, $replace, $html);
+        $text = $this->encodeTag($text); // Escapes ToC tag temporarily
+        $html = parent::text($text);           // Parses the markdown text
+        return $this->decodeTag($html); // Unescapes the ToC tag
     }
 
     /**
      * Returns the parsed ToC.
+     * If the arg is "string" then it returns the ToC in HTML string.
      *
-     * @param string $typeReturn Type of the return format. "html" or "json".
-     *
-     * @return string HTML/JSON string of ToC
+     * @param  string $type_return  Type of the return format. "string" or "json".
+     * @return string               HTML/JSON string of ToC.
      */
-    public function getContentsList($typeReturn = 'html')
+    public function contentsList($type_return = 'string'): string
     {
-        if ('html' === strtolower($typeReturn)) {
-            $result = '';
-            if (!empty($this->contentsListString)) {
-                // Parses the ToC list in markdown to HTML
-                $result = $this->body($this->contentsListString);
-            }
-
-            return $result;
+        switch (strtolower($type_return)) {
+            case 'string':
+                return $this->contentsListString ? $this->body($this->contentsListString) : '';
+            case 'json':
+                return json_encode($this->contentsListArray);
+            default:
+                $backtrace = debug_backtrace();
+                $caller = $backtrace[0];
+                $errorMessage = "Unknown return type '{$type_return}' given while parsing ToC. Called in " . $caller['file'] . " on line " . $caller['line'];
+                throw new InvalidArgumentException($errorMessage);
         }
-
-        if ('json' === strtolower($typeReturn)) {
-            return json_encode($this->contentsListArray);
-        }
-
-        return $this->getContentsList('html');
     }
 
-    // Overwrite to allow for custom block types
-    protected function element(array $element)
+
+    /**
+     * Allows users to define their own logic for createAnchorID.
+     */
+    public function setCreateAnchorIDCallback(callable $callback): void
     {
-
-        // Check if the name is empty or not set
-        if (empty($element['name'])) {
-            return isset($element['text']) ? $element['text'] : '';
-        }
-
-        // Use the parent
-        return parent::element($element);
+        $this->createAnchorIDCallback = $callback;
     }
 
     /**
-     * Generates an anchor text that are link-able even if the heading is not in
-     * ASCII.
+     * Creates an anchor ID for the given text.
+     *
+     * If a callback is provided, it uses the user-defined logic to create the anchor ID.
+     * Otherwise, it uses the default logic which involves normalizing the string, replacing characters, and sanitizing the anchor.
+     *
+     * @param string $text The text for which to create the anchor ID.
+     * @return string The created anchor ID.
      */
-    protected function createAnchorID($str): string
+    protected function createAnchorID(string $text): ?string
     {
-        // Make sure string is in UTF-8 and strip invalid UTF-8 characters
-        $str = mb_convert_encoding((string) $str, 'UTF-8', mb_list_encodings());
-
-        $optionUrlEncode = $this->options['toc']['urlencode'] ?? false;
-        if ($optionUrlEncode) {
-            // Check AnchorID is unique
-            $str = $this->incrementAnchorId($str);
-
-            return urlencode($str);
+        // Check settings
+        if (!$this->getSetting('headings.auto_anchors')) {
+            return null;
         }
 
-        // Convert string to lowercase
-        $str = strtolower($str);
+        // Use user-defined logic if a callback is provided
+        if (is_callable($this->createAnchorIDCallback)) {
+            return call_user_func($this->createAnchorIDCallback, $text, $this->getSettings());
+        }
 
-        // Character map
-        $charMap = [
+        // Default logic
+
+        if ($this->getSetting('headings.auto_anchors.lowercase')) {
+            $text = mb_strtolower($text);
+        }
+
+        $text = $this->normalizeString($text);
+
+        if ($this->getSetting('headings.auto_anchors.transliterate')) {
+            $text = $this->transliterate($text);
+        }
+
+        $text = $this->sanitizeAnchor($text);
+
+        return $this->uniquifyAnchorID($text);
+    }
+
+    /**
+     * Normalize a string by converting it to lowercase and encoding it to UTF-8.
+     *
+     * @param string $text The string to be normalized.
+     * @return string The normalized string.
+     */
+    protected function normalizeString(string $text): string
+    {
+        return mb_convert_encoding($text, 'UTF-8', mb_list_encodings());
+    }
+
+    /**
+     * Replaces special characters in a string with their corresponding ASCII equivalents.
+     *
+     * @param string $text The input string.
+     * @return string The modified string with replaced characters.
+     */
+    protected function transliterate(string $text): string
+    {
+        $characterMap = [
             // Latin
             'À' => 'A', 'Á' => 'A', 'Â' => 'A', 'Ã' => 'A', 'Ä' => 'A', 'Å' => 'AA', 'Æ' => 'AE', 'Ç' => 'C',
             'È' => 'E', 'É' => 'E', 'Ê' => 'E', 'Ë' => 'E', 'Ì' => 'I', 'Í' => 'I', 'Î' => 'I', 'Ï' => 'I',
@@ -1643,71 +1729,624 @@ class ParsedownExtended extends ParsedownExtendedParentAlias
             'ā' => 'a', 'ē' => 'e', 'ģ' => 'g', 'ī' => 'i', 'ķ' => 'k', 'ļ' => 'l', 'ņ' => 'n', 'ū' => 'u',
         ];
 
-        // Replace special characters using the character map
-        $str = strtr($str, $charMap);
-
-        // Remove any remaining special characters and replace them with a space
-        $str = preg_replace('/[^a-z0-9\s]/', '', $str);
-
-        // Replace spaces with hyphens
-        $str = str_replace(' ', '-', $str);
-
-        // Remove multiple hyphens
-        $str = preg_replace('/-+/', '-', $str);
-
-        // Trim hyphens at the beginning and end of the string
-        $str = trim($str, '-');
-
-        return $this->incrementAnchorId($str);
+        return strtr($text, $characterMap);
     }
 
     /**
-     * Collect and count anchors in use to prevent duplicated ids. Return string
-     * with incremental, numeric suffix. Also init optional blacklist of ids.
+     * Sanitizes an anchor text by removing special characters, replacing spaces with dashes,
+     * and removing consecutive dashes.
+     *
+     * @param string $text The anchor text to sanitize.
+     * @return string The sanitized anchor text.
      */
-    protected function incrementAnchorId($str)
+    protected function sanitizeAnchor(string $text): string
     {
-        // add blacklist to list of used anchors
-        if (!$this->isBlacklistInitialized) {
-            $this->initBlacklist();
+        $delimiter = $this->getSetting('headings.auto_anchors.delimiter');
+        // Replace non-alphanumeric characters with our delimiter
+        $text = preg_replace('/[^\p{L}\p{Nd}]+/u', $delimiter, $text);
+        // Remove consecutive delimiters
+        $text = preg_replace('/(' . preg_quote($delimiter, '/') . '){2,}/', '$1', $text);
+        // Remove leading and trailing delimiters
+        $text = trim($text, $delimiter);
+        return $text;
+    }
+
+    /**
+     * Generate a unique anchor ID based on the given text.
+     *
+     * @param string $text The text to generate the anchor ID from.
+     * @return string The unique anchor ID.
+     */
+    protected function uniquifyAnchorID(string $text): string
+    {
+        $blacklist = $this->getSetting('headings.auto_anchors.blacklist');
+
+        // Check if the given text is not in the blacklist and does not have any duplicates
+        if (!in_array($text, $blacklist) && !isset($this->anchorDuplicates[$text])) {
+            return $text;
         }
 
-        $this->anchorDuplicates[$str] = !isset($this->anchorDuplicates[$str]) ? 0 : ++$this->anchorDuplicates[$str];
+        $originalText = $text;
+        $count = isset($this->anchorDuplicates[$originalText]) ? $this->anchorDuplicates[$originalText] : 0;
 
-        $newStr = $str;
+        // Generate a unique anchor ID by appending a count to the original text
+        do {
+            $count++;
+            $text = $originalText . '-' . $count;
+        } while (in_array($text, $blacklist) || isset($this->anchorDuplicates[$text]));
 
-        if ($count = $this->anchorDuplicates[$str]) {
-            $newStr .= "-{$count}";
+        // Store the count for the original text in the duplicates array
+        $this->anchorDuplicates[$originalText] = $count;
+        return $text;
+    }
 
-            // increment until conversion doesn't produce new duplicates anymore
-            if (isset($this->anchorDuplicates[$newStr])) {
-                $newStr = $this->incrementAnchorId($str);
+    /**
+     * Decodes the hashed ToC tag to an original tag and replaces.
+     *
+     * @param  string $text
+     * @return string
+     */
+    protected function decodeTag(string $text): string
+    {
+        $salt = $this->getSalt();
+        $tag_origin = $this->getTagToc();
+        $tag_hashed = hash('sha256', $salt . $tag_origin);
+
+        if (strpos($text, $tag_hashed) === false) {
+            return $text;
+        }
+
+        return str_replace($tag_hashed, $tag_origin, $text);
+    }
+
+    /**
+     * Encodes the ToC tag to a hashed tag and replace.
+     *
+     * @param  string $text
+     * @return string
+     */
+    protected function encodeTag(string $text): string
+    {
+        $salt = $this->getSalt();
+        $tag_origin = $this->getTagToc();
+
+        if (strpos($text, $tag_origin) === false) {
+            return $text;
+        }
+
+        $tag_hashed = hash('sha256', $salt . $tag_origin);
+
+        return str_replace($tag_origin, $tag_hashed, $text);
+    }
+
+    /**
+     * Get only the text from a markdown string.
+     * It parses to HTML once then trims the tags to get the text.
+     *
+     * @param  string $text  Markdown text.
+     * @return string
+     */
+    protected function fetchText($text): string
+    {
+        return trim(strip_tags($this->line($text)));
+    }
+
+    /**
+     * Gets the ID attribute of the ToC for HTML tags.
+     *
+     * @return string
+     */
+    protected function getIdAttributeToc(): string
+    {
+        if (isset($this->id_toc) && ! empty($this->id_toc)) {
+            return $this->id_toc;
+        }
+
+        return self::TOC_ID_ATTRIBUTE_DEFAULT;
+    }
+
+    /**
+     * Unique string to use as a salt value.
+     *
+     * @return string
+     */
+    protected function getSalt(): string
+    {
+        static $salt;
+        if (isset($salt)) {
+            return $salt;
+        }
+
+        $salt = hash('md5', time());
+        return $salt;
+    }
+
+    /**
+     * Gets the markdown tag for ToC.
+     *
+     * @return string
+     */
+    protected function getTagToc(): string
+    {
+        if (isset($this->tag_toc) && !empty($this->tag_toc)) {
+            return $this->tag_toc;
+        }
+
+        return self::TOC_TAG_DEFAULT;
+    }
+
+    /**
+     * Set/stores the heading block to ToC list in a string and array format.
+     *
+     * @param  array $Content   Heading info such as "level","id" and "text".
+     * @return void
+     */
+    protected function setContentsList(array $Content): void
+    {
+        // Stores as an array
+        $this->setContentsListAsArray($Content);
+        // Stores as string in markdown list format.
+        $this->setContentsListAsString($Content);
+    }
+
+    /**
+     * Sets/stores the heading block info as an array.
+     *
+     * @param  array $Content
+     * @return void
+     */
+    protected function setContentsListAsArray(array $Content): void
+    {
+        $this->contentsListArray[] = $Content;
+    }
+
+    /**
+     * Sets/stores the heading block info as a list in markdown format.
+     *
+     * @param  array $Content  Heading info such as "level","id" and "text".
+     * @return void
+     */
+    protected function setContentsListAsString(array $Content): void
+    {
+        $text = $this->fetchText($Content['text']);
+        $id = $Content['id'];
+        $level = (int) trim($Content['level'], 'h');
+        $link = "[{$text}](#{$id})";
+
+        if ($this->firstHeadLevel === 0) {
+            $this->firstHeadLevel = $level;
+        }
+        $indentLevel = max(1, $level - ($this->firstHeadLevel - 1));
+        $indent = str_repeat('  ', $indentLevel);
+
+        $this->contentsListString .= "{$indent}- {$link}" . PHP_EOL;
+    }
+
+    /**
+     * Sets the user defined ToC markdown tag.
+     *
+     * @param  string $tag
+     * @return void
+     */
+    public function setTagToc($tag): void
+    {
+        $tag = trim($tag);
+        if (self::escape($tag) === $tag) {
+            // Set ToC tag if it's safe
+            $this->tag_toc = $tag;
+        } else {
+            $backtrace = debug_backtrace();
+            $caller = $backtrace[0];
+            $errorMessage = "Malformed ToC user tag given: {$tag}. Called in " . $caller['file'] . " on line " . $caller['line'];
+            throw new InvalidArgumentException($errorMessage);
+        }
+    }
+
+    /**
+     * Parses markdown string to HTML and also the "[toc]" tag as well.
+     * It overrides the parent method: \Parsedown::text().
+     *
+     * @param  string $text
+     * @return string
+     */
+    public function text($text): string
+    {
+        $html = $this->body($text);
+        $tag_origin = $this->getTagToc();
+        if (strpos($text, $tag_origin) === false) {
+            return $html;
+        }
+
+        $toc_data = $this->contentsList();
+        $toc_id = $this->getIdAttributeToc();
+        return str_replace("<p>{$tag_origin}</p>", "<div id=\"{$toc_id}\">{$toc_data}</div>", $html);
+    }
+
+
+    // Settings
+    // -------------------------------------------------------------------------
+
+    /**
+     * Sets a setting value in the ParsedownExtended class.
+     *
+     * @param string $settingName The name of the setting to be set.
+     * @param mixed $settingValue The value to be set for the setting.
+     * @return self Returns the current instance of the ParsedownExtended class to allow method chaining.
+     */
+    public function setSetting(string $settingName, $settingValue): self
+    {
+        // Split the settingName into parts using dot as separator
+        $settingParts = explode('.', $settingName);
+
+        // Reference to the settings array
+        $currentSettings = &$this->settings;
+
+        // Iterate through the parts of the setting name
+        foreach ($settingParts as $part) {
+            // Check if the part exists in the current settings
+            if (isset($currentSettings[$part])) {
+                // Move to the next level of settings
+                $currentSettings = &$currentSettings[$part];
             } else {
-                $this->anchorDuplicates[$newStr] = 0;
+                // The setting name is invalid, return an error message
+                throw new \InvalidArgumentException("Invalid setting name: $settingName");
             }
         }
 
-        return $newStr;
+        /**
+         * If the setting value is an array and the 'enabled' key is not set in the setting value,
+         * but it is set in the current settings, then set the 'enabled' key in the setting value
+         * to the value of the 'enabled' key in the current settings.
+         */
+        if (is_array($settingValue) && isset($currentSettings['enabled']) && !isset($settingValue['enabled'])) {
+            $settingValue['enabled'] = $currentSettings['enabled'];
+        }
+
+        // Check if the settingValue is a boolean and update the 'enabled' key if present
+        if (is_bool($settingValue) && isset($currentSettings['enabled'])) {
+            $currentSettings['enabled'] = $settingValue;
+        } else {
+            // Update the setting value without removing other keys
+            $currentSettings = $settingValue;
+        }
+
+        // Return $this to allow chaining
+        return $this;
     }
 
     /**
-     * Add blacklisted ids to anchor list.
+     * Sets multiple setting values for the ParsedownExtended class.
+     *
+     * @param array $settings An associative array where keys are setting names and values are the new values.
+     * @return self Returns the ParsedownExtended instance for method chaining.
+     * @throws InvalidArgumentException If any of the setting keys do not exist or if the values are of invalid types.
      */
-    protected function initBlacklist()
+    public function setSettings(array $settings): self
     {
-        if ($this->isBlacklistInitialized) {
-            return;
+        foreach ($settings as $key => $value) {
+            // Use the existing setSetting method to set each individual setting
+            $this->setSetting($key, $value);
         }
 
-        if (!empty($this->options['headings']['blacklist']) && is_array($this->options['headings']['blacklist'])) {
-            foreach ($this->options['headings']['blacklist'] as $v) {
-                if (is_string($v)) {
-                    $this->anchorDuplicates[$v] = 0;
-                }
+        return $this;
+    }
+
+
+    /**
+     * Retrieves the value of a specific setting based on the provided key.
+     *
+     * @param string $key The key of the setting to retrieve.
+     * @return mixed The value of the setting.
+     * @throws InvalidArgumentException If the setting does not exist.
+     */
+    public function getSetting(string $key)
+    {
+        $keys = explode('.', $key);
+        $current = $this->settings;
+
+        foreach ($keys as $part) {
+            if (isset($current[$part])) {
+                $current = $current[$part];
+            } else {
+                $backtrace = debug_backtrace();
+                $caller = $backtrace[0]; // Gets the immediate caller. Adjust the index for more depth.
+
+                $errorMessage = "Setting '$key' does not exist. Called in " . ($caller['file'] ?? 'unknown') . " on line " . ($caller['line'] ?? 'unknown');
+                throw new InvalidArgumentException($errorMessage);
             }
         }
 
-        $this->isBlacklistInitialized = true;
+        // For a parent setting with child properties, return the 'enabled' status.
+        // This assumes that parent settings are always arrays with an 'enabled' property.
+        if (is_array($current) && isset($current['enabled'])) {
+            return $current['enabled'];
+        }
+
+        // For child settings or simple boolean settings, return their direct value.
+        return $current;
+    }
+
+    /**
+     * Retrieves all settings for the ParsedownExtended class.
+     *
+     * @return array Returns an array of all settings.
+     */
+    public function getSettings(): array
+    {
+        return $this->settings;
+    }
+
+
+    // Helper functions
+    // -------------------------------------------------------------------------
+
+
+    private function throwSettingException(string $key, string $part)
+    {
+        $backtrace = debug_backtrace();
+        $caller = $backtrace[0];
+        $errorMessage = "Setting '$part' in path '$key' does not exist. Called in " . ($caller['file'] ?? 'unknown') . " on line " . ($caller['line'] ?? 'unknown');
+        throw new InvalidArgumentException($errorMessage);
+    }
+
+    private function throwInvalidTypeException(string $key)
+    {
+        $backtrace = debug_backtrace();
+        $caller = $backtrace[0];
+        $errorMessage = "Invalid type for setting '$key'. Expected array or boolean. Called in " . ($caller['file'] ?? 'unknown') . " on line " . ($caller['line'] ?? 'unknown');
+        throw new InvalidArgumentException($errorMessage);
+    }
+
+    /**
+     * Adds an inline type to the ParsedownExtended class.
+     *
+     * @param string|array $markers The marker(s) for the inline type.
+     * @param string $funcName The name of the function to handle the inline type.
+     * @return void
+     */
+    private function addInlineType($markers, string $funcName): void
+    {
+        // Ensure $markers is an array, even if it's a single marker
+        $markers = (array) $markers;
+
+        foreach ($markers as $marker) {
+            if (!isset($this->InlineTypes[$marker])) {
+                $this->InlineTypes[$marker] = [];
+            }
+
+            // add to the beginning of the array so it has priority
+            // array_unshift($this->InlineTypes[$marker], $funcName);
+            $this->InlineTypes[$marker][] = $funcName;
+            $this->inlineMarkerList .= $marker;
+        }
+    }
+
+
+    /**
+     * Adds a block type to the ParsedownExtended class.
+     *
+     * @param string|array $markers The marker(s) representing the block type.
+     * @param string $funcName The name of the function to handle the block type.
+     * @return void
+     */
+    private function addBlockType($markers, string $funcName): void
+    {
+        // Ensure $markers is an array, even if it's a single marker
+        $markers = (array) $markers;
+
+        foreach ($markers as $marker) {
+            if (!isset($this->BlockTypes[$marker])) {
+                $this->BlockTypes[$marker] = [];
+            }
+            // add to the beginning of the array so it has priority
+            //array_unshift($this->BlockTypes[$marker], $funcName);
+            $this->BlockTypes[$marker][] = $funcName;
+        }
+    }
+
+    /**
+     * Overwrite to allow for custom block types
+     */
+    protected function element(array $Element)
+    {
+        if ($this->legacyMode) {
+            // Check if the name is empty
+            if (empty($Element['name'])) {
+                return isset($Element['text']) ? $Element['text'] : '';
+            }
+        }
+
+        // Use the parent
+        return parent::element($Element);
+    }
+
+
+    /**
+     * Overwrite line from Parsedown to allow for more precise control over inline elements
+     * line() is 1.7 version of lineElements() from 1.8, so we overwrite it too, it will not be called
+     * when using 1.8 version of parsedown
+     *
+     * @return string
+     */
+    public function line($text, $nonNestables = array())
+    {
+        $markup = '';
+
+        # $Excerpt is based on the first occurrence of a marker
+
+        while ($Excerpt = strpbrk($text, $this->inlineMarkerList)) {
+            $marker = $Excerpt[0];
+
+            $markerPosition = strpos($text, $marker);
+
+            // Get the charecter before the marker
+            $before = $markerPosition > 0 ? $text[$markerPosition - 1] : '';
+
+            $Excerpt = array(
+                'text' => $Excerpt,
+                'context' => $text,
+                'before' => $before,
+                'parent' => $this,
+                // 'inlineTypes' => isset($this->InlineTypes[$marker]) ? $this->InlineTypes[$marker] : [] // Not apresent in original Parsedown
+            );
+
+            foreach ($this->InlineTypes[$marker] as $inlineType) {
+                # check to see if the current inline type is nestable in the current context
+
+                if (! empty($nonNestables) and in_array($inlineType, $nonNestables)) {
+                    continue;
+                }
+
+                $Inline = $this->{'inline'.$inlineType}($Excerpt);
+
+                if (! isset($Inline)) {
+                    continue;
+                }
+
+
+                # makes sure that the inline belongs to "our" marker
+
+                if (isset($Inline['position']) and $Inline['position'] > $markerPosition) {
+                    continue;
+                }
+
+                # sets a default inline position
+
+                if (! isset($Inline['position'])) {
+                    $Inline['position'] = $markerPosition;
+                }
+
+                # cause the new element to 'inherit' our non nestables
+
+                foreach ($nonNestables as $non_nestable) {
+                    $Inline['element']['nonNestables'][] = $non_nestable;
+                }
+
+                # the text that comes before the inline
+                $unmarkedText = substr($text, 0, $Inline['position']);
+
+                # compile the unmarked text
+                $markup .= $this->unmarkedText($unmarkedText);
+
+                # compile the inline
+                $markup .= isset($Inline['markup']) ? $Inline['markup'] : $this->element($Inline['element']);
+
+                # remove the examined text
+                $text = substr($text, $Inline['position'] + $Inline['extent']);
+
+                continue 2;
+            }
+
+            # the marker does not belong to an inline
+
+            $unmarkedText = substr($text, 0, $markerPosition + 1);
+
+            $markup .= $this->unmarkedText($unmarkedText);
+
+            $text = substr($text, $markerPosition + 1);
+        }
+
+        $markup .= $this->unmarkedText($text);
+
+        return $markup;
+    }
+
+    /**
+     * Overwrite lineElements from Parsedown to allow for more precise control over inline elements
+     * lineElements() is 1.8 version of line() from 1.7, so we overwrite it too, it will not be called
+     * when using 1.7 version of parsedown
+     *
+     */
+    protected function lineElements($text, $nonNestables = array()): array
+    {
+        $Elements = array();
+
+        $nonNestables = (
+            empty($nonNestables)
+            ? array()
+            : array_combine($nonNestables, $nonNestables)
+        );
+
+        # $Excerpt is based on the first occurrence of a marker
+
+        while ($Excerpt = strpbrk($text, $this->inlineMarkerList)) {
+            $marker = $Excerpt[0];
+
+            $markerPosition = strlen($text) - strlen($Excerpt);
+
+            // Get the charecter before the marker
+            $before = $markerPosition > 0 ? $text[$markerPosition - 1] : '';
+
+            $Excerpt = array('text' => $Excerpt, 'context' => $text, 'before' => $before);
+
+            foreach ($this->InlineTypes[$marker] as $inlineType) {
+                # check to see if the current inline type is nestable in the current context
+
+                if (isset($nonNestables[$inlineType])) {
+                    continue;
+                }
+
+                $Inline = $this->{"inline$inlineType"}($Excerpt);
+
+                if (! isset($Inline)) {
+                    continue;
+                }
+
+                # makes sure that the inline belongs to "our" marker
+
+                if (isset($Inline['position']) and $Inline['position'] > $markerPosition) {
+                    continue;
+                }
+
+                # sets a default inline position
+
+                if (! isset($Inline['position'])) {
+                    $Inline['position'] = $markerPosition;
+                }
+
+                # cause the new element to 'inherit' our non nestables
+
+
+                $Inline['element']['nonNestables'] = isset($Inline['element']['nonNestables'])
+                    ? array_merge($Inline['element']['nonNestables'], $nonNestables)
+                    : $nonNestables
+                ;
+
+                # the text that comes before the inline
+                $unmarkedText = substr($text, 0, $Inline['position']);
+
+                # compile the unmarked text
+                $InlineText = $this->inlineText($unmarkedText);
+                $Elements[] = $InlineText['element'];
+
+                # compile the inline
+                $Elements[] = $this->extractElement($Inline);
+
+                # remove the examined text
+                $text = substr($text, $Inline['position'] + $Inline['extent']);
+
+                continue 2;
+            }
+
+            # the marker does not belong to an inline
+
+            $unmarkedText = substr($text, 0, $markerPosition + 1);
+
+            $InlineText = $this->inlineText($unmarkedText);
+            $Elements[] = $InlineText['element'];
+
+            $text = substr($text, $markerPosition + 1);
+        }
+
+        $InlineText = $this->inlineText($text);
+        $Elements[] = $InlineText['element'];
+
+        foreach ($Elements as &$Element) {
+            if (! isset($Element['autobreak'])) {
+                $Element['autobreak'] = false;
+            }
+        }
+
+        return $Elements;
     }
 }
-
