@@ -23,7 +23,7 @@ jobs:
           php-version: '7.4'
 
       - name: Run Super-Linter
-        uses: super-linter/super-linter@v5
+        uses: super-linter/super-linter/slim@v5
         env:
           VALIDATE_ALL_CODEBASE: false
           VALIDATE_PHP: true
