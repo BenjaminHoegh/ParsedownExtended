@@ -32,15 +32,6 @@ class ParsedownExtended extends ParsedownExtendedParentAlias
     private bool $legacyMode = false;
     private array $settings;
 
-    /**
-     * @var string[]
-     *
-     * @psalm-var list{'\', '`', '*', '_', '{', '}', '[', ']', '(', ')', '>', '#', '+', '-', '.', '!', '|', '?', '"', ''', '<'}
-     */
-    protected array $specialCharacters = [
-        '\\', '`', '*', '_', '{', '}', '[', ']', '(', ')', '>', '#', '+', '-', '.', '!', '|', '?', '"', "'", '<',
-    ];
-
     // Standard settings
     private array $defaultSettings = [
         'abbreviations' => [ // Requires ParsedownExtra
@@ -191,6 +182,10 @@ class ParsedownExtended extends ParsedownExtendedParentAlias
             // set legacy mode to true
             $this->legacyMode = true;
         }
+
+        $specialCharacters = [
+            '\\', '`', '*', '_', '{', '}', '[', ']', '(', ')', '>', '#', '+', '-', '.', '!', '|', '?', '"', "'", '<',
+        ];
 
         $this->settings = $this->defaultSettings; // Start with default settings
         $this->initializeSettings($userSettings);
