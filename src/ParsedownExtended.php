@@ -74,9 +74,8 @@ class ParsedownExtended extends ParsedownExtendedParentAlias
             'auto_anchors' => [
                 'enabled' => true,
                 'delimiter' => '-',
-                'limit' => null, // TODO: Implement limit for auto_anchors
                 'lowercase' => true,
-                'replacements' => array(), // TODO: Implement replacements for auto_anchors
+                'replacements' => array(),
                 'transliterate' => false,
                 'blacklist' => [],
             ],
@@ -333,7 +332,6 @@ class ParsedownExtended extends ParsedownExtendedParentAlias
      * @param array $Excerpt The excerpt containing the text to parse.
      *
      * @return (int|string[])[]|null
-     *
      */
     protected function inlineEmphasis($Excerpt)
     {
@@ -394,7 +392,6 @@ class ParsedownExtended extends ParsedownExtendedParentAlias
     }
 
     /**
-     * @return (int|string[])[]|null
      *
      */
     protected function inlineInsertions(array $Excerpt): ?array
@@ -511,7 +508,6 @@ class ParsedownExtended extends ParsedownExtendedParentAlias
      * @param array $Excerpt The excerpt to parse.
      *
      * @return (int|string[])[]|null
-     *
      */
     protected function inlineMathNotation($Excerpt)
     {
@@ -557,7 +553,6 @@ class ParsedownExtended extends ParsedownExtendedParentAlias
      * @param array $Excerpt The excerpt containing the escape sequence.
      *
      * @return (int|mixed)[]|null
-     *
      */
     protected function inlineEscapeSequence($Excerpt)
     {
@@ -637,7 +632,6 @@ class ParsedownExtended extends ParsedownExtendedParentAlias
      * @param array $Excerpt The excerpt containing the inline text.
      *
      * @return (int|string[])[]|null
-     *
      */
     protected function inlineSmartypants($Excerpt)
     {
@@ -1095,7 +1089,6 @@ class ParsedownExtended extends ParsedownExtendedParentAlias
      * @param array $Line The line to be processed.
      *
      * @return (mixed|string[])[]|null
-     *
      */
     protected function blockMathNotation($Line)
     {
@@ -1634,6 +1627,10 @@ class ParsedownExtended extends ParsedownExtendedParentAlias
             $text = mb_strtolower($text);
         }
 
+        if($this->getSetting('headings.auto_anchors.replacements')) {
+            $text = preg_replace(array_keys($this->getSetting('headings.auto_anchors.replacements')), $this->getSetting('headings.auto_anchors.replacements'), $text);
+        }
+
         $text = $this->normalizeString($text);
 
         if ($this->getSetting('headings.auto_anchors.transliterate')) {
@@ -2081,6 +2078,9 @@ class ParsedownExtended extends ParsedownExtendedParentAlias
     // -------------------------------------------------------------------------
 
 
+    /**
+     * @return never
+     */
     private function throwSettingException(string $key, string $part)
     {
         $backtrace = debug_backtrace();
@@ -2089,6 +2089,9 @@ class ParsedownExtended extends ParsedownExtendedParentAlias
         throw new InvalidArgumentException($errorMessage);
     }
 
+    /**
+     * @return never
+     */
     private function throwInvalidTypeException(string $key)
     {
         $backtrace = debug_backtrace();
