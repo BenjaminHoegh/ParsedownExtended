@@ -4,8 +4,10 @@
     <description>The default coding standard for usage with Super-Linter. It just includes PSR12 and excludes line length checks.</description>
 
     <!-- Include PSR12 Standard -->
-    <rule ref="PSR12" />
-
-    <!-- Exclude line length checks -->
-    <exclude name="Generic.Files.LineLength" />
+    <rule ref="PSR12">
+        <properties>
+            <!-- Exclude line length checks -->
+            <exclude name="Generic.Files.LineLength" />
+        </properties>
+    </rule>
 </ruleset>
