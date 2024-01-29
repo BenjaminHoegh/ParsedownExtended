@@ -26,7 +26,7 @@ class ParsedownExtended extends ParsedownExtendedParentAlias
     private string $contentsListString = '';
     private string $id_toc = '';
     private string $tag_toc = '';
-    private ?callable $createAnchorIDCallback = null; // User-defined callback
+    private $createAnchorIDCallback = null;
 
 
     private bool $legacyMode = false;
@@ -79,7 +79,7 @@ class ParsedownExtended extends ParsedownExtendedParentAlias
                 'enabled' => true,
                 'delimiter' => '-',
                 'lowercase' => true,
-                'replacements' => array(),
+                'replacements' => [],
                 'transliterate' => false,
                 'blacklist' => [],
             ],
@@ -356,14 +356,14 @@ class ParsedownExtended extends ParsedownExtendedParentAlias
             return;
         }
 
-        return array(
+        return [
             'extent' => strlen($matches[0]),
-            'element' => array(
+            'element' => [
                 'name' => $emphasis,
                 'handler' => 'line',
                 'text' => $matches[1],
-            ),
-        );
+            ],
+        ];
     }
 
 
@@ -548,12 +548,12 @@ class ParsedownExtended extends ParsedownExtendedParentAlias
             }
 
             if (preg_match($regex, $Excerpt['text'], $matches)) {
-                return array(
+                return [
                     'extent' => strlen($matches[0]),
-                    'element' => array(
+                    'element' => [
                         'text' => $matches[0],
-                    ),
-                );
+                    ],
+                ];
             }
         }
 
@@ -592,10 +592,10 @@ class ParsedownExtended extends ParsedownExtendedParentAlias
         }
 
         if (isset($Excerpt['text'][1]) && in_array($Excerpt['text'][1], $this->specialCharacters)) {
-            return array(
+            return [
                 'markup' => $Excerpt['text'][1],
                 'extent' => 2,
-            );
+            ];
         }
     }
 
@@ -1217,7 +1217,7 @@ class ParsedownExtended extends ParsedownExtendedParentAlias
         ];
 
         if (isset($extensions[$language])) {
-            list($elementName, $class) = $extensions[$language];
+            [$elementName, $class] = $extensions[$language];
 
             if(!$this->legacyMode) {
                 // 1.8
@@ -1446,7 +1446,7 @@ class ParsedownExtended extends ParsedownExtendedParentAlias
 
             if ($colspan > 1) {
                 if (! isset($headerElement['attributes'])) {
-                    $headerElement['attributes'] = array();
+                    $headerElement['attributes'] = [];
                 }
                 $headerElement['attributes']['colspan'] = $colspan;
             }
@@ -1504,7 +1504,7 @@ class ParsedownExtended extends ParsedownExtendedParentAlias
 
                 if ($colspan > 1) {
                     if (! isset($element['attributes'])) {
-                        $element['attributes'] = array();
+                        $element['attributes'] = [];
                     }
                     $element['attributes']['colspan'] = $colspan;
                 }
@@ -1545,7 +1545,7 @@ class ParsedownExtended extends ParsedownExtendedParentAlias
 
                 if ($rowspan > 1) {
                     if (! isset($element['attributes'])) {
-                        $element['attributes'] = array();
+                        $element['attributes'] = [];
                     }
                     $element['attributes']['rowspan'] = $rowspan;
                 }
@@ -1787,7 +1787,7 @@ class ParsedownExtended extends ParsedownExtendedParentAlias
         }
 
         $originalText = $text;
-        $count = isset($this->anchorDuplicates[$originalText]) ? $this->anchorDuplicates[$originalText] : 0;
+        $count = $this->anchorDuplicates[$originalText] ?? 0;
 
         // Generate a unique anchor ID by appending a count to the original text
         do {
@@ -2187,7 +2187,7 @@ class ParsedownExtended extends ParsedownExtendedParentAlias
         if ($this->legacyMode) {
             // Check if the name is empty
             if (empty($Element['name'])) {
-                return isset($Element['text']) ? $Element['text'] : '';
+                return $Element['text'] ?? '';
             }
         }
 
@@ -2203,7 +2203,7 @@ class ParsedownExtended extends ParsedownExtendedParentAlias
      *
      * @return string
      */
-    public function line($text, $nonNestables = array())
+    public function line($text, $nonNestables = [])
     {
         $markup = '';
 
@@ -2217,13 +2217,13 @@ class ParsedownExtended extends ParsedownExtendedParentAlias
             // Get the charecter before the marker
             $before = $markerPosition > 0 ? $text[$markerPosition - 1] : '';
 
-            $Excerpt = array(
+            $Excerpt = [
                 'text' => $Excerpt,
                 'context' => $text,
                 'before' => $before,
                 'parent' => $this,
                 // 'inlineTypes' => isset($this->InlineTypes[$marker]) ? $this->InlineTypes[$marker] : [] // Not apresent in original Parsedown
-            );
+            ];
 
             foreach ($this->InlineTypes[$marker] as $inlineType) {
                 # check to see if the current inline type is nestable in the current context
@@ -2264,7 +2264,7 @@ class ParsedownExtended extends ParsedownExtendedParentAlias
                 $markup .= $this->unmarkedText($unmarkedText);
 
                 # compile the inline
-                $markup .= isset($Inline['markup']) ? $Inline['markup'] : $this->element($Inline['element']);
+                $markup .= $Inline['markup'] ?? $this->element($Inline['element']);
 
                 # remove the examined text
                 $text = substr($text, $Inline['position'] + $Inline['extent']);
@@ -2293,13 +2293,13 @@ class ParsedownExtended extends ParsedownExtendedParentAlias
      *
      * @psalm-return list{mixed,...}
      */
-    protected function lineElements($text, $nonNestables = array()): array
+    protected function lineElements($text, $nonNestables = []): array
     {
-        $Elements = array();
+        $Elements = [];
 
         $nonNestables = (
             empty($nonNestables)
-            ? array()
+            ? []
             : array_combine($nonNestables, $nonNestables)
         );
 
@@ -2313,7 +2313,7 @@ class ParsedownExtended extends ParsedownExtendedParentAlias
             // Get the charecter before the marker
             $before = $markerPosition > 0 ? $text[$markerPosition - 1] : '';
 
-            $Excerpt = array('text' => $Excerpt, 'context' => $text, 'before' => $before);
+            $Excerpt = ['text' => $Excerpt, 'context' => $text, 'before' => $before];
 
             foreach ($this->InlineTypes[$marker] as $inlineType) {
                 # check to see if the current inline type is nestable in the current context
