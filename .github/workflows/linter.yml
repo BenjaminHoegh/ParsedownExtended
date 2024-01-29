@@ -22,7 +22,9 @@ jobs:
         uses: super-linter/super-linter/slim@v5
         env:
           VALIDATE_ALL_CODEBASE: false
-          VALIDATE_PHP: true
+          VALIDATE_PHP_BUILTIN: true
+          VALIDATE_PHP_PHPCS: true
+          VALIDATE_PHP_PSALM: true
           VALIDATE_MARKDOWN: true
           VALIDATE_YAML: true
           VALIDATE_JSON: true
