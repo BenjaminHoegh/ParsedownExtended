@@ -1,16 +1,18 @@
 <?php
-/**
- *
- * This code checks if the class 'ParsedownExtra' exists. If it does, it creates an alias for it called 'ParsedownExtendedParentAlias'.
- * If 'ParsedownExtra' does not exist, it creates an alias for 'Parsedown' called 'ParsedownExtendedParentAlias'.
- */
 
+/**
+ * This code checks if the class 'ParsedownExtra' exists. If it does, it creates an alias for it called 'ParsedownExtendedParentAlias'.
+ * If the class 'ParsedownExtra' does not exist, it creates an alias for the class 'Parsedown' called 'ParsedownExtendedParentAlias'.
+ */
 if (class_exists('ParsedownExtra')) {
     class_alias('ParsedownExtra', 'ParsedownExtendedParentAlias');
 } else {
     class_alias('Parsedown', 'ParsedownExtendedParentAlias');
 }
 
+/**
+ * ParsedownExtended class extends the ParsedownExtendedParentAlias class and provides additional features and settings for parsing Markdown content.
+ */
 class ParsedownExtended extends ParsedownExtendedParentAlias
 {
     public const VERSION = '1.2.0';
@@ -177,7 +179,7 @@ class ParsedownExtended extends ParsedownExtendedParentAlias
 
         }
 
-        # Check if Parsedown 1.7.4 or later is installed but not 1.8
+        // Check if Parsedown 1.7.4 or later is installed but not 1.8
         if (version_compare(\Parsedown::version, '1.8.0') < 0 && version_compare(\Parsedown::version, '1.7.4') >= 0) {
             // set legacy mode to true
             $this->legacyMode = true;
@@ -1136,8 +1138,8 @@ class ParsedownExtended extends ParsedownExtendedParentAlias
     /**
      * Continues the block math notation parsing.
      *
-     * @param array $Line The current line being parsed.
-     * @param array $Block The current block being parsed.
+     * @param  array $Line  The current line being parsed.
+     * @param  array $Block The current block being parsed.
      * @return array|null The updated block or null if the block is complete.
      */
     protected function blockMathNotationContinue($Line, $Block)
@@ -1170,7 +1172,7 @@ class ParsedownExtended extends ParsedownExtendedParentAlias
     /**
      * Returns the complete block of math notation.
      *
-     * @param string $Block The block of math notation.
+     * @param  string $Block The block of math notation.
      * @return string The complete block of math notation.
      */
     protected function blockMathNotationComplete($Block)
@@ -1335,7 +1337,7 @@ class ParsedownExtended extends ParsedownExtendedParentAlias
      * the parent method: \Parsedown::blockHeader() and returns $Block array if
      * the $Line is a heading element.
      *
-     * @param  array $Line  Array that Parsedown detected as a block type element.
+     * @param  array $Line Array that Parsedown detected as a block type element.
      * @return void|array   Array of Heading Block.
      */
     protected function blockHeader($Line)
@@ -1577,7 +1579,7 @@ class ParsedownExtended extends ParsedownExtendedParentAlias
      * Parses the given markdown string to an HTML string but it leaves the ToC
      * tag as is. It's an alias of the parent method "\parent::text()".
      *
-     * @param  string $text  Markdown string to be parsed.
+     * @param  string $text Markdown string to be parsed.
      * @return string        Parsed HTML string.
      */
     public function body(string $text): string
@@ -1591,21 +1593,21 @@ class ParsedownExtended extends ParsedownExtendedParentAlias
      * Returns the parsed ToC.
      * If the arg is "string" then it returns the ToC in HTML string.
      *
-     * @param  string $type_return  Type of the return format. "string" or "json".
+     * @param  string $type_return Type of the return format. "string" or "json".
      * @return string               HTML/JSON string of ToC.
      */
     public function contentsList($type_return = 'string'): string
     {
         switch (strtolower($type_return)) {
-            case 'string':
-                return $this->contentsListString ? $this->body($this->contentsListString) : '';
-            case 'json':
-                return json_encode($this->contentsListArray);
-            default:
-                $backtrace = debug_backtrace();
-                $caller = $backtrace[0];
-                $errorMessage = "Unknown return type '{$type_return}' given while parsing ToC. Called in " . $caller['file'] . " on line " . $caller['line'];
-                throw new InvalidArgumentException($errorMessage);
+        case 'string':
+            return $this->contentsListString ? $this->body($this->contentsListString) : '';
+        case 'json':
+            return json_encode($this->contentsListArray);
+        default:
+            $backtrace = debug_backtrace();
+            $caller = $backtrace[0];
+            $errorMessage = "Unknown return type '{$type_return}' given while parsing ToC. Called in " . $caller['file'] . " on line " . $caller['line'];
+            throw new InvalidArgumentException($errorMessage);
         }
     }
 
@@ -1624,7 +1626,7 @@ class ParsedownExtended extends ParsedownExtendedParentAlias
      * If a callback is provided, it uses the user-defined logic to create the anchor ID.
      * Otherwise, it uses the default logic which involves normalizing the string, replacing characters, and sanitizing the anchor.
      *
-     * @param string $text The text for which to create the anchor ID.
+     * @param  string $text The text for which to create the anchor ID.
      * @return string The created anchor ID.
      */
     protected function createAnchorID(string $text): ?string
@@ -1663,7 +1665,7 @@ class ParsedownExtended extends ParsedownExtendedParentAlias
     /**
      * Normalize a string by converting it to lowercase and encoding it to UTF-8.
      *
-     * @param string $text The string to be normalized.
+     * @param  string $text The string to be normalized.
      * @return string The normalized string.
      */
     protected function normalizeString(string $text): string
@@ -1674,7 +1676,7 @@ class ParsedownExtended extends ParsedownExtendedParentAlias
     /**
      * Replaces special characters in a string with their corresponding ASCII equivalents.
      *
-     * @param string $text The input string.
+     * @param  string $text The input string.
      * @return string The modified string with replaced characters.
      */
     protected function transliterate(string $text): string
@@ -1751,7 +1753,7 @@ class ParsedownExtended extends ParsedownExtendedParentAlias
      * Sanitizes an anchor text by removing special characters, replacing spaces with dashes,
      * and removing consecutive dashes.
      *
-     * @param string $text The anchor text to sanitize.
+     * @param  string $text The anchor text to sanitize.
      * @return string The sanitized anchor text.
      */
     protected function sanitizeAnchor(string $text): string
@@ -1769,7 +1771,7 @@ class ParsedownExtended extends ParsedownExtendedParentAlias
     /**
      * Generate a unique anchor ID based on the given text.
      *
-     * @param string $text The text to generate the anchor ID from.
+     * @param  string $text The text to generate the anchor ID from.
      * @return string The unique anchor ID.
      */
     protected function uniquifyAnchorID(string $text): string
@@ -1838,7 +1840,7 @@ class ParsedownExtended extends ParsedownExtendedParentAlias
      * Get only the text from a markdown string.
      * It parses to HTML once then trims the tags to get the text.
      *
-     * @param  string $text  Markdown text.
+     * @param  string $text Markdown text.
      * @return string
      */
     protected function fetchText($text): string
@@ -1893,7 +1895,7 @@ class ParsedownExtended extends ParsedownExtendedParentAlias
     /**
      * Set/stores the heading block to ToC list in a string and array format.
      *
-     * @param  array $Content   Heading info such as "level","id" and "text".
+     * @param  array $Content Heading info such as "level","id" and "text".
      * @return void
      */
     protected function setContentsList(array $Content): void
@@ -1918,7 +1920,7 @@ class ParsedownExtended extends ParsedownExtendedParentAlias
     /**
      * Sets/stores the heading block info as a list in markdown format.
      *
-     * @param  array $Content  Heading info such as "level","id" and "text".
+     * @param  array $Content Heading info such as "level","id" and "text".
      * @return void
      */
     protected function setContentsListAsString(array $Content): void
@@ -1984,8 +1986,8 @@ class ParsedownExtended extends ParsedownExtendedParentAlias
     /**
      * Sets a setting value in the ParsedownExtended class.
      *
-     * @param string $settingName The name of the setting to be set.
-     * @param mixed $settingValue The value to be set for the setting.
+     * @param string $settingName  The name of the setting to be set.
+     * @param mixed  $settingValue The value to be set for the setting.
      *
      * @return static
      */
@@ -2053,7 +2055,7 @@ class ParsedownExtended extends ParsedownExtendedParentAlias
     /**
      * Retrieves the value of a specific setting based on the provided key.
      *
-     * @param string $key The key of the setting to retrieve.
+     * @param  string $key The key of the setting to retrieve.
      * @return mixed The value of the setting.
      * @throws InvalidArgumentException If the setting does not exist.
      */
@@ -2124,8 +2126,8 @@ class ParsedownExtended extends ParsedownExtendedParentAlias
     /**
      * Adds an inline type to the ParsedownExtended class.
      *
-     * @param string|string[] $markers The marker(s) for the inline type.
-     * @param string $funcName The name of the function to handle the inline type.
+     * @param string|string[] $markers  The marker(s) for the inline type.
+     * @param string          $funcName The name of the function to handle the inline type.
      *
      * @return void
      *
@@ -2152,8 +2154,8 @@ class ParsedownExtended extends ParsedownExtendedParentAlias
     /**
      * Adds a block type to the ParsedownExtended class.
      *
-     * @param string[] $markers The marker(s) representing the block type.
-     * @param string $funcName The name of the function to handle the block type.
+     * @param string[] $markers  The marker(s) representing the block type.
+     * @param string   $funcName The name of the function to handle the block type.
      *
      * @return void
      *
@@ -2202,7 +2204,7 @@ class ParsedownExtended extends ParsedownExtendedParentAlias
     {
         $markup = '';
 
-        # $Excerpt is based on the first occurrence of a marker
+        // $Excerpt is based on the first occurrence of a marker
 
         while ($Excerpt = strpbrk($text, $this->inlineMarkerList)) {
             $marker = $Excerpt[0];
@@ -2221,7 +2223,7 @@ class ParsedownExtended extends ParsedownExtendedParentAlias
             ];
 
             foreach ($this->InlineTypes[$marker] as $inlineType) {
-                # check to see if the current inline type is nestable in the current context
+                // check to see if the current inline type is nestable in the current context
 
                 if (! empty($nonNestables) and in_array($inlineType, $nonNestables)) {
                     continue;
@@ -2234,40 +2236,40 @@ class ParsedownExtended extends ParsedownExtendedParentAlias
                 }
 
 
-                # makes sure that the inline belongs to "our" marker
+                // makes sure that the inline belongs to "our" marker
 
                 if (isset($Inline['position']) and $Inline['position'] > $markerPosition) {
                     continue;
                 }
 
-                # sets a default inline position
+                // sets a default inline position
 
                 if (! isset($Inline['position'])) {
                     $Inline['position'] = $markerPosition;
                 }
 
-                # cause the new element to 'inherit' our non nestables
+                // cause the new element to 'inherit' our non nestables
 
                 foreach ($nonNestables as $non_nestable) {
                     $Inline['element']['nonNestables'][] = $non_nestable;
                 }
 
-                # the text that comes before the inline
+                // the text that comes before the inline
                 $unmarkedText = substr($text, 0, $Inline['position']);
 
-                # compile the unmarked text
+                // compile the unmarked text
                 $markup .= $this->unmarkedText($unmarkedText);
 
-                # compile the inline
+                // compile the inline
                 $markup .= $Inline['markup'] ?? $this->element($Inline['element']);
 
-                # remove the examined text
+                // remove the examined text
                 $text = substr($text, $Inline['position'] + $Inline['extent']);
 
                 continue 2;
             }
 
-            # the marker does not belong to an inline
+            // the marker does not belong to an inline
 
             $unmarkedText = substr($text, 0, $markerPosition + 1);
 
@@ -2298,7 +2300,7 @@ class ParsedownExtended extends ParsedownExtendedParentAlias
             : array_combine($nonNestables, $nonNestables)
         );
 
-        # $Excerpt is based on the first occurrence of a marker
+        // $Excerpt is based on the first occurrence of a marker
 
         while ($Excerpt = strpbrk($text, $this->inlineMarkerList)) {
             $marker = $Excerpt[0];
@@ -2311,7 +2313,7 @@ class ParsedownExtended extends ParsedownExtendedParentAlias
             $Excerpt = ['text' => $Excerpt, 'context' => $text, 'before' => $before];
 
             foreach ($this->InlineTypes[$marker] as $inlineType) {
-                # check to see if the current inline type is nestable in the current context
+                // check to see if the current inline type is nestable in the current context
 
                 if (isset($nonNestables[$inlineType])) {
                     continue;
@@ -2323,19 +2325,19 @@ class ParsedownExtended extends ParsedownExtendedParentAlias
                     continue;
                 }
 
-                # makes sure that the inline belongs to "our" marker
+                // makes sure that the inline belongs to "our" marker
 
                 if (isset($Inline['position']) and $Inline['position'] > $markerPosition) {
                     continue;
                 }
 
-                # sets a default inline position
+                // sets a default inline position
 
                 if (! isset($Inline['position'])) {
                     $Inline['position'] = $markerPosition;
                 }
 
-                # cause the new element to 'inherit' our non nestables
+                // cause the new element to 'inherit' our non nestables
 
 
                 $Inline['element']['nonNestables'] = isset($Inline['element']['nonNestables'])
@@ -2343,23 +2345,23 @@ class ParsedownExtended extends ParsedownExtendedParentAlias
                     : $nonNestables
                 ;
 
-                # the text that comes before the inline
+                // the text that comes before the inline
                 $unmarkedText = substr($text, 0, $Inline['position']);
 
-                # compile the unmarked text
+                // compile the unmarked text
                 $InlineText = $this->inlineText($unmarkedText);
                 $Elements[] = $InlineText['element'];
 
-                # compile the inline
+                // compile the inline
                 $Elements[] = $this->extractElement($Inline);
 
-                # remove the examined text
+                // remove the examined text
                 $text = substr($text, $Inline['position'] + $Inline['extent']);
 
                 continue 2;
             }
 
-            # the marker does not belong to an inline
+            // the marker does not belong to an inline
 
             $unmarkedText = substr($text, 0, $markerPosition + 1);
 
