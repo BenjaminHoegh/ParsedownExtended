@@ -5,9 +5,6 @@
 
     <!-- Include PSR12 Standard -->
     <rule ref="PSR12">
-        <properties>
-            <!-- Exclude line length checks -->
-            <exclude name="Generic.Files.LineLength" />
-        </properties>
+        <exclude name="Generic.Files.LineLength" />
     </rule>
 </ruleset>
