@@ -431,7 +431,7 @@ class ParsedownExtended extends ParsedownExtendedParentAlias
      */
     protected function inlineKeystrokes(array $Excerpt): ?array
     {
-        if (!$this->getSetting('keystrokes')) {
+        if (!$this->getSetting('emphasis.keystrokes')) || !$this->getSetting('emphasis')) {
             return null;
         }
 
