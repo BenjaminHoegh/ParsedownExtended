@@ -58,11 +58,12 @@ class ParsedownExtended extends ParsedownExtendedParentAlias
             'enabled' => true,
             'bold' => true,
             'italic' => true,
-            'marked' => true,
             'strikethroughs' => true,
             'insertions' => true,
             'subscript' => false,
             'superscript' => false,
+            'keystrokes' => true,
+            'marking' => true,
         ],
         'footnotes' => true,
         'headings' => [
@@ -78,7 +79,6 @@ class ParsedownExtended extends ParsedownExtendedParentAlias
             ],
         ],
         'images' => true,
-        'keystrokes' => true,
         'links' => [
             'enabled' => true,
             'email_links' => true,
@@ -193,7 +193,7 @@ class ParsedownExtended extends ParsedownExtendedParentAlias
         $this->initializeSettings($userSettings);
 
         // Add inline types
-        $this->addInlineType('=', 'Marked');
+        $this->addInlineType('=', 'Marking');
         $this->addInlineType('+', 'Insertions');
         $this->addInlineType('[', 'Keystrokes');
         $this->addInlineType(['\\', '$'], 'MathNotation');
@@ -365,7 +365,7 @@ class ParsedownExtended extends ParsedownExtendedParentAlias
 
 
     /**
-     * Inline Marked function.
+     * Inline Marking function.
      *
      * This function is responsible for handling inline mark in the parsed text.
      * It searches for text enclosed in double equal signs (==) and wraps it in a <mark> element.
@@ -376,9 +376,9 @@ class ParsedownExtended extends ParsedownExtendedParentAlias
      *
      * @psalm-return array{extent: int<0, max>, element: array{name: 'mark', text: string}}|null
      */
-    protected function inlineMarked(array $Excerpt): ?array
+    protected function inlineMarking(array $Excerpt): ?array
     {
-        if (!$this->getSetting('emphasis.marked') || !$this->getSetting('emphasis')) {
+        if (!$this->getSetting('emphasis.marking') || !$this->getSetting('emphasis')) {
             return null;
         }
 
