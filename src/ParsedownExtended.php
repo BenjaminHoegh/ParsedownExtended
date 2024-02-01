@@ -1995,10 +1995,10 @@ class ParsedownExtended extends ParsedownExtendedParentAlias
     {
         // Split the settingName into parts using dot as separator
         $settingParts = explode('.', $settingName);
-
+    
         // Reference to the settings array
         $currentSettings = &$this->settings;
-
+    
         // Iterate through the parts of the setting name
         foreach ($settingParts as $part) {
             // Check if the part exists in the current settings
@@ -2009,7 +2009,7 @@ class ParsedownExtended extends ParsedownExtendedParentAlias
             // Move to the next level of settings
             $currentSettings = &$currentSettings[$part];
         }
-
+    
         /**
          * If the setting value is an array and the 'enabled' key is not set in the setting value,
          * but it is set in the current settings, then set the 'enabled' key in the setting value
@@ -2018,7 +2018,7 @@ class ParsedownExtended extends ParsedownExtendedParentAlias
         if (is_array($settingValue) && isset($currentSettings['enabled']) && !isset($settingValue['enabled'])) {
             $settingValue['enabled'] = $currentSettings['enabled'];
         }
-
+    
         /**
          * If $overwrite is false and both current and new setting values are arrays,
          * merge them. Otherwise, replace the current setting with the new value.
@@ -2028,19 +2028,18 @@ class ParsedownExtended extends ParsedownExtendedParentAlias
             $currentSettings = array_merge($currentSettings, $settingValue);
         } else {
             // If not merging, then handle setting the value based on its type or replacing outright
-
-            // Check if the settingValue is a boolean and update the 'enabled' key if present
             if (is_bool($settingValue) && isset($currentSettings['enabled'])) {
                 $currentSettings['enabled'] = $settingValue;
             } else {
-                // Update the setting value without removing other keys
+                // Update the setting value, potentially replacing it entirely
                 $currentSettings = $settingValue;
             }
         }
-
+    
         // Return $this to allow chaining
         return $this;
     }
+
 
     /**
      * Sets multiple setting values for the ParsedownExtended class.
