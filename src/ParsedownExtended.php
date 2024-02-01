@@ -58,11 +58,12 @@ class ParsedownExtended extends ParsedownExtendedParentAlias
             'enabled' => true,
             'bold' => true,
             'italic' => true,
-            'marked' => true,
             'strikethroughs' => true,
             'insertions' => true,
             'subscript' => false,
             'superscript' => false,
+            'keystrokes' => true,
+            'marking' => true,
         ],
         'footnotes' => true,
         'headings' => [
@@ -78,7 +79,6 @@ class ParsedownExtended extends ParsedownExtendedParentAlias
             ],
         ],
         'images' => true,
-        'keystrokes' => true,
         'links' => [
             'enabled' => true,
             'email_links' => true,
@@ -193,7 +193,7 @@ class ParsedownExtended extends ParsedownExtendedParentAlias
         $this->initializeSettings($userSettings);
 
         // Add inline types
-        $this->addInlineType('=', 'Marked');
+        $this->addInlineType('=', 'Marking');
         $this->addInlineType('+', 'Insertions');
         $this->addInlineType('[', 'Keystrokes');
         $this->addInlineType(['\\', '$'], 'MathNotation');
@@ -365,7 +365,7 @@ class ParsedownExtended extends ParsedownExtendedParentAlias
 
 
     /**
-     * Inline Marked function.
+     * Inline Marking function.
      *
      * This function is responsible for handling inline mark in the parsed text.
      * It searches for text enclosed in double equal signs (==) and wraps it in a <mark> element.
@@ -376,9 +376,9 @@ class ParsedownExtended extends ParsedownExtendedParentAlias
      *
      * @psalm-return array{extent: int<0, max>, element: array{name: 'mark', text: string}}|null
      */
-    protected function inlineMarked(array $Excerpt): ?array
+    protected function inlineMarking(array $Excerpt): ?array
     {
-        if (!$this->getSetting('emphasis.marked') || !$this->getSetting('emphasis')) {
+        if (!$this->getSetting('emphasis.marking') || !$this->getSetting('emphasis')) {
             return null;
         }
 
@@ -431,7 +431,7 @@ class ParsedownExtended extends ParsedownExtendedParentAlias
      */
     protected function inlineKeystrokes(array $Excerpt): ?array
     {
-        if (!$this->getSetting('keystrokes')) {
+        if (!$this->getSetting('emphasis.keystrokes')) || !$this->getSetting('emphasis')) {
             return null;
         }
 
@@ -1991,26 +1991,25 @@ class ParsedownExtended extends ParsedownExtendedParentAlias
      *
      * @return static
      */
-    public function setSetting(string $settingName, $settingValue): self
+    public function setSetting(string $settingName, $settingValue, bool $overwrite = false): self
     {
         // Split the settingName into parts using dot as separator
         $settingParts = explode('.', $settingName);
-
+    
         // Reference to the settings array
         $currentSettings = &$this->settings;
-
+    
         // Iterate through the parts of the setting name
         foreach ($settingParts as $part) {
             // Check if the part exists in the current settings
-            if (isset($currentSettings[$part])) {
-                // Move to the next level of settings
-                $currentSettings = &$currentSettings[$part];
-            } else {
+            if (!isset($currentSettings[$part])) {
                 // The setting name is invalid, return an error message
                 throw new \InvalidArgumentException("Invalid setting name: $settingName");
             }
+            // Move to the next level of settings
+            $currentSettings = &$currentSettings[$part];
         }
-
+    
         /**
          * If the setting value is an array and the 'enabled' key is not set in the setting value,
          * but it is set in the current settings, then set the 'enabled' key in the setting value
@@ -2019,18 +2018,28 @@ class ParsedownExtended extends ParsedownExtendedParentAlias
         if (is_array($settingValue) && isset($currentSettings['enabled']) && !isset($settingValue['enabled'])) {
             $settingValue['enabled'] = $currentSettings['enabled'];
         }
-
-        // Check if the settingValue is a boolean and update the 'enabled' key if present
-        if (is_bool($settingValue) && isset($currentSettings['enabled'])) {
-            $currentSettings['enabled'] = $settingValue;
+    
+        /**
+         * If $overwrite is false and both current and new setting values are arrays,
+         * merge them. Otherwise, replace the current setting with the new value.
+         */
+        if (!$overwrite && is_array($currentSettings) && is_array($settingValue)) {
+            // Merge the arrays, preserving existing elements and adding new ones from $settingValue
+            $currentSettings = array_merge($currentSettings, $settingValue);
         } else {
-            // Update the setting value without removing other keys
-            $currentSettings = $settingValue;
+            // If not merging, then handle setting the value based on its type or replacing outright
+            if (is_bool($settingValue) && isset($currentSettings['enabled'])) {
+                $currentSettings['enabled'] = $settingValue;
+            } else {
+                // Update the setting value, potentially replacing it entirely
+                $currentSettings = $settingValue;
+            }
         }
-
+    
         // Return $this to allow chaining
         return $this;
     }
+
 
     /**
      * Sets multiple setting values for the ParsedownExtended class.
