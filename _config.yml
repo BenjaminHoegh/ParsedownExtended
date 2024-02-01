@@ -3,9 +3,9 @@ description: >- # this means to ignore newlines until "baseurl:"
   Write an description for your new site here. You can edit this
   line in _config.yml. It will appear in your document head meta (for
   Google search results) and in your feed.xml site description.
-domain: benjaminhoegh.github.io       # if you want to force HTTPS, specify the domain without the http at the start, e.g. example.com
-url: https://benjaminhoegh.github.io  # the base hostname and protocol for your site, e.g. http://example.com
-baseurl: /ParsedownExtended/      # place folder name if the site is served in a subfolder
+domain: benjaminhoegh.github.io # if you want to force HTTPS, specify the domain without the http at the start, e.g. example.com
+url: https://benjaminhoegh.github.io # the base hostname and protocol for your site, e.g. http://example.com
+baseurl: /ParsedownExtended/ # place folder name if the site is served in a subfolder
 
 # Exclude from processing.
 # The following items will not be processed, by default.
@@ -15,17 +15,18 @@ baseurl: /ParsedownExtended/      # place folder name if the site is served in a
 # Excluded items can be processed by explicitly listing the directories or
 # their entries' file path in the `include:` list.
 #
-# exclude:
-  # - .sass-cache/
-#   - .jekyll-cache/
-#   - gemfiles/
-#   - Gemfile
-#   - Gemfile.lock
-#   - node_modules/
-#   - vendor/bundle/
-#   - vendor/cache/
-#   - vendor/gems/
-#   - vendor/ruby/
+exclude:
+  - .sass-cache/
+  - .jekyll-cache/
+  - gemfiles/
+  - Gemfile
+  - Gemfile.lock
+  - node_modules/
+  - vendor/bundle/
+  - vendor/cache/
+  - vendor/gems/
+  - vendor/ruby/
+  - config.codekit3
 
 # Enable or disable the site search
 # Supports true (default) or false
@@ -86,11 +87,9 @@ color_scheme: light
 # Dark color scheme; activates auto-switching if not nil. Supports "dark" or a custom color scheme
 dark_color_scheme: dark
 
-# Google Analytics Tracking (optional)
-# e.g, UA-1234567-89
-#ga_tracking: UA-2709176-10
-#ga_tracking_anonymize_ip: true # Use GDPR compliant Google Analytics settings (true/nil by default)
-
-
-
-
+collections_dir: documentation
+collections:
+  methods:
+    output: true
+  settings:
+    output: true

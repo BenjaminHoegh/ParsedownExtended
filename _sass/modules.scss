@@ -3,6 +3,10 @@
 //
 @import "./vendor/normalize.scss/normalize.scss";
 
+@import "./support/_variables.scss";
+@import "./support/_functions.scss";
+@import "./support/mixins/mixins.scss";
+
 //
 // Modules
 //
