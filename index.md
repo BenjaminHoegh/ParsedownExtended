@@ -4,65 +4,68 @@ layout: page
 
 [![Github All Releases](https://img.shields.io/github/release/BenjaminHoegh/ParsedownExtended.svg?style=flat-square)](https://github.com/BenjaminHoegh/ParsedownExtended/releases) [![GitHub](https://img.shields.io/github/license/BenjaminHoegh/ParsedownExtended?style=flat-square)](https://github.com/BenjaminHoegh/ParsedownExtended/blob/master/LICENSE.md)
 
-Table of contents
+## Introduction
 
-- [Getting started](#getting-started)
-- [Bugs and feature requests](#bugs-and-feature-requests)
-- [Contributing](#contributing)
-- [Community](#community)
-- [Copyright and license](#copyright-and-license)
+ParsedownExtended is an extention for Parsedown, offering additional features and functionalities. It is designed to provide an easy-to-use Markdown parsing solution while extending the capabilities of the base Parsedown library.
 
 ## Features
-- Task
-- Smartypants
-- Emojis
-- Heading permalink
-- Table of content
-- Keystrokes
-- Highlight
-- Super and subscript
-- Diagrams
-- LaTeX
-- Predefined abbreviation
-- Options for every element of markdown
-- And more...
+
+ParsedownExtended includes a variety of features to enhance your Markdown parsing experience:
+
+- **Task Lists:** Create simple task lists in Markdown.
+- **Smartypants:** Automatically convert straight quotes to curly, dashes to en-dash and em-dash, etc.
+- **Emojis:** Support for rendering emojis.
+- **Heading Permalinks:** Generate permalinks for your headings.
+- **Table of Contents:** Automatically generate a table of contents based on headings.
+- **Keystrokes:** Render keystroke combinations.
+- **Marking:** Mark text within your documents for emphasis or distinction.
+- **Superscript and Subscript:** Render text as superscript or subscript.
+- **Diagrams Syntax Support:** Recognizes diagram syntax for integration with libraries like mermaid.js and chart.js.
+- **LaTeX Syntax Support:** Detects LaTeX syntax, suitable for mathematical expressions, to be rendered with libraries like KaTeX.js.
+- **Predefined Abbreviations:** Define and use abbreviations easily.
+- **Customizable Options:** Extensive options for customizing each Markdown element.
+- **Additional Features:** ParsedownExtended continuously evolves, adding more features over time.
 
 ## Getting started
 
-### Manuel
-Download the source code from the latest release
-You must include <code class="file">parsedown.php</code>
-and <code class="file">ParsedownExtended.php</code>
+### Manual Installation
 
-```php
-require 'Parsedown.php';
-require 'ParsedownExtra.php'; // optional
-require 'ParsedownExtended.php';
+1. Download the latest version of `ParsedownExtended` from the [releases page](https://github.com/BenjaminHoegh/ParsedownExtended/releases).
+2. Include the required files in your project:
 
-$ParsedownExtended = new ParsedownExtended();
+    ```php
+    require 'Parsedown.php';
+    require 'ParsedownExtra.php'; // optional
+    require 'ParsedownExtended.php';
 
-echo $ParsedownExtended->text('Hello _Parsedown_!'); # prints: <p>Hello <em>Parsedown</em>!</p>
-// you can also parse inline markdown only
-echo $ParsedownExtended->line('Hello _Parsedown_!'); # prints: Hello <em>Parsedown</em>!
-```
+    $ParsedownExtended = new ParsedownExtended();
 
-### Using composer
+    echo $ParsedownExtended->text('Hello _Parsedown_!'); # prints: <p>Hello <em>Parsedown</em>!</p>
+    // you can also parse inline markdown only
+    echo $ParsedownExtended->line('Hello _Parsedown_!'); # prints: Hello <em>Parsedown</em>!
+    ```
 
-From the command line interface, navigate to your project folder then run this command:
-```shell
-composer require BenjaminHoegh/parsedown-extended
-```
 
-Then require the auto-loader file:
-```php
-require 'vendor/autoload.php';
 
-$ParsedownExtended = new ParsedownExtended();
+### Using Composer
 
-echo $ParsedownExtended->text('Hello _Parsedown_!'); # prints: <p>Hello <em>Parsedown</em>!</p>
-// you can also parse inline markdown only
-echo $ParsedownExtended->line('Hello _Parsedown_!'); # prints: Hello <em>Parsedown</em>!
-```
+1. Install via Composer:
+
+    ```shell
+    composer require BenjaminHoegh/parsedown-extended
+    ```
+
+2. Include the Composer autoloader in your project:
+
+    ```php
+    require 'vendor/autoload.php';
+
+    $ParsedownExtended = new ParsedownExtended();
+
+    echo $ParsedownExtended->text('Hello _Parsedown_!'); # prints: <p>Hello <em>Parsedown</em>!</p>
+    // you can also parse inline markdown only
+    echo $ParsedownExtended->line('Hello _Parsedown_!'); # prints: Hello <em>Parsedown</em>!
+    ```
 
 ## Bugs and feature requests
 
@@ -82,4 +85,4 @@ Get updates on ParsedownExtended's development and chat with the project maintai
 
 ## Copyright and license
 
-Code and documentation copyright 2021 the [ParsedownExtended Authors](https://github.com/BenjaminHoegh/ParsedownExtended/graphs/contributors). Code released under the [MIT License](https://github.com/BenjaminHoegh/ParsedownExtended/blob/master/LICENSE.md). Docs released under [Creative Commons](https://github.com/BenjaminHoegh/ParsedownExtended/blob/master/docs/LICENSE.md).
+Code and documentation copyright 2024 the [ParsedownExtended Authors](https://github.com/BenjaminHoegh/ParsedownExtended/graphs/contributors). Code released under the [MIT License](https://github.com/BenjaminHoegh/ParsedownExtended/blob/master/LICENSE.md). Docs released under [Creative Commons](https://github.com/BenjaminHoegh/ParsedownExtended/blob/master/docs/LICENSE.md).
