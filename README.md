@@ -25,6 +25,8 @@
 
 Table of contents
 
+- [Introduction](#introduction)
+- [Features](#features)
 - [Getting started](#getting-started)
 - [Bugs and feature requests](#bugs-and-feature-requests)
 - [Contributing](#contributing)
