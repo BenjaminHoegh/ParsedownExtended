@@ -1991,7 +1991,7 @@ class ParsedownExtended extends ParsedownExtendedParentAlias
      *
      * @return static
      */
-    public function setSetting(string $settingName, $settingValue): self
+    public function setSetting(string $settingName, $settingValue, bool $overwrite = false): self
     {
         // Split the settingName into parts using dot as separator
         $settingParts = explode('.', $settingName);
@@ -2002,13 +2002,12 @@ class ParsedownExtended extends ParsedownExtendedParentAlias
         // Iterate through the parts of the setting name
         foreach ($settingParts as $part) {
             // Check if the part exists in the current settings
-            if (isset($currentSettings[$part])) {
-                // Move to the next level of settings
-                $currentSettings = &$currentSettings[$part];
-            } else {
+            if (!isset($currentSettings[$part])) {
                 // The setting name is invalid, return an error message
                 throw new \InvalidArgumentException("Invalid setting name: $settingName");
             }
+            // Move to the next level of settings
+            $currentSettings = &$currentSettings[$part];
         }
 
         /**
@@ -2020,12 +2019,23 @@ class ParsedownExtended extends ParsedownExtendedParentAlias
             $settingValue['enabled'] = $currentSettings['enabled'];
         }
 
-        // Check if the settingValue is a boolean and update the 'enabled' key if present
-        if (is_bool($settingValue) && isset($currentSettings['enabled'])) {
-            $currentSettings['enabled'] = $settingValue;
+        /**
+         * If $overwrite is false and both current and new setting values are arrays,
+         * merge them. Otherwise, replace the current setting with the new value.
+         */
+        if (!$overwrite && is_array($currentSettings) && is_array($settingValue)) {
+            // Merge the arrays, preserving existing elements and adding new ones from $settingValue
+            $currentSettings = array_merge($currentSettings, $settingValue);
         } else {
-            // Update the setting value without removing other keys
-            $currentSettings = $settingValue;
+            // If not merging, then handle setting the value based on its type or replacing outright
+
+            // Check if the settingValue is a boolean and update the 'enabled' key if present
+            if (is_bool($settingValue) && isset($currentSettings['enabled'])) {
+                $currentSettings['enabled'] = $settingValue;
+            } else {
+                // Update the setting value without removing other keys
+                $currentSettings = $settingValue;
+            }
         }
 
         // Return $this to allow chaining
