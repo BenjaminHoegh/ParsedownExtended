@@ -1354,6 +1354,12 @@ class ParsedownExtended extends ParsedownExtendedParentAlias
             $id = $Block['element']['attributes']['id'] ?? $this->createAnchorID($text);
 
             $Block['element']['attributes'] = ['id' => $id];
+
+            // Check if heading level is in the selectors
+            if (!in_array($level, $this->getSetting('toc.headings'])) {
+                return $Block;
+            }
+            
             $this->setContentsList(['text' => $text, 'id' => $id, 'level' => $level]);
 
             return $Block;
@@ -1374,6 +1380,12 @@ class ParsedownExtended extends ParsedownExtendedParentAlias
             $id = $Block['element']['attributes']['id'] ?? $this->createAnchorID($text);
 
             $Block['element']['attributes'] = ['id' => $id];
+            
+            // Check if heading level is in the selectors
+            if (!in_array($level, $this->getSetting('toc.headings'])) {
+                return $Block;
+            }
+            
             $this->setContentsList(['text' => $text, 'id' => $id, 'level' => $level]);
 
             return $Block;
