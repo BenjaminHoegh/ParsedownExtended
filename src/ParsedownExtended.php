@@ -1778,6 +1778,11 @@ class ParsedownExtended extends ParsedownExtendedParentAlias
     {
         $blacklist = $this->getSetting('headings.auto_anchors.blacklist');
 
+        // Initialize the count for this text if not already set
+        if (!isset($this->anchorDuplicates[$text])) {
+            $this->anchorDuplicates[$text] = 0;
+        }
+
         // Check if the given text is not in the blacklist and does not have any duplicates
         if (!in_array($text, $blacklist) && !isset($this->anchorDuplicates[$text])) {
             return $text;
