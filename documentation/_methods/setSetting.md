@@ -37,7 +37,7 @@ $Parsedown->setSetting('emphasis.subscript', true);
 $Parsedown->setSetting('math.block.delimiters', [
     ['left' => 'kk', 'right' => 'dd'],
     ['left' => '__', 'right' => '__']
-]);
+], true);
 
 // Example 4: Updating a setting value with method chaining
 $Parsedown
