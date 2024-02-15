@@ -1,6 +1,7 @@
 ---
 layout: default
 title: Thematic Breaks
+path_prefix: documentation
 ---
 
 # Thematic Breaks

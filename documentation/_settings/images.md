@@ -1,6 +1,7 @@
 ---
 layout: default
 title: Images
+path_prefix: documentation
 ---
 
 # Images

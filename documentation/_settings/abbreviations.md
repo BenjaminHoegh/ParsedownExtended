@@ -1,6 +1,7 @@
 ---
 layout: default
 title: Abbreviations
+path_prefix: documentation
 ---
 
 # Abbreviation <label class="label label-gray">Parsedown Extra Required</label>

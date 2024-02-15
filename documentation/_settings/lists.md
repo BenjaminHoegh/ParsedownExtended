@@ -1,6 +1,7 @@
 ---
 layout: default
 title: Lists and Tasks
+path_prefix: documentation
 ---
 
 # Lists

@@ -1,6 +1,7 @@
 ---
 layout: default
 title: Footnotes
+path_prefix: documentation
 ---
 
 # Footnotes <label class="label label-gray">Parsedown Extra Required</label>

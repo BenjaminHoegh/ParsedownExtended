@@ -1,6 +1,7 @@
 ---
 layout: default
 title: Code
+path_prefix: documentation
 ---
 
 # Code

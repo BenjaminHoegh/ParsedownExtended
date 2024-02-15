@@ -1,6 +1,7 @@
 ---
 layout: default
 title: Typographer
+path_prefix: documentation
 ---
 
 # Typographer

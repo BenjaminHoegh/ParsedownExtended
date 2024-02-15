@@ -2,6 +2,7 @@
 layout: default
 title: Table of Content
 has_toc: false
+path_prefix: documentation
 ---
 
 # Table of Content (ToC)
