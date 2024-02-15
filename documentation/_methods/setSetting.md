@@ -1,6 +1,7 @@
 ---
 layout: default
 title: Settings Method
+path_prefix: documentation
 ---
 
 

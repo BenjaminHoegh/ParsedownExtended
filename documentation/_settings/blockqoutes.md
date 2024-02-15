@@ -1,6 +1,7 @@
 ---
 layout: default
 title: Blockqoutes
+path_prefix: documentation
 ---
 
 # Blockquotes

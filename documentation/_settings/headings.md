@@ -1,6 +1,7 @@
 ---
 layout: default
 title: Headings
+path_prefix: documentation
 ---
 
 # Headings

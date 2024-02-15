@@ -1,6 +1,7 @@
 ---
 layout: default
 title: Emoji Shortcodes
+path_prefix: documentation
 ---
 
 # Emoji Shortcodes

@@ -1,6 +1,7 @@
 ---
 layout: default
 title: Math
+path_prefix: documentation
 ---
 
 # Math

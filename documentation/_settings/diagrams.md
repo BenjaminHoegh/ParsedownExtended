@@ -1,6 +1,7 @@
 ---
 layout: default
 title: Diagrams
+path_prefix: documentation
 ---
 
 # Diagrams

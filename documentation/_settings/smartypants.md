@@ -1,6 +1,7 @@
 ---
 layout: default
 title: Smartypants
+path_prefix: documentation
 ---
 
 # Smartypants

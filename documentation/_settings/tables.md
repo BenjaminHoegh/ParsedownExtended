@@ -1,6 +1,7 @@
 ---
 layout: default
 title: Tables
+path_prefix: documentation
 ---
 
 # Tables

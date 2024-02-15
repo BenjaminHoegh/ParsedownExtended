@@ -1,6 +1,7 @@
 ---
 layout: default
 title: Definition Lists
+path_prefix: documentation
 ---
 
 # Definition Lists <label class="label label-gray">Parsedown Extra Required</label>

@@ -1,6 +1,7 @@
 ---
 layout: default
 title: Links
+path_prefix: documentation
 ---
 
 # Links

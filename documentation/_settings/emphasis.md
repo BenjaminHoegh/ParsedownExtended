@@ -1,6 +1,7 @@
 ---
 layout: default
 title: Emphasis
+path_prefix: documentation
 ---
 
 # Emphasis
