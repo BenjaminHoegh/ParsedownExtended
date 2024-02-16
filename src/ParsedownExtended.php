@@ -1118,13 +1118,12 @@ class ParsedownExtended extends ParsedownExtendedParentAlias
         foreach ($this->settings['math']['block']['delimiters'] as $config) {
 
             $leftMarker = preg_quote($config['left'], '/');
-            $regex = '/^(?<!\\\\)(' . $leftMarker . ')(?!.)$/';
+            $regex = '/^(?<!\\\\)(' . $leftMarker . ')(.*)/'; 
 
-
-            if (preg_match($regex, $Line['text'])) {
+            if (preg_match($regex, $Line['text'], $matches)) {
                 return [
                     'element' => [
-                        'text' => '',
+                        'text' => $matches[2],
                     ],
                     'start' => $config['left'], // Store the start marker
                     'end' => $config['right'], // Store the end marker
@@ -1155,12 +1154,14 @@ class ParsedownExtended extends ParsedownExtendedParentAlias
 
         // Double escape the backslashes for regex pattern
         $rightMarker = preg_quote($Block['end'], '/');
-        $regex = '/^(?<!\\\\)(' . $rightMarker . ')$/';
+        $regex = '/^(?<!\\\\)(' . $rightMarker . ')(.*)/'; 
 
-        if (preg_match($regex, $Line['text'])) {
+        if (preg_match($regex, $Line['text'], $matches)) {
             $Block['complete'] = true;
             $Block['math'] = true;
-            $Block['element']['text'] = $Block['start'] . $Block['element']['text'] . $Block['end'];
+            $Block['element']['text'] = $Block['start'] . $Block['element']['text'] . $Block['end'] . $matches[2]; 
+
+
             return $Block;
         }
 
