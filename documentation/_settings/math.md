@@ -31,7 +31,7 @@ The `math` feature allows the following configurations:
 - **block** (array): Configure block math expressions.
   - **delimiters** (array): Define the delimiters for block math expressions.
 
-> [!NOTE]
+
 > Custom delimiters may not work as excepted when using charecters not registered in `$specialCharacters` 
 
 
