@@ -139,7 +139,7 @@ class ParsedownExtended extends ParsedownExtendedParentAlias
         'toc' => [
             'enabled' => true,
             'headings' => ['h1', 'h2', 'h3', 'h4', 'h5', 'h6'],
-            'set_toc_tag' => '[toc]',
+            'toc_tag' => '[toc]',
         ],
         'typographer' => true,
     ];
@@ -2007,6 +2007,11 @@ class ParsedownExtended extends ParsedownExtendedParentAlias
     public function text($text): string
     {
         $html = $this->body($text);
+
+        if (!$this->isEnabled('toc')) {
+            return $html;
+        }
+        
         $tag_origin = $this->getTagToc();
         if (strpos($text, $tag_origin) === false) {
             return $html;
