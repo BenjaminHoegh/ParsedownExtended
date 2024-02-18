@@ -22,7 +22,7 @@ class ParsedownExtended extends ParsedownExtendedParentAlias
 
     private const TOC_TAG_DEFAULT = '[toc]';
     private const TOC_ID_ATTRIBUTE_DEFAULT = 'toc';
-    private array $anchorDuplicates = [];
+    private array $anchorRegister = [];
     private array $contentsListArray = [];
     private int $firstHeadLevel = 0;
     private string $contentsListString = '';
@@ -1806,29 +1806,32 @@ class ParsedownExtended extends ParsedownExtendedParentAlias
     protected function uniquifyAnchorID(string $text): string
     {
         $blacklist = $this->getSetting('headings.auto_anchors.blacklist');
+        $originalText = $text; // Keep the original text for reference
 
         // Initialize the count for this text if not already set
-        if (!isset($this->anchorDuplicates[$text])) {
-            $this->anchorDuplicates[$text] = 0;
+        if (!isset($this->anchorRegister[$text])) {
+            $this->anchorRegister[$text] = 0;
+        } else {
+            // If already set, increment to check for the next possible suffix
+            $this->anchorRegister[$text]++;
         }
 
-        // Check if the given text is not in the blacklist and does not have any duplicates
-        if (!in_array($text, $blacklist) && !isset($this->anchorDuplicates[$text])) {
-            return $text;
+        // Adjust the count based on the blacklist, ensuring we skip blacklisted numbers
+        while (true) {
+            $potentialId = $originalText . ($this->anchorRegister[$text] > 0 ? '-' . $this->anchorRegister[$text] : '');
+            if (!in_array($potentialId, $blacklist)) {
+                break; // Found a non-blacklisted ID, stop adjusting the count
+            }
+            $this->anchorRegister[$text]++; // Increment the count and check the next potential ID
         }
 
-        $originalText = $text;
-        $count = $this->anchorDuplicates[$originalText] ?? 0;
+        // If the adjusted count is 0, it means the original text is not blacklisted and has not appeared before
+        if ($this->anchorRegister[$text] === 0) {
+            return $originalText; // Return the original text as is
+        }
 
-        // Generate a unique anchor ID by appending a count to the original text
-        do {
-            $count++;
-            $text = $originalText . '-' . $count;
-        } while (in_array($text, $blacklist) || isset($this->anchorDuplicates[$text]));
-
-        // Store the count for the original text in the duplicates array
-        $this->anchorDuplicates[$originalText] = $count;
-        return $text;
+        // Return the text appended with the adjusted count, skipping any blacklisted numbers
+        return $originalText . '-' . $this->anchorRegister[$text];
     }
 
     /**
