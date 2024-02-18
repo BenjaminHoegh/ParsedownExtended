@@ -1350,6 +1350,12 @@ class ParsedownExtended extends ParsedownExtendedParentAlias
         if (! empty($Block)) {
             $text = $Block['element']['text'] ?? $Block['element']['handler']['argument'] ?? '';
             $level = $Block['element']['name'];
+
+            // check if level is allowed
+            if (!in_array($level, $this->getSetting('headings.allowed'))) {
+                return;
+            }
+
             $id = $Block['element']['attributes']['id'] ?? $this->createAnchorID($text);
 
             $Block['element']['attributes'] = ['id' => $id];
@@ -1376,6 +1382,12 @@ class ParsedownExtended extends ParsedownExtendedParentAlias
         if (! empty($Block)) {
             $text = $Block['element']['text'] ?? $Block['element']['handler']['argument'] ?? '';
             $level = $Block['element']['name'];
+
+            // check if level is allowed
+            if (!in_array($level, $this->getSetting('headings.allowed'))) {
+                return;
+            }
+            
             $id = $Block['element']['attributes']['id'] ?? $this->createAnchorID($text);
 
             $Block['element']['attributes'] = ['id' => $id];
