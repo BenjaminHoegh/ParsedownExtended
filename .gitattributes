@@ -1,4 +1,0 @@
-# Ignore all tests for archive
-/test               export-ignore
-/.gitattributes     export-ignore
-/.gitignore         export-ignore
