@@ -21,6 +21,7 @@ class ParsedownExtended extends ParsedownExtendedParentAlias
     private const TOC_TAG_DEFAULT = '[toc]';
     private const TOC_ID_ATTRIBUTE_DEFAULT = 'toc';
     private array $anchorRegister = [];
+    private array $anchorRegister = [];
     private array $contentsListArray = [];
     private int $firstHeadLevel = 0;
     private string $contentsListString = '';
@@ -1092,13 +1093,12 @@ class ParsedownExtended extends ParsedownExtendedParentAlias
         foreach ($this->settings['math']['block']['delimiters'] as $config) {
 
             $leftMarker = preg_quote($config['left'], '/');
-            $regex = '/^(?<!\\\\)(' . $leftMarker . ')(?!.)$/';
+            $regex = '/^(?<!\\\\)(' . $leftMarker . ')(.*)/';
 
-
-            if (preg_match($regex, $Line['text'])) {
+            if (preg_match($regex, $Line['text'], $matches)) {
                 return [
                     'element' => [
-                        'text' => '',
+                        'text' => $matches[2],
                     ],
                     'start' => $config['left'], // Store the start marker
                     'end' => $config['right'], // Store the end marker
@@ -1123,12 +1123,14 @@ class ParsedownExtended extends ParsedownExtendedParentAlias
 
         // Double escape the backslashes for regex pattern
         $rightMarker = preg_quote($Block['end'], '/');
-        $regex = '/^(?<!\\\\)(' . $rightMarker . ')$/';
+        $regex = '/^(?<!\\\\)(' . $rightMarker . ')(.*)/';
 
-        if (preg_match($regex, $Line['text'])) {
+        if (preg_match($regex, $Line['text'], $matches)) {
             $Block['complete'] = true;
             $Block['math'] = true;
-            $Block['element']['text'] = $Block['start'] . $Block['element']['text'] . $Block['end'];
+            $Block['element']['text'] = $Block['start'] . $Block['element']['text'] . $Block['end'] . $matches[2];
+
+
             return $Block;
         }
 
@@ -1328,6 +1330,11 @@ class ParsedownExtended extends ParsedownExtendedParentAlias
         if (! empty($Block)) {
             $text = $Block['element']['text'] ?? $Block['element']['handler']['argument'] ?? '';
             $level = $Block['element']['name'];
+
+            // check if level is allowed
+            if (!in_array($level, $this->getSetting('headings.allowed'))) {
+                return;
+            }
 
             // Prepare value for id generation by checking if the id attribute is set else use the text
             $id = $Block['element']['attributes']['id'] ?? $text;
