@@ -10,9 +10,7 @@ if (class_exists('ParsedownExtra')) {
     class_alias('Parsedown', 'ParsedownExtendedParentAlias');
 }
 
-/**
- * ParsedownExtended class extends the ParsedownExtendedParentAlias class and provides additional features and settings for parsing Markdown content.
- */
+
 class ParsedownExtended extends ParsedownExtendedParentAlias
 {
     public const VERSION = '1.2.3';
@@ -22,7 +20,7 @@ class ParsedownExtended extends ParsedownExtendedParentAlias
 
     private const TOC_TAG_DEFAULT = '[toc]';
     private const TOC_ID_ATTRIBUTE_DEFAULT = 'toc';
-    private array $anchorDuplicates = [];
+    private array $anchorRegister = [];
     private array $contentsListArray = [];
     private int $firstHeadLevel = 0;
     private string $contentsListString = '';
@@ -139,7 +137,7 @@ class ParsedownExtended extends ParsedownExtendedParentAlias
         'toc' => [
             'enabled' => true,
             'headings' => ['h1', 'h2', 'h3', 'h4', 'h5', 'h6'],
-            'set_toc_tag' => '[toc]',
+            'toc_tag' => '[toc]',
         ],
         'typographer' => true,
     ];
@@ -185,9 +183,6 @@ class ParsedownExtended extends ParsedownExtendedParentAlias
             $this->legacyMode = true;
         }
 
-        $specialCharacters = [
-            '\\', '`', '*', '_', '{', '}', '[', ']', '(', ')', '>', '#', '+', '-', '.', '!', '|', '?', '"', "'", '<',
-        ];
 
         $this->settings = $this->defaultSettings; // Start with default settings
         $this->initializeSettings($userSettings);
@@ -206,12 +201,11 @@ class ParsedownExtended extends ParsedownExtendedParentAlias
         // Add block types
         $this->addBlockType(['\\','$'], 'MathNotation');
 
-
         /**
-         * This function iterates through each inline type list and moves the 'SpecialCharacter' element
+         * Move 'SpecialCharacter' to the end of the list if it exists.
          * to the end of the list if it exists. This ensures that 'SpecialCharacter' is always processed last
          * when parsing the markdown content. This is necessary to prevent the parser from interfering with
-         * other inline types.
+         * other types.
          */
         foreach ($this->InlineTypes as &$list) {
             if (($key = array_search('SpecialCharacter', $list)) !== false) {
@@ -219,15 +213,16 @@ class ParsedownExtended extends ParsedownExtendedParentAlias
                 $list[] = 'SpecialCharacter'; // Append 'SpecialCharacter' at the end
             }
         }
+
+        foreach ($this->BlockTypes as &$list) {
+            if (($key = array_search('SpecialCharacter', $list)) !== false) {
+                unset($list[$key]);
+                $list[] = 'SpecialCharacter'; // Append 'SpecialCharacter' at the end
+            }
+        }
     }
 
-    /**
-     * Initializes the settings of the ParsedownExtended class.
-     *
-     * @param array $userSettings The user-defined settings.
-     *
-     * @throws InvalidArgumentException If a non-existent setting is provided or if the provided value has an incorrect type.
-     */
+
     private function initializeSettings(array $userSettings): void
     {
         foreach ($userSettings as $key => $value) {
@@ -327,14 +322,10 @@ class ParsedownExtended extends ParsedownExtendedParentAlias
     }
 
     /**
-     * Overwrites inlineEmphasis in order to give more control over
-     * which emphasis elements are parsed.
+     * Parses inline emphasis in the text.
      *
-     * @param array $Excerpt The excerpt containing the text to parse.
-     *
-     * @return (int|string[])[]|null
-     *
-     * @psalm-return array{extent: int<0, max>, element: array{name: 'em'|'strong', handler: 'line', text: string}}|null
+     * @param array $Excerpt The excerpt containing the text to be parsed.
+     * @return array|null The parsed emphasis element or null if no emphasis is found.
      */
     protected function inlineEmphasis($Excerpt)
     {
@@ -365,16 +356,10 @@ class ParsedownExtended extends ParsedownExtendedParentAlias
 
 
     /**
-     * Inline Marking function.
+     * Marks inline text with the 'mark' HTML element if emphasis marking is enabled.
      *
-     * This function is responsible for handling inline mark in the parsed text.
-     * It searches for text enclosed in double equal signs (==) and wraps it in a <mark> element.
-     *
-     * @param array $Excerpt The excerpt containing the text to be highlighted.
-     *
-     * @return (int|string[])[]|null
-     *
-     * @psalm-return array{extent: int<0, max>, element: array{name: 'mark', text: string}}|null
+     * @param array $Excerpt The excerpt array containing the text to be marked.
+     * @return array|null The marked text as an array or null if marking is not enabled.
      */
     protected function inlineMarking(array $Excerpt): ?array
     {
@@ -395,10 +380,12 @@ class ParsedownExtended extends ParsedownExtendedParentAlias
         return null;
     }
 
+
     /**
-     * @return (int|string[])[]|null
+     * Checks for inline insertions in the given excerpt.
      *
-     * @psalm-return array{extent: int<0, max>, element: array{name: 'ins', text: string}}|null
+     * @param array $Excerpt The excerpt to check.
+     * @return array|null Returns an array with the extent and element of the insertion if found, otherwise null.
      */
     protected function inlineInsertions(array $Excerpt): ?array
     {
@@ -420,14 +407,10 @@ class ParsedownExtended extends ParsedownExtendedParentAlias
     }
 
     /**
-     * Parses inline keystrokes in the given excerpt.
-     * It searches for text enclosed in double square brackets (e.g. [[Ctrl+Alt+Del]]) and wraps it in a <kbd> element.
+     * Parses inline keystrokes in the text and returns an array containing the extent and element information.
      *
-     * @param array $Excerpt The excerpt to parse.
-     *
-     * @return (int|string[])[]|null
-     *
-     * @psalm-return array{extent: int<0, max>, element: array{name: 'kbd', text: string}}|null
+     * @param array $Excerpt The excerpt array containing the text to be parsed.
+     * @return array|null Returns an array with 'extent' and 'element' information if inline keystrokes are found, otherwise returns null.
      */
     protected function inlineKeystrokes(array $Excerpt): ?array
     {
@@ -449,15 +432,12 @@ class ParsedownExtended extends ParsedownExtendedParentAlias
     }
 
 
+
     /**
-     * Parses inline superscript elements in the given excerpt.
-     * It searches for text enclosed in double carets (e.g. ^superscript^) and wraps it in a <sup> element.
+     * Parses inline superscript elements in the text.
      *
-     * @param array $Excerpt The excerpt to parse.
-     *
-     * @return (int|string[])[]|null
-     *
-     * @psalm-return array{extent: int<0, max>, element: array{name: 'sup', text: string, function: 'lineElements'}}|null
+     * @param array $Excerpt The excerpt containing the text to parse.
+     * @return array|null Returns an array with the extent and element of the superscript, or null if not found.
      */
     protected function inlineSuperscript(array $Excerpt): ?array
     {
@@ -480,15 +460,12 @@ class ParsedownExtended extends ParsedownExtendedParentAlias
     }
 
 
+
     /**
-     * Parses inline subscript elements in the given excerpt.
-     * It searches for text enclosed in double tildes (e.g. ~subscript~) and wraps it in a <sub> element.
+     * Parses inline subscript elements in the text.
      *
-     * @param array $Excerpt The excerpt to parse.
-     *
-     * @return (int|string[])[]|null
-     *
-     * @psalm-return array{extent: int<0, max>, element: array{name: 'sub', text: string, function: 'lineElements'}}|null
+     * @param array $Excerpt The excerpt containing the text to parse.
+     * @return array|null Returns an array with the extent and element if a subscript element is found, otherwise null.
      */
     protected function inlineSubscript(array $Excerpt): ?array
     {
@@ -511,39 +488,43 @@ class ParsedownExtended extends ParsedownExtendedParentAlias
     }
 
 
+
     /**
      * Parses inline math notation in the given excerpt.
      *
      * @param array $Excerpt The excerpt to parse.
-     *
-     * @return (int|string[])[]|null
-     *
-     * @psalm-return array{extent: int<0, max>, element: array{text: string}}|null
+     * @return array|null The parsed math notation or null if parsing is disabled.
      */
     protected function inlineMathNotation($Excerpt)
     {
+        // Check if parsing of math notation is enabled
         if (!$this->isEnabled('math') || !$this->isEnabled('math.inline')) {
             return null;
         }
 
+        // Check if the excerpt has enough characters
         if (!isset($Excerpt['text'][1])) {
             return;
         }
 
+        // Check if there is whitespace before the excerpt
         if ($Excerpt['before'] !== '' && preg_match('/\s/', $Excerpt['before']) === 0) {
             return;
         }
 
+        // Iterate through the inline math delimiters
         foreach ($this->settings['math']['inline']['delimiters'] as $config) {
             $leftMarker = preg_quote($config['left'], '/');
             $rightMarker = preg_quote($config['right'], '/');
 
+            // Construct the regular expression pattern
             if ($config['left'][0] === '\\' || strlen($config['left']) > 1) {
                 $regex = '/^(?<!\S)' . $leftMarker . '(?![\r\n])((?:\\\\' . $rightMarker . '|\\\\' . $leftMarker . '|[^\r\n])+?)' . $rightMarker . '(?![^\s,.])/s';
             } else {
                 $regex = '/^(?<!\S)' . $leftMarker . '(?![\r\n])((?:\\\\' . $rightMarker . '|\\\\' . $leftMarker . '|[^' . $rightMarker . '\r\n])+?)' . $rightMarker . '(?![^\s,.])/s';
             }
 
+            // Match the regular expression pattern against the excerpt
             if (preg_match($regex, $Excerpt['text'], $matches)) {
                 return [
                     'extent' => strlen($matches[0]),
@@ -558,14 +539,19 @@ class ParsedownExtended extends ParsedownExtendedParentAlias
     }
 
 
+
     /**
-     * Escapes inline escape sequences in the parsedown text.
+     * Escapes inline escape sequences in the given Excerpt.
      *
-     * @param array $Excerpt The excerpt containing the escape sequence.
+     * This method checks if the 'math' feature is enabled and if so, it iterates through the configured inline delimiters for math expressions.
+     * It constructs a regular expression pattern based on the left and right markers of each delimiter and checks if the pattern matches the Excerpt's text.
+     * If a match is found, the method returns early.
      *
-     * @return (int|mixed)[]|null
+     * If the 'math' feature is not enabled or no match is found, the method checks if the second character of the Excerpt's text is a special character.
+     * If it is, the method returns an array with the special character as the 'markup' value and an extent of 2.
      *
-     * @psalm-return array{markup: mixed, extent: 2}|null
+     * @param array $Excerpt The Excerpt containing the text to be processed.
+     * @return array|null Returns an array with the 'markup' and 'extent' values if a special character is found, otherwise returns null.
      */
     protected function inlineEscapeSequence($Excerpt)
     {
@@ -596,15 +582,17 @@ class ParsedownExtended extends ParsedownExtendedParentAlias
     }
 
 
+
     /**
      * Applies typographic substitutions to the inline text.
-     * It searches for typographic substitutions and replaces them with their HTML entities.
      *
-     * @param array $Excerpt The excerpt containing the inline text.
+     * This method checks if the typographer feature is enabled. If not, it returns null.
+     * If enabled, it applies various typographic substitutions to the text, such as replacing
+     * "(c)" with the copyright symbol, "(r)" with the registered trademark symbol, etc.
+     * It also handles smart ellipses and replaces consecutive dots with ellipses.
      *
-     * @return ((null|string)[]|int)[]|null
-     *
-     * @psalm-return array{extent: int<0, max>, element: array{text: null|string}}|null
+     * @param array $Excerpt The excerpt array containing the inline text.
+     * @return array|null The modified excerpt array with typographic substitutions applied, or null if typographer is disabled.
      */
     protected function inlineTypographer(array $Excerpt): ?array
     {
@@ -639,14 +627,12 @@ class ParsedownExtended extends ParsedownExtendedParentAlias
         return null;
     }
 
+
     /**
-     * Applies smartypants substitutions to the inline text.
+     * Applies SmartyPants substitutions to the inline text.
      *
      * @param array $Excerpt The excerpt containing the inline text.
-     *
-     * @return (int|string[])[]|null
-     *
-     * @psalm-return array{extent: int<1, max>, element: array{text: string}}|null
+     * @return array|null The modified excerpt with SmartyPants substitutions applied, or null if SmartyPants is not enabled.
      */
     protected function inlineSmartypants($Excerpt)
     {
@@ -766,14 +752,12 @@ class ParsedownExtended extends ParsedownExtendedParentAlias
         }
     }
 
+
     /**
      * Replaces emoji codes with corresponding emoji characters.
      *
-     * @param string $Excerpt The text to process.
-     *
-     * @return (int|string[])[]|null
-     *
-     * @psalm-return array{extent: int<0, max>, element: array{text: string}}|null
+     * @param array $Excerpt The excerpt containing the emoji codes.
+     * @return array|null The excerpt with emoji codes replaced or null if emojis are disabled.
      */
     protected function inlineEmojis(array $Excerpt): ?array
     {
@@ -1098,16 +1082,7 @@ class ParsedownExtended extends ParsedownExtendedParentAlias
         }
     }
 
-    /**
-     * This method is responsible for handling block-level math expressions in the parsed Markdown.
-     * It checks if the given line contains a block-level math expression and returns the appropriate block structure.
-     *
-     * @param array $Line The line to be processed.
-     *
-     * @return (mixed|string[])[]|null
-     *
-     * @psalm-return array{element: array{text: ''}, start: mixed, end: mixed}|null
-     */
+
     protected function blockMathNotation($Line)
     {
         if (!$this->isEnabled('math') || !$this->isEnabled('math.block')) {
@@ -1134,13 +1109,7 @@ class ParsedownExtended extends ParsedownExtendedParentAlias
         return;
     }
 
-    /**
-     * Continues the block math notation parsing.
-     *
-     * @param  array $Line  The current line being parsed.
-     * @param  array $Block The current block being parsed.
-     * @return array|null The updated block or null if the block is complete.
-     */
+
     protected function blockMathNotationContinue($Line, $Block)
     {
         if (isset($Block['complete'])) {
@@ -1168,25 +1137,14 @@ class ParsedownExtended extends ParsedownExtendedParentAlias
         return $Block;
     }
 
-    /**
-     * Returns the complete block of math notation.
-     *
-     * @param  string $Block The block of math notation.
-     * @return string The complete block of math notation.
-     */
+
     protected function blockMathNotationComplete($Block)
     {
         return $Block;
     }
 
 
-    /**
-     * This method handles the parsing of fenced code blocks in the ParsedownExtended class.
-     *
-     * @param array $Line The current line being parsed.
-     *
-     * @return array|null The parsed block or null if code blocks are disabled.
-     */
+
     protected function blockFencedCode($Line)
     {
         if (!$this->isEnabled('code') or !$this->isEnabled('code.blocks')) {
@@ -1252,14 +1210,7 @@ class ParsedownExtended extends ParsedownExtendedParentAlias
         return $Block;
     }
 
-    /**
-     * This function is used to generate list items and tasked list items.
-     * It handles both legacy mode and non-legacy mode.
-     *
-     * @param array $lines The lines of text to be processed.
-     *
-     * @return mixed The processed list items.
-     */
+
     protected function li($lines)
     {
         if (!$this->isEnabled('lists.tasks')) {
@@ -1296,6 +1247,7 @@ class ParsedownExtended extends ParsedownExtendedParentAlias
 
             return $markup;
         } else {
+            /** @psalm-suppress UndefinedMethod */
             $Elements = $this->linesElements($lines);
 
             $text = $Elements[0]['handler']['argument'];
@@ -1330,15 +1282,7 @@ class ParsedownExtended extends ParsedownExtendedParentAlias
     }
 
 
-    /**
-     * Heading process.
-     * Creates heading block element and stores to the ToC list. It overrides
-     * the parent method: \Parsedown::blockHeader() and returns $Block array if
-     * the $Line is a heading element.
-     *
-     * @param  array $Line Array that Parsedown detected as a block type element.
-     * @return void|array   Array of Heading Block.
-     */
+
     protected function blockHeader($Line)
     {
         if (!$this->isEnabled('headings')) {
@@ -1350,7 +1294,15 @@ class ParsedownExtended extends ParsedownExtendedParentAlias
         if (! empty($Block)) {
             $text = $Block['element']['text'] ?? $Block['element']['handler']['argument'] ?? '';
             $level = $Block['element']['name'];
-            $id = $Block['element']['attributes']['id'] ?? $this->createAnchorID($text);
+
+            // check if level is allowed
+            if (!in_array($level, $this->getSetting('headings.allowed'))) {
+                return;
+            }
+
+            // Prepare value for id generation by checking if the id attribute is set else use the text
+            $id = $Block['element']['attributes']['id'] ?? $text;
+            $id = $this->createAnchorID($id);
 
             $Block['element']['attributes'] = ['id' => $id];
 
@@ -1376,7 +1328,10 @@ class ParsedownExtended extends ParsedownExtendedParentAlias
         if (! empty($Block)) {
             $text = $Block['element']['text'] ?? $Block['element']['handler']['argument'] ?? '';
             $level = $Block['element']['name'];
-            $id = $Block['element']['attributes']['id'] ?? $this->createAnchorID($text);
+
+            // Prepare value for id generation by checking if the id attribute is set else use the text
+            $id = $Block['element']['attributes']['id'] ?? $text;
+            $id = $this->createAnchorID($id);
 
             $Block['element']['attributes'] = ['id' => $id];
 
@@ -1408,16 +1363,15 @@ class ParsedownExtended extends ParsedownExtendedParentAlias
     }
 
     /**
-     * (Override)
-     * Tablespan
-     * Modifyed version of Tablespan by @KENNYSOFT
-     */
+         * (Override)
+         * Tablespan
+         * Modifyed version of Tablespan by @KENNYSOFT
+         */
     protected function blockTableComplete(array $block): array
     {
         if (!$this->isEnabled('tables.tablespan')) {
             return $block;
         }
-        $headerElements = null;
 
         if ($this->legacyMode === true) {
             // 1.7
@@ -1435,6 +1389,7 @@ class ParsedownExtended extends ParsedownExtendedParentAlias
                 // 1.7
                 while ($index && $headerElements[$index - 1]['text'] === '>') {
                     $colspan++;
+                    /** @psalm-suppress UnsupportedReferenceUsage */
                     $PreviousHeaderElement = & $headerElements[--$index];
                     $PreviousHeaderElement['merged'] = true;
                     if (isset($PreviousHeaderElement['attributes'])) {
@@ -1443,8 +1398,9 @@ class ParsedownExtended extends ParsedownExtendedParentAlias
                 }
             } else {
                 // 1.8
-                while ($index && '>' === $HeaderElements[$index - 1]['handler']['argument']) {
+                while ($index && '>' === $headerElements[$index - 1]['handler']['argument']) {
                     $colspan++;
+                    /** @psalm-suppress UnsupportedReferenceUsage */
                     $PreviousHeaderElement = & $headerElements[--$index];
                     $PreviousHeaderElement['merged'] = true;
                     if (isset($PreviousHeaderElement['attributes'])) {
@@ -1493,6 +1449,7 @@ class ParsedownExtended extends ParsedownExtendedParentAlias
                     // 1.7
                     while ($index && $elements[$index - 1]['text'] === '>') {
                         $colspan++;
+                        /** @psalm-suppress UnsupportedReferenceUsage */
                         $PreviousElement = & $elements[--$index];
                         $PreviousElement['merged'] = true;
                         if (isset($PreviousElement['attributes'])) {
@@ -1503,6 +1460,7 @@ class ParsedownExtended extends ParsedownExtendedParentAlias
                     // 1.8
                     while ($index && '>' === $elements[$index - 1]['handler']['argument']) {
                         ++$colspan;
+                        /** @psalm-suppress UnsupportedReferenceUsage */
                         $PreviousElement = &$elements[--$index];
                         $PreviousElement['merged'] = true;
                         if (isset($PreviousElement['attributes'])) {
@@ -1584,31 +1542,19 @@ class ParsedownExtended extends ParsedownExtendedParentAlias
 
 
     // Functions related to Table of Contents
-    // A slightly modified version of ToC by @KEINOS
+    // Modified version of ToC by @KEINOS
     // -------------------------------------------------------------------------
 
-    /**
-     * Parses the given markdown string to an HTML string but it leaves the ToC
-     * tag as is. It's an alias of the parent method "\parent::text()".
-     *
-     * @param  string $text Markdown string to be parsed.
-     * @return string        Parsed HTML string.
-     */
+
     public function body(string $text): string
     {
         $text = $this->encodeTag($text); // Escapes ToC tag temporarily
-        $html = parent::text($text);           // Parses the markdown text
-        return $this->decodeTag($html); // Unescapes the ToC tag
+        $html = parent::text($text);     // Parses the markdown text
+        return $this->decodeTag($html);  // Unescapes the ToC tag
     }
 
-    /**
-     * Returns the parsed ToC.
-     * If the arg is "string" then it returns the ToC in HTML string.
-     *
-     * @param  string $type_return Type of the return format. "string" or "json".
-     * @return string               HTML/JSON string of ToC.
-     */
-    public function contentsList($type_return = 'string'): string
+
+    public function contentsList(string $type_return = 'string'): string
     {
         switch (strtolower($type_return)) {
             case 'string':
@@ -1618,29 +1564,19 @@ class ParsedownExtended extends ParsedownExtendedParentAlias
             default:
                 $backtrace = debug_backtrace();
                 $caller = $backtrace[0];
-                $errorMessage = "Unknown return type '{$type_return}' given while parsing ToC. Called in " . $caller['file'] . " on line " . $caller['line'];
+                $errorMessage = "Unknown return type '{$type_return}' given while parsing ToC. Called in " . ($caller['file'] ?? 'unknown') . " on line " . ($caller['line'] ?? 'unknown');
                 throw new InvalidArgumentException($errorMessage);
         }
     }
 
 
-    /**
-     * Allows users to define their own logic for createAnchorID.
-     */
+
     public function setCreateAnchorIDCallback(callable $callback): void
     {
         $this->createAnchorIDCallback = $callback;
     }
 
-    /**
-     * Creates an anchor ID for the given text.
-     *
-     * If a callback is provided, it uses the user-defined logic to create the anchor ID.
-     * Otherwise, it uses the default logic which involves normalizing the string, replacing characters, and sanitizing the anchor.
-     *
-     * @param  string $text The text for which to create the anchor ID.
-     * @return string The created anchor ID.
-     */
+
     protected function createAnchorID(string $text): ?string
     {
         // Check settings
@@ -1675,23 +1611,13 @@ class ParsedownExtended extends ParsedownExtendedParentAlias
         return $this->uniquifyAnchorID($text);
     }
 
-    /**
-     * Normalize a string by converting it to lowercase and encoding it to UTF-8.
-     *
-     * @param  string $text The string to be normalized.
-     * @return string The normalized string.
-     */
-    protected function normalizeString(string $text): string
+
+    protected function normalizeString(string $text)
     {
         return mb_convert_encoding($text, 'UTF-8', mb_list_encodings());
     }
 
-    /**
-     * Replaces special characters in a string with their corresponding ASCII equivalents.
-     *
-     * @param  string $text The input string.
-     * @return string The modified string with replaced characters.
-     */
+
     protected function transliterate(string $text): string
     {
         $characterMap = [
@@ -1762,13 +1688,7 @@ class ParsedownExtended extends ParsedownExtendedParentAlias
         return strtr($text, $characterMap);
     }
 
-    /**
-     * Sanitizes an anchor text by removing special characters, replacing spaces with dashes,
-     * and removing consecutive dashes.
-     *
-     * @param  string $text The anchor text to sanitize.
-     * @return string The sanitized anchor text.
-     */
+
     protected function sanitizeAnchor(string $text): string
     {
         $delimiter = $this->getSetting('headings.auto_anchors.delimiter');
@@ -1781,46 +1701,40 @@ class ParsedownExtended extends ParsedownExtendedParentAlias
         return $text;
     }
 
-    /**
-     * Generate a unique anchor ID based on the given text.
-     *
-     * @param  string $text The text to generate the anchor ID from.
-     * @return string The unique anchor ID.
-     */
+
     protected function uniquifyAnchorID(string $text): string
     {
         $blacklist = $this->getSetting('headings.auto_anchors.blacklist');
+        $originalText = $text; // Keep the original text for reference
 
         // Initialize the count for this text if not already set
-        if (!isset($this->anchorDuplicates[$text])) {
-            $this->anchorDuplicates[$text] = 0;
+        if (!isset($this->anchorRegister[$text])) {
+            $this->anchorRegister[$text] = 0;
+        } else {
+            // If already set, increment to check for the next possible suffix
+            $this->anchorRegister[$text]++;
         }
 
-        // Check if the given text is not in the blacklist and does not have any duplicates
-        if (!in_array($text, $blacklist) && !isset($this->anchorDuplicates[$text])) {
-            return $text;
+        // Adjust the count based on the blacklist, ensuring we skip blacklisted numbers
+        while (true) {
+            $potentialId = $originalText . ($this->anchorRegister[$text] > 0 ? '-' . $this->anchorRegister[$text] : '');
+            if (!in_array($potentialId, $blacklist)) {
+                break; // Found a non-blacklisted ID, stop adjusting the count
+            }
+            $this->anchorRegister[$text]++; // Increment the count and check the next potential ID
         }
 
-        $originalText = $text;
-        $count = $this->anchorDuplicates[$originalText] ?? 0;
+        // If the adjusted count is 0, it means the original text is not blacklisted and has not appeared before
+        if ($this->anchorRegister[$text] === 0) {
+            return $originalText; // Return the original text as is
+        }
 
-        // Generate a unique anchor ID by appending a count to the original text
-        do {
-            $count++;
-            $text = $originalText . '-' . $count;
-        } while (in_array($text, $blacklist) || isset($this->anchorDuplicates[$text]));
-
-        // Store the count for the original text in the duplicates array
-        $this->anchorDuplicates[$originalText] = $count;
-        return $text;
+        // Return the text appended with the adjusted count, skipping any blacklisted numbers
+        return $originalText . '-' . $this->anchorRegister[$text];
     }
 
-    /**
-     * Decodes the hashed ToC tag to an original tag and replaces.
-     *
-     * @param  string $text
-     * @return string
-     */
+
+
     protected function decodeTag(string $text): string
     {
         $salt = $this->getSalt();
@@ -1834,12 +1748,7 @@ class ParsedownExtended extends ParsedownExtendedParentAlias
         return str_replace($tag_hashed, $tag_origin, $text);
     }
 
-    /**
-     * Encodes the ToC tag to a hashed tag and replace.
-     *
-     * @param  string $text
-     * @return string
-     */
+
     protected function encodeTag(string $text): string
     {
         $salt = $this->getSalt();
@@ -1854,37 +1763,23 @@ class ParsedownExtended extends ParsedownExtendedParentAlias
         return str_replace($tag_origin, $tag_hashed, $text);
     }
 
-    /**
-     * Get only the text from a markdown string.
-     * It parses to HTML once then trims the tags to get the text.
-     *
-     * @param  string $text Markdown text.
-     * @return string
-     */
+
     protected function fetchText($text): string
     {
         return trim(strip_tags($this->line($text)));
     }
 
-    /**
-     * Gets the ID attribute of the ToC for HTML tags.
-     *
-     * @return string
-     */
+
     protected function getIdAttributeToc(): string
     {
-        if (isset($this->id_toc) && ! empty($this->id_toc)) {
+        if (!empty($this->id_toc)) {
             return $this->id_toc;
         }
 
         return self::TOC_ID_ATTRIBUTE_DEFAULT;
     }
 
-    /**
-     * Unique string to use as a salt value.
-     *
-     * @return string
-     */
+
     protected function getSalt(): string
     {
         static $salt;
@@ -1892,30 +1787,21 @@ class ParsedownExtended extends ParsedownExtendedParentAlias
             return $salt;
         }
 
-        $salt = hash('md5', time());
+        $salt = hash('md5', (string) time());
         return $salt;
     }
 
-    /**
-     * Gets the markdown tag for ToC.
-     *
-     * @return string
-     */
+
     protected function getTagToc(): string
     {
-        if (isset($this->tag_toc) && !empty($this->tag_toc)) {
+        if (!empty($this->tag_toc)) {
             return $this->tag_toc;
         }
 
         return self::TOC_TAG_DEFAULT;
     }
 
-    /**
-     * Set/stores the heading block to ToC list in a string and array format.
-     *
-     * @param  array $Content Heading info such as "level","id" and "text".
-     * @return void
-     */
+
     protected function setContentsList(array $Content): void
     {
         // Stores as an array
@@ -1924,23 +1810,13 @@ class ParsedownExtended extends ParsedownExtendedParentAlias
         $this->setContentsListAsString($Content);
     }
 
-    /**
-     * Sets/stores the heading block info as an array.
-     *
-     * @param  array $Content
-     * @return void
-     */
+
     protected function setContentsListAsArray(array $Content): void
     {
         $this->contentsListArray[] = $Content;
     }
 
-    /**
-     * Sets/stores the heading block info as a list in markdown format.
-     *
-     * @param  array $Content Heading info such as "level","id" and "text".
-     * @return void
-     */
+
     protected function setContentsListAsString(array $Content): void
     {
         $text = $this->fetchText($Content['text']);
@@ -1957,12 +1833,7 @@ class ParsedownExtended extends ParsedownExtendedParentAlias
         $this->contentsListString .= "{$indent}- {$link}" . PHP_EOL;
     }
 
-    /**
-     * Sets the user defined ToC markdown tag.
-     *
-     * @param  string $tag
-     * @return void
-     */
+
     public function setTagToc($tag): void
     {
         $tag = trim($tag);
@@ -1972,21 +1843,20 @@ class ParsedownExtended extends ParsedownExtendedParentAlias
         } else {
             $backtrace = debug_backtrace();
             $caller = $backtrace[0];
-            $errorMessage = "Malformed ToC user tag given: {$tag}. Called in " . $caller['file'] . " on line " . $caller['line'];
+            $errorMessage = "Malformed ToC user tag given: {$tag}. Called in " . ($caller['file'] ?? 'unknown') . " on line " . ($caller['line'] ?? 'unknown');
             throw new InvalidArgumentException($errorMessage);
         }
     }
 
-    /**
-     * Parses markdown string to HTML and also the "[toc]" tag as well.
-     * It overrides the parent method: \Parsedown::text().
-     *
-     * @param  string $text
-     * @return string
-     */
+
     public function text($text): string
     {
         $html = $this->body($text);
+
+        if (!$this->isEnabled('toc')) {
+            return $html;
+        }
+
         $tag_origin = $this->getTagToc();
         if (strpos($text, $tag_origin) === false) {
             return $html;
@@ -2001,15 +1871,7 @@ class ParsedownExtended extends ParsedownExtendedParentAlias
     // Settings
     // -------------------------------------------------------------------------
 
-    /**
-     * Sets a setting value in the ParsedownExtended class.
-     *
-     * @param string $settingName The name of the setting to be set.
-     * @param mixed $settingValue The value to be set for the setting.
-     * @param bool $overwrite (optional) Whether to overwrite the existing setting value if it already exists. Default is false.
-     * @return self Returns an instance of the ParsedownExtended class.
-     * @throws \InvalidArgumentException If the setting name is invalid.
-     */
+
     public function setSetting(string $settingName, $settingValue, bool $overwrite = false): self
     {
         // Split the settingName into parts using dot as separator
@@ -2030,19 +1892,12 @@ class ParsedownExtended extends ParsedownExtendedParentAlias
             $currentSettings = &$currentSettings[$part];
         }
 
-        /**
-         * If the setting value is an array and the 'enabled' key is not set in the setting value,
-         * but it is set in the current settings, then set the 'enabled' key in the setting value
-         * to the value of the 'enabled' key in the current settings.
-         */
+
         if (is_array($settingValue) && isset($currentSettings['enabled']) && !isset($settingValue['enabled'])) {
             $settingValue['enabled'] = $currentSettings['enabled'];
         }
 
-        /**
-         * If $overwrite is false and both current and new setting values are arrays,
-         * merge them. Otherwise, replace the current setting with the new value.
-         */
+
         if (!$overwrite && is_array($currentSettings) && is_array($settingValue)) {
             // Merge the arrays, preserving existing elements and adding new ones from $settingValue
             $currentSettings = array_merge($currentSettings, $settingValue);
@@ -2061,15 +1916,7 @@ class ParsedownExtended extends ParsedownExtendedParentAlias
     }
 
 
-    /**
-     * Sets multiple setting values for the ParsedownExtended class.
-     *
-     * @param array $settings An associative array where keys are setting names and values are the new values.
-     *
-     * @return static
-     *
-     * @throws InvalidArgumentException If any of the setting keys do not exist or if the values are of invalid types.
-     */
+
     public function setSettings(array $settings): self
     {
         foreach ($settings as $key => $value) {
@@ -2098,14 +1945,7 @@ class ParsedownExtended extends ParsedownExtendedParentAlias
     }
 
 
-    /**
-     * Retrieves the value of a specific setting based on the provided key.
-     * If the setting is a array it will return the 'enabled' value.
-     *
-     * @param  string $key The key of the setting to retrieve.
-     * @return mixed The value of the setting.
-     * @throws InvalidArgumentException If the setting does not exist.
-     */
+
     public function getSetting(string $key)
     {
         $keys = explode('.', $key);
@@ -2126,11 +1966,7 @@ class ParsedownExtended extends ParsedownExtendedParentAlias
         return $current;
     }
 
-    /**
-     * Retrieves all settings for the ParsedownExtended class.
-     *
-     * @return array Returns an array of all settings.
-     */
+
     public function getSettings(): array
     {
         return $this->settings;
@@ -2140,16 +1976,7 @@ class ParsedownExtended extends ParsedownExtendedParentAlias
     // Helper functions
     // -------------------------------------------------------------------------
 
-    /**
-     * Adds an inline type to the ParsedownExtended class.
-     *
-     * @param string|string[] $markers  The marker(s) for the inline type.
-     * @param string          $funcName The name of the function to handle the inline type.
-     *
-     * @return void
-     *
-     * @psalm-param list{0: '('|'<'|'\', 1: '$'|'.'|'>', 2?: '+'|'-', 3?: '!'|'.', 4?: '''|'?', 5?: '"', 6?: '`'}|string $markers
-     */
+
     private function addInlineType($markers, string $funcName): void
     {
         // Ensure $markers is an array, even if it's a single marker
@@ -2160,42 +1987,37 @@ class ParsedownExtended extends ParsedownExtendedParentAlias
                 $this->InlineTypes[$marker] = [];
             }
 
+            // add to specialcharecters array
+            if (!in_array($marker, $this->specialCharacters)) {
+                $this->specialCharacters[] = $marker;
+            }
+
             // add to the beginning of the array so it has priority
-            // array_unshift($this->InlineTypes[$marker], $funcName);
             $this->InlineTypes[$marker][] = $funcName;
             $this->inlineMarkerList .= $marker;
         }
     }
 
 
-    /**
-     * Adds a block type to the ParsedownExtended class.
-     *
-     * @param string[] $markers  The marker(s) representing the block type.
-     * @param string   $funcName The name of the function to handle the block type.
-     *
-     * @return void
-     *
-     * @psalm-param list{'\', '$'} $markers
-     */
+
     private function addBlockType(array $markers, string $funcName): void
     {
-        // Ensure $markers is an array, even if it's a single marker
-        $markers = (array) $markers;
-
         foreach ($markers as $marker) {
             if (!isset($this->BlockTypes[$marker])) {
                 $this->BlockTypes[$marker] = [];
             }
+
+            // add to specialcharecters array
+            if (!in_array($marker, $this->specialCharacters)) {
+                $this->specialCharacters[] = $marker;
+            }
+
             // add to the beginning of the array so it has priority
-            //array_unshift($this->BlockTypes[$marker], $funcName);
             $this->BlockTypes[$marker][] = $funcName;
         }
     }
 
-    /**
-     * Overwrite to allow for custom block types
-     */
+
     protected function element(array $Element)
     {
         if ($this->legacyMode) {
@@ -2211,12 +2033,10 @@ class ParsedownExtended extends ParsedownExtendedParentAlias
 
 
     /**
-     * Overwrite line from Parsedown to allow for more precise control over inline elements
-     * line() is 1.7 version of lineElements() from 1.8, so we overwrite it too, it will not be called
-     * when using 1.8 version of parsedown
-     *
-     * @return string
-     */
+         * Overwrite line from Parsedown to allow for more precise control over inline elements
+         * line() is 1.7 version of lineElements() from 1.8, so we overwrite it too, it will not be called
+         * when using 1.8 version of parsedown
+         */
     public function line($text, $nonNestables = [])
     {
         $markup = '';
@@ -2301,12 +2121,10 @@ class ParsedownExtended extends ParsedownExtendedParentAlias
     }
 
     /**
-     * Overwrite lineElements from Parsedown to allow for more precise control over inline elements
-     * lineElements() is 1.8 version of line() from 1.7, so we overwrite it too, it will not be called
-     * when using 1.7 version of parsedown
-     *
-     * @psalm-return list{mixed,...}
-     */
+         * Overwrite lineElements from Parsedown to allow for more precise control over inline elements
+         * lineElements() is 1.8 version of line() from 1.7, so we overwrite it too, it will not be called
+         * when using 1.7 version of parsedown
+         */
     protected function lineElements($text, $nonNestables = []): array
     {
         $Elements = [];
@@ -2366,10 +2184,12 @@ class ParsedownExtended extends ParsedownExtendedParentAlias
                 $unmarkedText = substr($text, 0, $Inline['position']);
 
                 // compile the unmarked text
+                /** @psalm-suppress UndefinedMethod */
                 $InlineText = $this->inlineText($unmarkedText);
                 $Elements[] = $InlineText['element'];
 
                 // compile the inline
+                /** @psalm-suppress UndefinedMethod */
                 $Elements[] = $this->extractElement($Inline);
 
                 // remove the examined text
@@ -2382,12 +2202,14 @@ class ParsedownExtended extends ParsedownExtendedParentAlias
 
             $unmarkedText = substr($text, 0, $markerPosition + 1);
 
+            /** @psalm-suppress UndefinedMethod */
             $InlineText = $this->inlineText($unmarkedText);
             $Elements[] = $InlineText['element'];
 
             $text = substr($text, $markerPosition + 1);
         }
 
+        /** @psalm-suppress UndefinedMethod */
         $InlineText = $this->inlineText($text);
         $Elements[] = $InlineText['element'];
 
