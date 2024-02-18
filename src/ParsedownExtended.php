@@ -1356,7 +1356,9 @@ class ParsedownExtended extends ParsedownExtendedParentAlias
                 return;
             }
 
-            $id = $Block['element']['attributes']['id'] ?? $this->createAnchorID($text);
+            // Prepare value for id generation by checking if the id attribute is set else use the text
+            $id = $Block['element']['attributes']['id'] ?? $text;
+            $id = $this->createAnchorID($id);
 
             $Block['element']['attributes'] = ['id' => $id];
 
@@ -1388,7 +1390,9 @@ class ParsedownExtended extends ParsedownExtendedParentAlias
                 return;
             }
             
-            $id = $Block['element']['attributes']['id'] ?? $this->createAnchorID($text);
+            // Prepare value for id generation by checking if the id attribute is set else use the text
+            $id = $Block['element']['attributes']['id'] ?? $text;
+            $id = $this->createAnchorID($id);
 
             $Block['element']['attributes'] = ['id' => $id];
 
