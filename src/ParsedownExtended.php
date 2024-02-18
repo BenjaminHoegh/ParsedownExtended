@@ -21,7 +21,6 @@ class ParsedownExtended extends ParsedownExtendedParentAlias
     private const TOC_TAG_DEFAULT = '[toc]';
     private const TOC_ID_ATTRIBUTE_DEFAULT = 'toc';
     private array $anchorRegister = [];
-    private array $anchorRegister = [];
     private array $contentsListArray = [];
     private int $firstHeadLevel = 0;
     private string $contentsListString = '';
