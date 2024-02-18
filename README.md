@@ -21,7 +21,7 @@
 
 <br>
 
-[![Github All Releases](https://img.shields.io/github/release/BenjaminHoegh/ParsedownExtended.svg?style=flat-square)](https://github.com/BenjaminHoegh/ParsedownExtended/releases) [![GitHub](https://img.shields.io/github/license/BenjaminHoegh/ParsedownExtended?style=flat-square)](https://github.com/BenjaminHoegh/ParsedownExtended/blob/main/LICENSE.md)
+![GitHub Release](https://img.shields.io/github/v/release/BenjaminHoegh/ParsedownExtended?style=flat-square) ![GitHub License](https://img.shields.io/github/license/BenjaminHoegh/ParsedownExtended?style=flat-square)
 
 Table of contents
 
