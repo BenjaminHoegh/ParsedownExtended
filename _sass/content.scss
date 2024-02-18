@@ -40,7 +40,7 @@
     list-style-type: none;
     counter-reset: step-counter;
 
-    > li {
+    >li {
       position: relative;
 
       &::before {
@@ -73,7 +73,7 @@
   ul {
     list-style: none;
 
-    > li {
+    >li {
       &::before {
         position: absolute;
         margin-left: -1.4em;
@@ -100,7 +100,7 @@
     margin-right: 0.6em;
   }
 
-  hr + * {
+  hr+* {
     margin-top: 0;
   }
 
@@ -122,6 +122,7 @@
     grid-column: 1;
     font-weight: 500;
     text-align: right;
+
     &::after {
       content: ":";
     }
@@ -131,6 +132,7 @@
     grid-column: 2;
     margin-bottom: 0;
     margin-left: 1em;
+
     blockquote,
     div,
     dl,
@@ -158,6 +160,7 @@
   ol,
   ul {
     dl:first-child {
+
       dt:first-child,
       dd:nth-child(2) {
         margin-top: 0;
@@ -189,12 +192,12 @@
   }
 
   .anchor-heading:hover,
-  h1:hover > .anchor-heading,
-  h2:hover > .anchor-heading,
-  h3:hover > .anchor-heading,
-  h4:hover > .anchor-heading,
-  h5:hover > .anchor-heading,
-  h6:hover > .anchor-heading {
+  h1:hover>.anchor-heading,
+  h2:hover>.anchor-heading,
+  h3:hover>.anchor-heading,
+  h4:hover>.anchor-heading,
+  h5:hover>.anchor-heading,
+  h6:hover>.anchor-heading {
     svg {
       visibility: visible;
     }
@@ -218,26 +221,28 @@
       margin-top: $sp-2;
     }
 
-    + table,
-    + .table-wrapper,
-    + .code-example,
-    + .highlighter-rouge {
+    +table,
+    +.table-wrapper,
+    +.code-example,
+    +.highlighter-rouge {
       margin-top: 1em;
     }
 
-    + p {
+    +p {
       margin-top: 0;
     }
   }
 
 
   blockquote {
+    margin: 0;
+    margin-bottom: 16px;
     padding: 0 1em;
-    color: #D0D7DE;
+    color: #646D76;
     border-left: .25em solid #D0D7DE;
   }
 
-// Someting too add
+  // Someting too add
 
   kbd {
     box-shadow: 0px 0px 15px 0px rgba(0, 0, 0, 0.05);
@@ -255,7 +260,7 @@
     color: $body-text-color;
 
     &:before {
-      content:"\F097B";
+      content: "\F097B";
       font-size: 16px;
       transform: translate(0, -50%);
       position: absolute;
@@ -275,6 +280,7 @@
       box-sizing: border-box;
     }
   }
+
   code.console {
     box-shadow: 0px 0px 15px 0px rgba(0, 0, 0, 0.05);
     border-radius: 0.25rem;
@@ -289,8 +295,9 @@
     border-radius: 0.25rem;
     font-size: 14px;
     color: $body-text-color;
+
     &:before {
-      content:"\F07B7";
+      content: "\F07B7";
       font-size: 16px;
       transform: translate(0, -50%);
       position: absolute;
@@ -310,6 +317,7 @@
       box-sizing: border-box;
     }
   }
+
   code.folder {
     box-shadow: 0px 0px 15px 0px rgba(0, 0, 0, 0.05);
     border-radius: 0.25rem;
@@ -324,8 +332,9 @@
     border-radius: 0.25rem;
     font-size: 14px;
     color: $body-text-color;
+
     &:before {
-      content:"\F0256";
+      content: "\F0256";
       font-size: 16px;
       transform: translate(0, -50%);
       position: absolute;
@@ -345,6 +354,7 @@
       box-sizing: border-box;
     }
   }
+
   code.file {
     box-shadow: 0px 0px 15px 0px rgba(0, 0, 0, 0.05);
     border-radius: 0.25rem;
@@ -359,8 +369,9 @@
     border-radius: 0.25rem;
     font-size: 14px;
     color: $body-text-color;
+
     &:before {
-      content:"\F0224";
+      content: "\F0224";
       font-size: 16px;
       transform: translate(0, -50%);
       position: absolute;
@@ -380,12 +391,13 @@
       box-sizing: border-box;
     }
   }
+
   a.external {
     color: $body-text-color;
     background: $kbd-primary-background-color;
     border: 1px solid $kbd-border-color;
     border-radius: .25rem;
-    box-shadow: 0 0 15px 0 rgba(0,0,0,0.05);
+    box-shadow: 0 0 15px 0 rgba(0, 0, 0, 0.05);
     padding: 0.15rem .5rem 0.15rem 2.5rem;
     position: relative;
     font-family: "Open Sans", sans-serif;
@@ -407,7 +419,7 @@
       text-align: center;
       top: 50%;
       left: 0;
-      transform: translate(0,-50%);
+      transform: translate(0, -50%);
       box-sizing: border-box;
     }
 
@@ -424,15 +436,12 @@
     }
   }
 
-  > footer div {
+  >footer div {
     justify-content: flex-end;
     margin-bottom: 30px;
+
     #edit-this-page {
       color: gray;
     }
   }
 }
-
-
-
-
