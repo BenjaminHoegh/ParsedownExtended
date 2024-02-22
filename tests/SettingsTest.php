@@ -115,4 +115,25 @@ class SettingsTest extends TestCase
         $this->parsedownExtended->setSetting('emphasis', ['italic' => false], true);
         $this->assertEquals(['italic' => false, 'enabled' => true], $this->parsedownExtended->getSetting('emphasis'));
     }
+
+
+    public function testSettingArray(): void
+    {
+        $this->parsedownExtended->setSetting('math', [
+            'inline' => [
+                'delimiters' => [
+                    ['$', '$'],
+                    ['\\(', '\\)']
+                ],
+            ],
+            'block' => [
+                'delimiters' => [
+                    ['$$', '$$'],
+                    ['\\[', '\\]']
+                ],
+            ]
+        ]);
+        $this->assertTrue($this->parsedownExtended->isEnabled('math'));
+        $this->assertTrue($this->parsedownExtended->isEnabled('math.inline'));
+    }
 }

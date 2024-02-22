@@ -13,7 +13,7 @@ if (class_exists('ParsedownExtra')) {
 
 class ParsedownExtended extends ParsedownExtendedParentAlias
 {
-    public const VERSION = '1.2.4';
+    public const VERSION = '1.2.5';
     public const VERSION_PARSEDOWN_REQUIRED = '1.7.4';
     public const VERSION_PARSEDOWN_EXTRA_REQUIRED = '0.8.1';
     public const MIN_PHP_VERSION = '7.4';
@@ -1878,42 +1878,50 @@ class ParsedownExtended extends ParsedownExtendedParentAlias
     // -------------------------------------------------------------------------
 
 
-    public function setSetting(string $settingName, $settingValue, bool $overwrite = false): self
+    public function setSetting(string $settingName, $value, bool $overwrite = false): self
     {
         // Split the settingName into parts using dot as separator
         $settingParts = explode('.', $settingName);
 
         // Reference to the settings array
         /** @psalm-suppress UnsupportedPropertyReferenceUsage */
-        $currentSettings = &$this->settings;
+        $current = &$this->settings;
 
         // Iterate through the parts of the setting name
         foreach ($settingParts as $part) {
             // Check if the part exists in the current settings
-            if (!isset($currentSettings[$part])) {
+            if (!isset($current[$part])) {
                 // The setting name is invalid, return an error message
                 throw new \InvalidArgumentException("Invalid setting name: $settingName");
             }
             // Move to the next level of settings
-            $currentSettings = &$currentSettings[$part];
+            $current = &$current[$part];
         }
 
 
-        if (is_array($settingValue) && isset($currentSettings['enabled']) && !isset($settingValue['enabled'])) {
-            $settingValue['enabled'] = $currentSettings['enabled'];
+        if (is_array($value) && isset($current['enabled'])) {
+            $value['enabled'] = true;
+        }
+
+        if (is_array($value)) {
+            foreach ($value as $key => $val) {
+                if (is_array($value[$key]) && isset($current[$key]['enabled'])) {
+                    $value[$key]['enabled'] = true;
+                }
+            }
         }
 
 
-        if (!$overwrite && is_array($currentSettings) && is_array($settingValue)) {
-            // Merge the arrays, preserving existing elements and adding new ones from $settingValue
-            $currentSettings = array_merge($currentSettings, $settingValue);
+        if (!$overwrite && is_array($current) && is_array($value)) {
+            // Merge the arrays, preserving existing elements and adding new ones from $value
+            $current = array_merge($current, $value);
         } else {
             // If not merging, then handle setting the value based on its type or replacing outright
-            if (is_bool($settingValue) && isset($currentSettings['enabled'])) {
-                $currentSettings['enabled'] = $settingValue;
+            if (is_bool($value) && isset($current['enabled'])) {
+                $current['enabled'] = $value;
             } else {
                 // Update the setting value, potentially replacing it entirely
-                $currentSettings = $settingValue;
+                $current = $value;
             }
         }
 
@@ -1934,18 +1942,32 @@ class ParsedownExtended extends ParsedownExtendedParentAlias
     }
 
 
-    public function isEnabled(string $key): bool
+    public function isEnabled(string $keyPath): bool
     {
-        $setting = $this->getSetting($key);
-        // Check if the setting is an array and has the 'isEnabled' key.
-        if (is_array($setting) && isset($setting['enabled'])) {
-            return $setting['enabled'];
-        } elseif (is_bool($setting)) {
-            return $setting;
+        $keys = explode('.', $keyPath);
+        $current = $this->settings;
+
+        // Navigate through the settings hierarchy
+        foreach ($keys as $key) {
+            if (!isset($current[$key])) {
+                $backtrace = debug_backtrace();
+                $caller = $backtrace[0];
+                $errorMessage = "The setting '$keyPath' does not exist. Called in " . ($caller['file'] ?? 'unknown') . " on line " . ($caller['line'] ?? 'unknown');
+                throw new InvalidArgumentException($errorMessage);
+            }
+            // Move to the next level in the settings array
+            $current = $current[$key];
+        }
+
+        // if key "enabled" exists, return its value
+        if (isset($current['enabled'])) {
+            return $current['enabled'];
+        } elseif (is_bool($current)) {
+            return $current;
         } else {
             $backtrace = debug_backtrace();
-            $caller = $backtrace[0]; // Gets the immediate caller. Adjust the index for more depth.
-            $errorMessage = "Setting '$key' is not a boolean. Called in " . ($caller['file'] ?? 'unknown') . " on line " . ($caller['line'] ?? 'unknown');
+            $caller = $backtrace[0];
+            $errorMessage = "The setting '$keyPath' does not have an boolean value. Called in " . ($caller['file'] ?? 'unknown') . " on line " . ($caller['line'] ?? 'unknown');
             throw new InvalidArgumentException($errorMessage);
         }
     }
