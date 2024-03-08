@@ -1598,7 +1598,11 @@ class ParsedownExtended extends ParsedownExtendedParentAlias
         // Default logic
 
         if ($this->isEnabled('headings.auto_anchors.lowercase')) {
-            $text = mb_strtolower($text);
+            if (extension_loaded('mbstring')) {
+                $text = mb_strtolower($text);
+            } else {
+                $text = strtolower($text);
+            }
         }
 
         // Note we don't use isEnabled here
@@ -1620,7 +1624,11 @@ class ParsedownExtended extends ParsedownExtendedParentAlias
 
     protected function normalizeString(string $text)
     {
-        return mb_convert_encoding($text, 'UTF-8', mb_list_encodings());
+        if (extension_loaded('mbstring')) {
+            return mb_convert_encoding($text, 'UTF-8', mb_list_encodings());
+        } else {
+            return $text; // Return raw as there is no good alternative for mb_convert_encoding
+        }
     }
 
 
