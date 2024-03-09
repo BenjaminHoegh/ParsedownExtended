@@ -4,115 +4,132 @@ use PHPUnit\Framework\TestCase;
 
 class SettingsTest extends TestCase
 {
-    protected $parsedownExtended;
+    protected $ParsedownExtended;
 
     protected function setUp(): void
     {
-        $this->parsedownExtended = new ParsedownExtended();
-        $this->parsedownExtended->setSafeMode(true); // As we always want to support safe mode
+        $this->ParsedownExtended = new ParsedownExtended();
+        $this->ParsedownExtended->setSafeMode(true); // As we always want to support safe mode
     }
 
     protected function tearDown(): void
     {
-        unset($this->parsedownExtended);
-    }
-
-    /**
-     * Invokes a protected or private method of an object using reflection.
-     *
-     * @param object $object The object whose method needs to be invoked.
-     * @param string $methodName The name of the method to be invoked.
-     * @param array $parameters An array of parameters to be passed to the method.
-     * @return mixed The result of the method invocation.
-     */
-    protected function invokeMethod(&$object, $methodName, array $parameters = [])
-    {
-        $reflection = new ReflectionClass(get_class($object));
-        $method = $reflection->getMethod($methodName);
-        $method->setAccessible(true);
-        return $method->invokeArgs($object, $parameters);
+        unset($this->ParsedownExtended);
     }
 
 
-    /**
-     * Accesses a protected or private property of an object using reflection.
-     *
-     * @param object $object The object whose property needs to be accessed.
-     * @param string $propertyName The name of the property to be accessed.
-     * @return ReflectionProperty The accessed property.
-     */
-    protected function accessProperty(&$object, $propertyName)
+    public function testGetSetting()
     {
-        $reflection = new ReflectionClass($object);
-        $property = $reflection->getProperty($propertyName);
-        $property->setAccessible(true);
-        return $property->getValue($object);
+        $setting = $this->ParsedownExtended->settings()->get('emphasis');
+        $this->assertIsArray($setting);
+        $this->assertArrayHasKey('italic', $setting);
+
+        // test nested setting
+        $setting = $this->ParsedownExtended->settings()->get('emphasis.italic');
+        $this->assertIsBool($setting);
+
+        // test on boolean value
+        $setting = $this->ParsedownExtended->settings()->get('comments');
+        $this->assertIsBool($setting);
+
+        // test on string value
+        $setting = $this->ParsedownExtended->settings()->get('toc.toc_tag');
+        $this->assertIsString($setting);
     }
 
 
-    /**
-     * Test case for setting a single value in ParsedownExtended.
-     *
-     * This test verifies that the `setSetting` method correctly sets a single value in the ParsedownExtended instance,
-     * and that the `isEnabled` method returns the expected value for the specified setting.
-     */
-    public function testSetSettingSingleValue(): void
+    public function testSetSetting()
     {
-        $this->parsedownExtended->setSetting('emphasis', false);
-        $this->assertEquals(false, $this->parsedownExtended->isEnabled('emphasis'));
+        // Test setting boolean value on top level setting (hidden enabled key)
+        $this->ParsedownExtended->settings()->set('emphasis', false);
+        $this->assertFalse($this->ParsedownExtended->settings()->isEnabled('emphasis'));
+
+        $this->ParsedownExtended->settings()->set('emphasis', true);
+        $this->assertTrue($this->ParsedownExtended->settings()->isEnabled('emphasis'));
+
+        // Test setting boolean value on boolean value
+        $this->ParsedownExtended->settings()->set('comments', true);
+        $this->assertTrue($this->ParsedownExtended->settings()->isEnabled('comments'));
+
+        // Test setting nested value
+        $this->ParsedownExtended->settings()->set('emphasis.italic', true);
+        $this->assertTrue($this->ParsedownExtended->settings()->isEnabled('emphasis.italic'));
+
+        // Test setting string
+        $this->ParsedownExtended->settings()->set('toc.toc_tag', '[[toc]]');
+        $this->assertEquals('[[toc]]', $this->ParsedownExtended->settings()->get('toc.toc_tag'));
+
+        // Don't have a test for setting an integer value as we don't have any settings that are integers
     }
 
-    /**
-     * Test case for setting a nested value in the ParsedownExtended class.
-     */
-    public function testSetSettingNestedValue(): void
+    public function testIsEnabled()
     {
-        $this->parsedownExtended->setSetting('emphasis.italic', false);
-        $this->assertEquals(false, $this->parsedownExtended->isEnabled('emphasis.italic'));
+        // test top level setting (hidden enabled key)
+        $this->ParsedownExtended->settings()->set('emphasis', true);
+        $this->assertTrue($this->ParsedownExtended->settings()->isEnabled('emphasis'));
+
+        // test boolean value
+        $this->ParsedownExtended->settings()->set('comments', false);
+        $this->assertFalse($this->ParsedownExtended->settings()->isEnabled('comments'));
     }
 
-    /**
-     * Test case for setting a boolean value in the ParsedownExtended class.
-     *
-     * This test verifies that the `setSetting` method correctly sets a boolean value for a specific setting,
-     * and that the `isEnabled` method returns the expected value for that setting.
-     */
-    public function testSetSettingBooleanValue(): void
+    public function testSetMultiple()
     {
-        $this->parsedownExtended->setSetting('emphasis', false);
-        $this->assertEquals(false, $this->parsedownExtended->isEnabled('emphasis'));
+        $this->ParsedownExtended->settings()->set([
+            'diagrams' => true,
+            'comments' => false,
+            'emphasis.bold' => false,
+            'headings.auto_anchors' => false,
+        ]);
+        $this->assertTrue($this->ParsedownExtended->settings()->isEnabled('diagrams'));
+        $this->assertFalse($this->ParsedownExtended->settings()->isEnabled('comments'));
+        $this->assertFalse($this->ParsedownExtended->settings()->isEnabled('emphasis.bold'));
+        $this->assertFalse($this->ParsedownExtended->settings()->isEnabled('headings.auto_anchors'));
     }
 
-    /**
-     * Test case for setting an array value in the ParsedownExtended class.
-     *
-     * This test verifies that the `setSetting` method correctly sets a new value for the specified setting,
-     * and that the `getSetting` method returns the expected merged setting.
-     */
-    public function testSetSettingArrayValue(): void
+    public function testSetArray()
     {
-        // Get the default setting
-        $defaultSetting = $this->accessProperty($this->parsedownExtended, 'defaultSettings');
-
-        // setting the new value
-        $newSetting = ['italic' => false, 'bold' => false];
-
-        // expected setting should be the default setting with the new value merged
-        $expectedSetting = array_merge($defaultSetting['emphasis'], $newSetting);
-
-        $this->parsedownExtended->setSetting('emphasis', $newSetting);
-        $this->assertEquals($expectedSetting, $this->parsedownExtended->getSetting('emphasis'));
+        $this->ParsedownExtended->settings()->set('math.inline.delimiters', [['left' => '$', 'right' => '$']]);
+        $this->assertEquals([['left' => '$', 'right' => '$']], $this->ParsedownExtended->settings()->get('math.inline.delimiters'));
     }
 
-    /**
-     * Test case for overriding a setting.
-     *
-     * This method tests the functionality of overriding a setting in the ParsedownExtended class.
-     * It sets the 'emphasis' setting to disable italics clear all other settings in that category.
-     */
-    public function testOverrideSetting(): void
+    public function testNonExistentSetting()
     {
-        $this->parsedownExtended->setSetting('emphasis', ['italic' => false], true);
-        $this->assertEquals(['italic' => false, 'enabled' => true], $this->parsedownExtended->getSetting('emphasis'));
+        $this->expectException(InvalidArgumentException::class);
+        $this->ParsedownExtended->settings()->set('invalid.setting', true);
+
+        $this->expectException(InvalidArgumentException::class);
+        $this->ParsedownExtended->settings()->get('invalid.setting');
+
+        $this->expectException(InvalidArgumentException::class);
+        $this->ParsedownExtended->settings()->isEnabled('invalid.setting');
+
+        $this->expectException(InvalidArgumentException::class);
+        $this->ParsedownExtended->settings()->set([
+            'invalid.setting' => true,
+            'another.invalid.setting' => false,
+        ]);
+    }
+
+    public function testInvalidType()
+    {
+        $this->expectException(InvalidArgumentException::class);
+        $this->ParsedownExtended->settings()->set('emphasis.bold', 123);
+
+        $this->expectException(InvalidArgumentException::class);
+        $this->ParsedownExtended->settings()->set([
+            'emphasis.bold' => 123,
+        ]);
+    }
+
+    public function testInvalidTypeParentKey()
+    {
+        $this->expectException(InvalidArgumentException::class);
+        $this->ParsedownExtended->settings()->set('emphasis', 123);
+
+        $this->expectException(InvalidArgumentException::class);
+        $this->ParsedownExtended->settings()->set([
+            'emphasis' => 123,
+        ]);
     }
 }
