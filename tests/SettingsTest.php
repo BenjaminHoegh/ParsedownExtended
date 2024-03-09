@@ -132,4 +132,25 @@ class SettingsTest extends TestCase
             'emphasis' => 123,
         ]);
     }
+
+
+    public function testSettingArray(): void
+    {
+        $this->parsedownExtended->setSetting('math', [
+            'inline' => [
+                'delimiters' => [
+                    ['$', '$'],
+                    ['\\(', '\\)']
+                ],
+            ],
+            'block' => [
+                'delimiters' => [
+                    ['$$', '$$'],
+                    ['\\[', '\\]']
+                ],
+            ]
+        ]);
+        $this->assertTrue($this->parsedownExtended->isEnabled('math'));
+        $this->assertTrue($this->parsedownExtended->isEnabled('math.inline'));
+    }
 }

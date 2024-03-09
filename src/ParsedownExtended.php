@@ -13,7 +13,7 @@ if (class_exists('ParsedownExtra')) {
 
 class ParsedownExtended extends ParsedownExtendedParentAlias
 {
-    public const VERSION = '1.2.4';
+    public const VERSION = '1.2.7';
     public const VERSION_PARSEDOWN_REQUIRED = '1.7.4';
     public const VERSION_PARSEDOWN_EXTRA_REQUIRED = '0.8.1';
     public const MIN_PHP_VERSION = '7.4';
@@ -1568,7 +1568,11 @@ class ParsedownExtended extends ParsedownExtendedParentAlias
         // Default logic
 
         if ($this->settings()->isEnabled('headings.auto_anchors.lowercase')) {
-            $text = mb_strtolower($text);
+            if (extension_loaded('mbstring')) {
+                $text = mb_strtolower($text);
+            } else {
+                $text = strtolower($text);
+            }
         }
 
         // Note we don't use isEnabled here
@@ -1590,7 +1594,11 @@ class ParsedownExtended extends ParsedownExtendedParentAlias
 
     protected function normalizeString(string $text)
     {
-        return mb_convert_encoding($text, 'UTF-8', mb_list_encodings());
+        if (extension_loaded('mbstring')) {
+            return mb_convert_encoding($text, 'UTF-8', mb_list_encodings());
+        } else {
+            return $text; // Return raw as there is no good alternative for mb_convert_encoding
+        }
     }
 
 
@@ -1842,7 +1850,6 @@ class ParsedownExtended extends ParsedownExtendedParentAlias
         $toc_id = $this->getIdAttributeToc();
         return str_replace("<p>{$tag_origin}</p>", "<div id=\"{$toc_id}\">{$toc_data}</div>", $html);
     }
-
 
 
     // Helper functions
