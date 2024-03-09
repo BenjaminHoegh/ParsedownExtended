@@ -7,7 +7,8 @@ return $config
         '@PHP74Migration' => true,
         '@PSR12' => true,
     ])
-    ->setFinder(PhpCsFixer\Finder::create()
+    ->setFinder(
+        PhpCsFixer\Finder::create()
         ->in(__DIR__)
         ->exclude('vendor')
     )
