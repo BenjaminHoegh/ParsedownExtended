@@ -13,7 +13,7 @@ if (class_exists('ParsedownExtra')) {
 
 class ParsedownExtended extends ParsedownExtendedParentAlias
 {
-    public const VERSION = '1.2.5';
+    public const VERSION = '1.2.7';
     public const VERSION_PARSEDOWN_REQUIRED = '1.7.4';
     public const VERSION_PARSEDOWN_EXTRA_REQUIRED = '0.8.1';
     public const MIN_PHP_VERSION = '7.4';
@@ -641,113 +641,116 @@ class ParsedownExtended extends ParsedownExtendedParentAlias
         }
 
         // Substitutions
-        $backtickDoublequoteOpen = $this->getSetting('smarty.substitutions.left-double-quote');
-        $backtickDoublequoteClose = $this->getSetting('smarty.substitutions.right-double-quote');
-        $smartDoublequoteOpen = $this->getSetting('smarty.substitutions.left-double-quote');
-        $smartDoublequoteClose = $this->getSetting('smarty.substitutions.right-double-quote');
-        $smartSinglequoteOpen = $this->getSetting('smarty.substitutions.left-single-quote');
-        $smartSinglequoteClose = $this->getSetting('smarty.substitutions.right-single-quote');
-        $leftAngleQuote = $this->getSetting('smarty.substitutions.left-angle-quote');
-        $rightAngleQuote = $this->getSetting('smarty.substitutions.right-angle-quote');
+        $substitutions = [
+            'left-double-quote' => html_entity_decode($this->getSetting('smarty.substitutions.left-double-quote')),
+            'right-double-quote' => html_entity_decode($this->getSetting('smarty.substitutions.right-double-quote')),
+            'left-single-quote' => html_entity_decode($this->getSetting('smarty.substitutions.left-single-quote')),
+            'right-single-quote' => html_entity_decode($this->getSetting('smarty.substitutions.right-single-quote')),
+            'left-angle-quote' => html_entity_decode($this->getSetting('smarty.substitutions.left-angle-quote')),
+            'right-angle-quote' => html_entity_decode($this->getSetting('smarty.substitutions.right-angle-quote')),
+            'mdash' => html_entity_decode($this->getSetting('smarty.substitutions.mdash')),
+            'ndash' => html_entity_decode($this->getSetting('smarty.substitutions.ndash')),
+            'ellipses' => html_entity_decode($this->getSetting('smarty.substitutions.ellipses')),
+        ];
 
-        if (!isset($Excerpt['before'])) {
-            $Excerpt['before'] = '';
-        }
-
-
-        if (preg_match('/(``)(?!\s)([^"\'`]{1,})(\'\')|(\")(?!\s)([^\"]{1,})(\")|(\')(?!\s)([^\']{1,})(\')|(<{2})(?!\s)([^<>]{1,})(>{2})|(?<!\.)(\.{3})(?!\.)|(-{3})|(-{2})/i', $Excerpt['text'], $matches)) {
-            $matches = array_values(array_filter($matches));
-
-            // Smart backticks
-            if ($this->isEnabled('smarty.smart_backticks') && '``' === $matches[1]) {
-                $length = strlen(trim($Excerpt['before']));
-                if ($length > 0) {
-                    return;
-                }
-
-                return [
-                    'extent' => strlen($matches[0]),
-                    'element' => [
-                        'text' => html_entity_decode($backtickDoublequoteOpen).$matches[2].html_entity_decode($backtickDoublequoteClose),
-                    ],
-                ];
-            }
-
-            // Smart quotes
-            if ($this->isEnabled('smarty.smart_quotes')) {
-                if ("'" === $matches[1]) {
-                    $length = strlen(trim($Excerpt['before']));
-                    if ($length > 0) {
+        // Patterns
+        $patterns = [
+            'smart_backticks' => [
+                'pattern' => '/^(``)(?!\s)([^"\'`]{1,})(\'\')/i',
+                'callback' => function ($matches) use ($substitutions, $Excerpt) {
+                    if (strlen(trim($Excerpt['before'])) > 0) {
                         return;
                     }
 
                     return [
                         'extent' => strlen($matches[0]),
                         'element' => [
-                            'text' => html_entity_decode($smartSinglequoteOpen).$matches[2].html_entity_decode($smartSinglequoteClose),
+                            'text' => $substitutions['left-double-quote'] . $matches[2] . $substitutions['right-double-quote'],
                         ],
                     ];
-                }
+                },
+            ],
+            'smart_quotes' => [
+                'pattern' => '/^(")(?!\s)([^"]+)(")|^(?<!\w)(\')(?!\s)([^\']+)(\')/i',
+                'callback' => function ($matches) use ($substitutions, $Excerpt) {
+                    if (strlen(trim($Excerpt['before'])) > 0) {
+                        return;
+                    }
 
-                if ('"' === $matches[1]) {
-                    $length = strlen(trim($Excerpt['before']));
-                    if ($length > 0) {
+                    if ("'" === $matches[1]) {
+                        return [
+                            'extent' => strlen($matches[0]),
+                            'element' => [
+                                'text' => $substitutions['left-single-quote'] . $matches[2] . $substitutions['right-single-quote'],
+                            ],
+                        ];
+                    }
+
+                    if ('"' === $matches[1]) {
+                        return [
+                            'extent' => strlen($matches[0]),
+                            'element' => [
+                                'text' => $substitutions['left-double-quote'] . $matches[2] . $substitutions['right-double-quote'],
+                            ],
+                        ];
+                    }
+                },
+            ],
+            'smart_angled_quotes' => [
+                'pattern' => '/^(<{2})(?!\s)([^<>]+)(>{2})/i',
+                'callback' => function ($matches) use ($substitutions, $Excerpt) {
+                    if (strlen(trim($Excerpt['before'])) > 0) {
                         return;
                     }
 
                     return [
                         'extent' => strlen($matches[0]),
                         'element' => [
-                            'text' => html_entity_decode($smartDoublequoteOpen).$matches[2].html_entity_decode($smartDoublequoteClose),
+                            'text' => $substitutions['left-angle-quote'] . $matches[2] . $substitutions['right-angle-quote'],
                         ],
                     ];
-                }
-            }
+                },
+            ],
+            'smart_dashes' => [
+                'pattern' => '/^(-{2,3})/i',
+                'callback' => function ($matches) use ($substitutions, $Excerpt) {
 
-            // Smart angled quotes
-            if ($this->isEnabled('smarty.smart_angled_quotes') && '<<' === $matches[1]) {
-                $length = strlen(trim($Excerpt['before']));
-                if ($length > 0) {
-                    return;
-                }
+                    if ('---' === $matches[1]) {
+                        return [
+                            'extent' => strlen($matches[0]),
+                            'element' => [
+                                'text' => $substitutions['mdash'],
+                            ],
+                        ];
+                    }
 
-                return [
-                    'extent' => strlen($matches[0]),
-                    'element' => [
-                        'text' => html_entity_decode($leftAngleQuote).$matches[2].html_entity_decode($rightAngleQuote),
-                    ],
-                ];
-            }
-
-            // Smart dashes
-            if ($this->isEnabled('smarty.smart_dashes')) {
-                if ('---' === $matches[1]) {
+                    if ('--' === $matches[1]) {
+                        return [
+                            'extent' => strlen($matches[0]),
+                            'element' => [
+                                'text' => $substitutions['ndash'],
+                            ],
+                        ];
+                    }
+                },
+            ],
+            'smart_ellipses' => [
+                'pattern' => '/^(?<!\.)(\.{3})(?!\.)/i',
+                'callback' => function ($matches) use ($substitutions, $Excerpt) {
                     return [
                         'extent' => strlen($matches[0]),
                         'element' => [
-                            'text' => html_entity_decode($this->getSetting('smarty.substitutions.mdash')),
+                            'text' => $substitutions['ellipses'],
                         ],
                     ];
-                }
+                },
+            ],
+        ];
 
-                if ('--' === $matches[1]) {
-                    return [
-                        'extent' => strlen($matches[0]),
-                        'element' => [
-                            'text' => html_entity_decode($this->getSetting('smarty.substitutions.ndash')),
-                        ],
-                    ];
-                }
-            }
-
-            // Smart ellipses
-            if ($this->isEnabled('smarty.smart_ellipses') && '...' === $matches[1]) {
-                return [
-                    'extent' => strlen($matches[0]),
-                    'element' => [
-                        'text' => html_entity_decode($this->getSetting('smarty.substitutions.ellipses')),
-                    ],
-                ];
+        foreach ($patterns as $key => $value) {
+            if ($this->isEnabled('smarty.'.$key) && preg_match($value['pattern'], $Excerpt['text'], $matches)) {
+                $matches = array_values(array_filter($matches));
+                return $value['callback']($matches);
             }
         }
     }
