@@ -1,6 +1,7 @@
 .nova/
 vendor/
 lab/
+tools/
 .php_cs.cache
 .php-cs-fixer.cache
 composer.lock
