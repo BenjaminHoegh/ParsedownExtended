@@ -177,12 +177,14 @@ class ParsedownExtended extends ParsedownExtendedParentAlias
 
         }
 
+        // Remove any suffix from the Parsedown version
+        $parsedownVersion = preg_replace('/-.*$/', '', \Parsedown::version);
+
         // Check if Parsedown 1.7.4 or later is installed but not 1.8
-        if (version_compare(\Parsedown::version, '1.8.0') < 0 && version_compare(\Parsedown::version, '1.7.4') >= 0) {
+        if (version_compare($parsedownVersion, '1.8.0') < 0 && version_compare($parsedownVersion, '1.7.4') >= 0) {
             // set legacy mode to true
             $this->legacyMode = true;
         }
-
 
         $this->settings = $this->defaultSettings; // Start with default settings
         $this->initializeSettings($userSettings);
@@ -2166,6 +2168,7 @@ class ParsedownExtended extends ParsedownExtendedParentAlias
          */
     protected function lineElements($text, $nonNestables = []): array
     {
+
         $Elements = [];
 
         $nonNestables = (
