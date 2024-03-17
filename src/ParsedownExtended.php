@@ -1097,7 +1097,8 @@ class ParsedownExtended extends ParsedownExtendedParentAlias
         foreach ($this->settings['math']['block']['delimiters'] as $config) {
 
             $leftMarker = preg_quote($config['left'], '/');
-            $regex = '/^(?<!\\\\)(' . $leftMarker . ')(.*)/';
+            $rightMarker = preg_quote($config['right'], '/');
+            $regex = '/^(?<!\\\\)('. $leftMarker . ')(.*?)(?=(?<!\\\\)' . $rightMarker . '|$)/';
 
             if (preg_match($regex, $Line['text'], $matches)) {
                 return [
