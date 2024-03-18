@@ -80,6 +80,8 @@ class ParsedownExtended extends ParsedownExtendedParentAlias
         'links' => [
             'enabled' => true,
             'email_links' => true,
+            'ext_links_in_new_window' => false,
+            'all_links_in_new_window' => false,
         ],
         'lists' => [
             'enabled' => true,
@@ -290,9 +292,42 @@ class ParsedownExtended extends ParsedownExtendedParentAlias
 
     protected function inlineLink($Excerpt)
     {
-        if ($this->isEnabled('links')) {
-            return parent::inlineLink($Excerpt);
+        if (!$this->isEnabled('links')) {
+            return;
         }
+
+        $Excerpt = parent::inlineLink($Excerpt);
+
+        $url = $Excerpt['element']['attributes']['href'];
+        // Normalize the URL if it's protocol-relative or lacks HTTP/HTTPS
+        if (strpos($url, '//') === 0 || !preg_match('/^https?:\/\//', $url)) {
+            $scheme = !empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off' ? 'https' : 'http';
+            $url = $scheme . ':' . (strpos($url, '//') === 0 ? $url : '//' . $url);
+        }
+
+        // Decode URL to handle URL encoding
+        $url = urldecode($url);
+        $isInternal = false;
+
+        // Determine if the URL is internal
+        $linkParts = parse_url($url);
+        if (!isset($linkParts['host'])) {
+            $isInternal = true;
+        } else {
+            $homeParts = parse_url((!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off' ? 'https://' : 'http://') . $_SERVER['HTTP_HOST']);
+            $linkHost = preg_replace('/^www\./', '', $linkParts['host']);
+            $homeHost = preg_replace('/^www\./', '', $homeParts['host']);
+            if ($linkHost === $homeHost) {
+                $isInternal = true;
+            }
+        }
+
+        // Set target="_blank" for external links if configured, or for all links if specified
+        if ((!$isInternal && $this->isEnabled('links.ext_links_in_new_window')) || $this->isEnabled('links.all_links_in_new_window')) {
+            $Excerpt['element']['attributes']['target'] = '_blank';
+        }
+
+        return $Excerpt;
     }
 
     protected function inlineMarkup($Excerpt)
