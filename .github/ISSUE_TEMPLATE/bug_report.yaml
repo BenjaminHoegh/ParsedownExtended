@@ -1,6 +1,6 @@
 name: Bug Report
-description: Help us improve by reporting bugs you've encountered
-labels: [bug]
+description: File a bug report
+labels: [Bug]
 assignees:
   - BenjaminHoegh
 body:
@@ -15,8 +15,7 @@ body:
     attributes:
       label: Bug Description
       description: Provide a clear and concise description of what the bug is, including what you expected to happen and what actually happened.
-      placeholder: "Explain the bug in detail. Include what you were doing when it occurred and any error messages you saw."
-      value: ""
+      placeholder: Explain the bug in detail. Include what you were doing when it occurred and any error messages you saw.
     validations:
       required: true
 
@@ -25,30 +24,32 @@ body:
     attributes:
       label: PHP Version
       description: Specify the PHP version you were using. This information helps us replicate the issue under similar conditions.
-      placeholder: "e.g., 7.4.3"
+      placeholder: e.g., 7.4.3
     validations:
       required: true
       
   - type: input
-    id: parsedown-version
+    id: php-version
     attributes:
       label: Parsedown Version
       description: Mention the version of Parsedown you're using. If possible, confirm if the issue persists with the latest version.
-      placeholder: "e.g., 1.8.0"
+      placeholder: e.g., 1.8.0
     validations:
       required: true
 
   - type: input
-    id: parsedown-extra-version
+    id: php-version
     attributes:
       label: Parsedown Extra Version
-      description: If you're using Parsedown Extra, please specify the version. Leave blank if not applicable.
-      placeholder: "Optional, e.g., 0.8.0"
+      description: If you're using Parsedown Extra, please specify the version. Leave blank if not applicable
+      placeholder: Optional, e.g., 0.8.0
+    validations:
+      required: false
 
   - type: checkboxes
     id: terms
     attributes:
-      label: Code of Conduct Agreement
+      label: Code of Conduct
       description: Confirm your agreement to adhere to our project's [Code of Conduct](https://github.com/BenjaminHoegh/ParsedownExtended/blob/main/.github/CODE_OF_CONDUCT.md). This helps maintain a respectful and constructive environment.
       options:
         - label: I agree to follow the project's Code of Conduct.
