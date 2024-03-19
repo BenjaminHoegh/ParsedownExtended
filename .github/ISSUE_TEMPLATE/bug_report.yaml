@@ -44,8 +44,6 @@ body:
       label: Parsedown Extra Version
       description: If you're using Parsedown Extra, please specify the version. Leave blank if not applicable.
       placeholder: "Optional, e.g., 0.8.0"
-    validations:
-      required: false
 
   - type: checkboxes
     id: terms
