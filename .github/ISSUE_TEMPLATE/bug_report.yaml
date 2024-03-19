@@ -29,7 +29,7 @@ body:
       required: true
       
   - type: input
-    id: php-version
+    id: parsedown-version
     attributes:
       label: Parsedown Version
       description: Mention the version of Parsedown you're using. If possible, confirm if the issue persists with the latest version.
@@ -38,7 +38,7 @@ body:
       required: true
 
   - type: input
-    id: php-version
+    id: parsedown-extra-version
     attributes:
       label: Parsedown Extra Version
       description: If you're using Parsedown Extra, please specify the version. Leave blank if not applicable
