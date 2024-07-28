@@ -18,18 +18,16 @@
   ],
   "require": {
     "php": ">=7.4",
-    "erusev/parsedown": ">=1.7.4 <2.0"
+    "erusev/parsedown": ">=1.7.4 <2.0",
+    "erusev/parsedown-extra": "^0.8.1"
   },
   "require-dev": {
     "phpunit/phpunit": "^9.0",
-    "vimeo/psalm": "^5.23"
-  },
-  "suggest": {
-    "erusev/parsedown-extra": ">=0.8.1"
+    "vimeo/psalm": "^5.25"
   },
   "autoload": {
-    "psr-0": {
-      "ParsedownExtended": "src/"
+    "psr-4": {
+      "BenjaminHoegh\\ParsedownExtended\\": "src/"
     }
   }
 }
