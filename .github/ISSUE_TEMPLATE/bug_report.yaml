@@ -7,25 +7,42 @@ body:
   - type: markdown
     attributes:
       value: |
-        Thanks for taking the time to fill out this bug report!
+        🐞 **Thank you for contributing to our project by reporting a bug!** 🐞
+        Please provide as much detail as possible to help us efficiently resolve the issue.
         
   - type: textarea
     id: describe-the-bug
     attributes:
-      label: Describe the bug
-      description: Also tell us, steps to reproduce the behavior
-      placeholder: Tell us what you see!
-      value: "A bug happened!"
+      label: Bug Description
+      description: Provide a clear and concise description of what the bug is, including what you expected to happen and what actually happened.
+      placeholder: Explain the bug in detail. Include what you were doing when it occurred and any error messages you saw.
     validations:
       required: true
-  
-  - type: textarea
-    id: expected-behavior
+
+  - type: input
+    id: php-version
     attributes:
-      label: Expected Behavior
-      description: Tell us what should happen
-      placeholder: Tell us what you expected too see
-      value: "Tell us what you expected too see!"
+      label: PHP Version
+      description: Specify the PHP version you were using. This information helps us replicate the issue under similar conditions.
+      placeholder: e.g., 7.4.3
+    validations:
+      required: true
+      
+  - type: input
+    id: parsedown-version
+    attributes:
+      label: Parsedown Version
+      description: Mention the version of Parsedown you're using. If possible, confirm if the issue persists with the latest version.
+      placeholder: e.g., 1.8.0
+    validations:
+      required: true
+
+  - type: input
+    id: parsedown-extra-version
+    attributes:
+      label: Parsedown Extra Version
+      description: If you're using Parsedown Extra, please specify the version. Leave blank if not applicable
+      placeholder: Optional, e.g., 0.8.0
     validations:
       required: false
 
@@ -33,7 +50,7 @@ body:
     id: terms
     attributes:
       label: Code of Conduct
-      description: By submitting this issue, you agree to follow our [Code of Conduct](https://github.com/BenjaminHoegh/ParsedownExtended/blob/main/.github/CODE_OF_CONDUCT.md)
+      description: Confirm your agreement to adhere to our project's [Code of Conduct](https://github.com/BenjaminHoegh/ParsedownExtended/blob/main/.github/CODE_OF_CONDUCT.md). This helps maintain a respectful and constructive environment.
       options:
-        - label: I agree to follow this project's Code of Conduct
+        - label: I agree to follow the project's Code of Conduct.
           required: true

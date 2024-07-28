@@ -1,5 +1,7 @@
 <?php
 
+namespace BenjaminHoegh\ParsedownExtended;
+
 /**
  * This code checks if the class 'ParsedownExtra' exists. If it does, it creates an alias for it called 'ParsedownExtendedParentAlias'.
  * If the class 'ParsedownExtra' does not exist, it creates an alias for the class 'Parsedown' called 'ParsedownExtendedParentAlias'.
@@ -11,9 +13,9 @@ if (class_exists('ParsedownExtra')) {
 }
 
 
-class ParsedownExtended extends ParsedownExtendedParentAlias
+class ParsedownExtended extends \ParsedownExtendedParentAlias
 {
-    public const VERSION = '1.2.7';
+    public const VERSION = '1.2.10';
     public const VERSION_PARSEDOWN_REQUIRED = '1.7.4';
     public const VERSION_PARSEDOWN_EXTRA_REQUIRED = '0.8.1';
     public const MIN_PHP_VERSION = '7.4';
@@ -187,8 +189,11 @@ class ParsedownExtended extends ParsedownExtendedParentAlias
 
         }
 
+        // Remove any suffix from the Parsedown version
+        $parsedownVersion = preg_replace('/-.*$/', '', \Parsedown::version);
+
         // Check if Parsedown 1.7.4 or later is installed but not 1.8
-        if (version_compare(\Parsedown::version, '1.8.0') < 0 && version_compare(\Parsedown::version, '1.7.4') >= 0) {
+        if (version_compare($parsedownVersion, '1.8.0') < 0 && version_compare($parsedownVersion, '1.7.4') >= 0) {
             // set legacy mode to true
             $this->legacyMode = true;
         }
@@ -654,25 +659,55 @@ class ParsedownExtended extends ParsedownExtendedParentAlias
                     return [
                         'extent' => strlen($matches[0]),
                         'element' => [
-                            'text' => html_entity_decode($smartSinglequoteOpen).$matches[2].html_entity_decode($smartSinglequoteClose),
+                            'text' => $substitutions['left-double-quote'] . $matches[2] . $substitutions['right-double-quote'],
                         ],
                     ];
-                }
+                },
+            ],
+            'smart_quotes' => [
+                'pattern' => '/^(")(?!\s)([^"]+)(")|^(?<!\w)(\')(?!\s)([^\']+)(\')/i',
+                'callback' => function ($matches) use ($substitutions, $Excerpt) {
+                    if (strlen(trim($Excerpt['before'])) > 0) {
+                        return;
+                    }
 
-                if ('"' === $matches[1]) {
-                    $length = strlen(trim($Excerpt['before']));
-                    if ($length > 0) {
+                    if ("'" === $matches[1]) {
+                        return [
+                            'extent' => strlen($matches[0]),
+                            'element' => [
+                                'text' => $substitutions['left-single-quote'] . $matches[2] . $substitutions['right-single-quote'],
+                            ],
+                        ];
+                    }
+
+                    if ('"' === $matches[1]) {
+                        return [
+                            'extent' => strlen($matches[0]),
+                            'element' => [
+                                'text' => $substitutions['left-double-quote'] . $matches[2] . $substitutions['right-double-quote'],
+                            ],
+                        ];
+                    }
+                },
+            ],
+            'smart_angled_quotes' => [
+                'pattern' => '/^(<{2})(?!\s)([^<>]+)(>{2})/i',
+                'callback' => function ($matches) use ($substitutions, $Excerpt) {
+                    if (strlen(trim($Excerpt['before'])) > 0) {
                         return;
                     }
 
                     return [
                         'extent' => strlen($matches[0]),
                         'element' => [
-                            'text' => html_entity_decode($smartDoublequoteOpen).$matches[2].html_entity_decode($smartDoublequoteClose),
+                            'text' => $substitutions['left-angle-quote'] . $matches[2] . $substitutions['right-angle-quote'],
                         ],
                     ];
-                }
-            }
+                },
+            ],
+            'smart_dashes' => [
+                'pattern' => '/^(-{2,3})/i',
+                'callback' => function ($matches) use ($substitutions, $Excerpt) {
 
             // Smart angled quotes
             if ($this->settings()->isEnabled('smarty.smart_angled_quotes') && '<<' === $matches[1]) {
@@ -698,7 +733,9 @@ class ParsedownExtended extends ParsedownExtendedParentAlias
                             'text' => html_entity_decode($this->settings()->get('smarty.substitutions.mdash')),
                         ],
                     ];
-                }
+                },
+            ],
+        ];
 
                 if ('--' === $matches[1]) {
                     return [
@@ -1062,7 +1099,8 @@ class ParsedownExtended extends ParsedownExtendedParentAlias
         foreach ($this->settings['math']['block']['delimiters'] as $config) {
 
             $leftMarker = preg_quote($config['left'], '/');
-            $regex = '/^(?<!\\\\)(' . $leftMarker . ')(.*)/';
+            $rightMarker = preg_quote($config['right'], '/');
+            $regex = '/^(?<!\\\\)('. $leftMarker . ')(.*?)(?=(?<!\\\\)' . $rightMarker . '|$)/';
 
             if (preg_match($regex, $Line['text'], $matches)) {
                 return [
@@ -1541,7 +1579,7 @@ class ParsedownExtended extends ParsedownExtendedParentAlias
                 $backtrace = debug_backtrace();
                 $caller = $backtrace[0];
                 $errorMessage = "Unknown return type '{$type_return}' given while parsing ToC. Called in " . ($caller['file'] ?? 'unknown') . " on line " . ($caller['line'] ?? 'unknown');
-                throw new InvalidArgumentException($errorMessage);
+                throw new \InvalidArgumentException($errorMessage);
         }
     }
 
@@ -1828,7 +1866,7 @@ class ParsedownExtended extends ParsedownExtendedParentAlias
             $backtrace = debug_backtrace();
             $caller = $backtrace[0];
             $errorMessage = "Malformed ToC user tag given: {$tag}. Called in " . ($caller['file'] ?? 'unknown') . " on line " . ($caller['line'] ?? 'unknown');
-            throw new InvalidArgumentException($errorMessage);
+            throw new \InvalidArgumentException($errorMessage);
         }
     }
 
@@ -2006,6 +2044,7 @@ class ParsedownExtended extends ParsedownExtendedParentAlias
      */
     protected function lineElements($text, $nonNestables = []): array
     {
+
         $Elements = [];
 
         $nonNestables = (
