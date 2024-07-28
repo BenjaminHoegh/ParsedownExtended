@@ -2,6 +2,24 @@
 vendor/
 lab/
 tools/
+
+# PHP-CS-Fixer
 .php_cs.cache
 .php-cs-fixer.cache
+
+# PHPUnit
+.phpunit.result.cache
+
+# Composer
 composer.lock
+composer.phar
+
+
+# Windows
+Thumbs.db
+
+# macOS
+.DS_Store
+
+# IDE
+.vscode/
