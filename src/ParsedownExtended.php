@@ -1,5 +1,7 @@
 <?php
 
+namespace BenjaminHoegh\ParsedownExtended;
+
 /**
  * This code checks if the class 'ParsedownExtra' exists. If it does, it creates an alias for it called 'ParsedownExtendedParentAlias'.
  * If the class 'ParsedownExtra' does not exist, it creates an alias for the class 'Parsedown' called 'ParsedownExtendedParentAlias'.
@@ -11,9 +13,9 @@ if (class_exists('ParsedownExtra')) {
 }
 
 
-class ParsedownExtended extends ParsedownExtendedParentAlias
+class ParsedownExtended extends \ParsedownExtendedParentAlias
 {
-    public const VERSION = '1.2.7';
+    public const VERSION = '1.2.10';
     public const VERSION_PARSEDOWN_REQUIRED = '1.7.4';
     public const VERSION_PARSEDOWN_EXTRA_REQUIRED = '0.8.1';
     public const MIN_PHP_VERSION = '7.4';
@@ -230,13 +232,13 @@ class ParsedownExtended extends ParsedownExtendedParentAlias
         foreach ($userSettings as $key => $value) {
             if (!isset($this->settings[$key])) {
                 // Throw an error for non-existent setting
-                throw new InvalidArgumentException("Setting '$key' does not exist.");
+                throw new \InvalidArgumentException("Setting '$key' does not exist.");
             }
 
             if (is_array($this->settings[$key])) {
                 if (!is_array($value) && !is_bool($value)) {
                     // Throw an error for incorrect type for complex settings
-                    throw new InvalidArgumentException("Invalid type for setting '$key'. Expected array or boolean.");
+                    throw new \InvalidArgumentException("Invalid type for setting '$key'. Expected array or boolean.");
                 }
 
                 if (is_bool($value)) {
@@ -247,7 +249,7 @@ class ParsedownExtended extends ParsedownExtendedParentAlias
                     foreach ($value as $subKey => $subValue) {
                         if (!isset($this->settings[$key][$subKey])) {
                             // Throw an error for non-existent sub-setting
-                            throw new InvalidArgumentException("Sub-setting '$subKey' does not exist in '$key'.");
+                            throw new \InvalidArgumentException("Sub-setting '$subKey' does not exist in '$key'.");
                         }
                         // Optionally validate $subValue type here
                         $this->settings[$key][$subKey] = $subValue;
@@ -256,7 +258,7 @@ class ParsedownExtended extends ParsedownExtendedParentAlias
             } else {
                 if (!is_bool($value)) {
                     // Throw an error for incorrect type for simple settings
-                    throw new InvalidArgumentException("Invalid type for setting '$key'. Expected boolean.");
+                    throw new \InvalidArgumentException("Invalid type for setting '$key'. Expected boolean.");
                 }
                 $this->settings[$key] = $value;
             }
@@ -1577,7 +1579,7 @@ class ParsedownExtended extends ParsedownExtendedParentAlias
                 $backtrace = debug_backtrace();
                 $caller = $backtrace[0];
                 $errorMessage = "Unknown return type '{$type_return}' given while parsing ToC. Called in " . ($caller['file'] ?? 'unknown') . " on line " . ($caller['line'] ?? 'unknown');
-                throw new InvalidArgumentException($errorMessage);
+                throw new \InvalidArgumentException($errorMessage);
         }
     }
 
@@ -1864,7 +1866,7 @@ class ParsedownExtended extends ParsedownExtendedParentAlias
             $backtrace = debug_backtrace();
             $caller = $backtrace[0];
             $errorMessage = "Malformed ToC user tag given: {$tag}. Called in " . ($caller['file'] ?? 'unknown') . " on line " . ($caller['line'] ?? 'unknown');
-            throw new InvalidArgumentException($errorMessage);
+            throw new \InvalidArgumentException($errorMessage);
         }
     }
 
@@ -1906,7 +1908,7 @@ class ParsedownExtended extends ParsedownExtendedParentAlias
             // Check if the part exists in the current settings
             if (!isset($current[$part])) {
                 // The setting name is invalid, return an error message
-                throw new \InvalidArgumentException("Invalid setting name: $settingName");
+                throw new \\InvalidArgumentException("Invalid setting name: $settingName");
             }
             // Move to the next level of settings
             $current = &$current[$part];
@@ -1967,7 +1969,7 @@ class ParsedownExtended extends ParsedownExtendedParentAlias
                 $backtrace = debug_backtrace();
                 $caller = $backtrace[0];
                 $errorMessage = "The setting '$keyPath' does not exist. Called in " . ($caller['file'] ?? 'unknown') . " on line " . ($caller['line'] ?? 'unknown');
-                throw new InvalidArgumentException($errorMessage);
+                throw new \InvalidArgumentException($errorMessage);
             }
             // Move to the next level in the settings array
             $current = $current[$key];
@@ -1982,7 +1984,7 @@ class ParsedownExtended extends ParsedownExtendedParentAlias
             $backtrace = debug_backtrace();
             $caller = $backtrace[0];
             $errorMessage = "The setting '$keyPath' does not have an boolean value. Called in " . ($caller['file'] ?? 'unknown') . " on line " . ($caller['line'] ?? 'unknown');
-            throw new InvalidArgumentException($errorMessage);
+            throw new \InvalidArgumentException($errorMessage);
         }
     }
 
@@ -2001,7 +2003,7 @@ class ParsedownExtended extends ParsedownExtendedParentAlias
                 $caller = $backtrace[0]; // Gets the immediate caller. Adjust the index for more depth.
 
                 $errorMessage = "Setting '$key' does not exist. Called in " . ($caller['file'] ?? 'unknown') . " on line " . ($caller['line'] ?? 'unknown');
-                throw new InvalidArgumentException($errorMessage);
+                throw new \InvalidArgumentException($errorMessage);
             }
         }
 
