@@ -36,7 +36,7 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
 
     // Standard settings
     private array $defaultSettings = [
-        'abbreviations' => [ // Requires ParsedownExtra
+        'abbreviations' => [
             'enabled' => true,
             'allow_custom_abbr' => true,
             'predefine' => [],
