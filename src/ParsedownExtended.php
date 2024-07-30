@@ -33,7 +33,7 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
 
     private bool $legacyMode = false;
 
-    private array $settingsSchema = [
+    private array $configSchema = [
         'abbreviations' => [
             'enabled' => ['type' => 'boolean', 'default' => true],
             'allow_custom_abbr' => ['type' => 'boolean', 'default' => true],
@@ -93,10 +93,7 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
                 'delimiters' => [
                     'type' => 'array',
                     'default' => [['left' => '\\(', 'right' => '\\)']],
-                    'itemSchema' => [
-                        'left' => ['type' => 'string'],
-                        'right' => ['type' => 'string'],
-                    ],
+                    'itemSchema' => ['type' => 'array', 'keys' => ['left' => 'string', 'right' => 'string']]
                 ],
             ],
             'block' => [
@@ -112,10 +109,7 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
                         ['left' => '\\begin{CD}', 'right' => '\\end{CD}'],
                         ['left' => '\\[', 'right' => '\\]'],
                     ],
-                    'itemSchema' => [
-                        'left' => ['type' => 'string'],
-                        'right' => ['type' => 'string'],
-                    ],
+                    'itemSchema' => ['type' => 'array', 'keys' => ['left' => 'string', 'right' => 'string']]
                 ],
             ],
         ],
@@ -128,17 +122,20 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
             'smart_dashes' => ['type' => 'boolean', 'default' => true],
             'smart_ellipses' => ['type' => 'boolean', 'default' => true],
             'smart_quotes' => ['type' => 'boolean', 'default' => true],
-            'substitutions' => ['type' => 'array', 'default' => [
-                'ellipses' => '&hellip;',
-                'left-angle-quote' => '&laquo;',
-                'left-double-quote' => '&ldquo;',
-                'left-single-quote' => '&lsquo;',
-                'mdash' => '&mdash;',
-                'ndash' => '&ndash;',
-                'right-angle-quote' => '&raquo;',
-                'right-double-quote' => '&rdquo;',
-                'right-single-quote' => '&rsquo;',
-            ]],
+            'substitutions' => [
+                'type' => 'array',
+                'default' => [
+                    'ellipses' => '&hellip;',
+                    'left-angle-quote' => '&laquo;',
+                    'left-double-quote' => '&ldquo;',
+                    'left-single-quote' => '&lsquo;',
+                    'mdash' => '&mdash;',
+                    'ndash' => '&ndash;',
+                    'right-angle-quote' => '&raquo;',
+                    'right-double-quote' => '&rdquo;',
+                    'right-single-quote' => '&rsquo;',
+                ],
+            ],
         ],
         'special_attributes' => ['type' => 'boolean', 'default' => true],
         'tables' => [
@@ -154,6 +151,8 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
         'typographer' => ['type' => 'boolean', 'default' => true],
     ];
 
+    protected $config;
+
     public function __construct()
     {
         // Check if PHP version is supported
@@ -162,7 +161,7 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
             $msg_error .= '  ParsedownExtended requires PHP version ' . self::MIN_PHP_VERSION . ' or later.' . PHP_EOL;
             $msg_error .= '  - Current version : ' . PHP_VERSION . PHP_EOL;
             $msg_error .= '  - Required version: ' . self::MIN_PHP_VERSION . PHP_EOL;
-            throw new Exception($msg_error);
+            throw new \Exception($msg_error);
         }
 
         // Check if Parsedown is installed
@@ -171,7 +170,7 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
             $msg_error .= '  ParsedownExtended requires a later version of Parsedown.' . PHP_EOL;
             $msg_error .= '  - Current version : ' . \Parsedown::version . PHP_EOL;
             $msg_error .= '  - Required version: ' . self::VERSION_PARSEDOWN_REQUIRED .' and later'. PHP_EOL;
-            throw new Exception($msg_error);
+            throw new \Exception($msg_error);
         }
 
         // If ParsedownExtra is installed, check its version
@@ -181,7 +180,7 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
                 $msg_error .= '  ParsedownExtended requires a later version of ParsedownExtra.' . PHP_EOL;
                 $msg_error .= '  - Current version : ' . \ParsedownExtra::version . PHP_EOL;
                 $msg_error .= '  - Required version: ' . self::VERSION_PARSEDOWN_EXTRA_REQUIRED .' and later'. PHP_EOL;
-                throw new Exception($msg_error);
+                throw new \Exception($msg_error);
             }
 
             // Get parent constructor
@@ -199,7 +198,7 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
         }
 
         // Initialize settings
-        $this->initializeSettings();
+        $this->config = $this->initializeConfig($this->configSchema);
 
         // Add inline types
         $this->addInlineType('=', 'Marking');
@@ -236,12 +235,17 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
         }
     }
 
+    public function getConfigSchema(): array
+    {
+        return $this->configSchema;
+    }
+
     // Inline types
     // -------------------------------------------------------------------------
 
     protected function inlineCode($Excerpt)
     {
-        if ($this->settings()->isEnabled('code') && $this->settings()->isEnabled('code.inline')) {
+        if ($this->config()->get('code') && $this->config()->get('code.inline')) {
             return parent::inlineCode($Excerpt);
         }
     }
@@ -249,49 +253,49 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
 
     protected function inlineEmailTag($Excerpt)
     {
-        if ($this->settings()->isEnabled('links') && $this->settings()->isEnabled('links.email_links')) {
+        if ($this->config()->get('links') && $this->config()->get('links.email_links')) {
             return parent::inlineEmailTag($Excerpt);
         }
     }
 
     protected function inlineImage($Excerpt)
     {
-        if ($this->settings()->isEnabled('images')) {
+        if ($this->config()->get('images')) {
             return parent::inlineImage($Excerpt);
         }
     }
 
     protected function inlineLink($Excerpt)
     {
-        if ($this->settings()->isEnabled('links')) {
+        if ($this->config()->get('links')) {
             return parent::inlineLink($Excerpt);
         }
     }
 
     protected function inlineMarkup($Excerpt)
     {
-        if ($this->settings()->isEnabled('markup')) {
+        if ($this->config()->get('markup')) {
             return parent::inlineMarkup($Excerpt);
         }
     }
 
     protected function inlineStrikethrough($Excerpt)
     {
-        if ($this->settings()->isEnabled('emphasis.strikethroughs') && $this->settings()->isEnabled('emphasis')) {
+        if ($this->config()->get('emphasis.strikethroughs') && $this->config()->get('emphasis')) {
             return parent::inlineStrikethrough($Excerpt);
         }
     }
 
     protected function inlineUrl($Excerpt)
     {
-        if ($this->settings()->isEnabled('links')) {
+        if ($this->config()->get('links')) {
             return parent::inlineUrl($Excerpt);
         }
     }
 
     protected function inlineUrlTag($Excerpt)
     {
-        if ($this->settings()->isEnabled('links')) {
+        if ($this->config()->get('links')) {
             return parent::inlineUrlTag($Excerpt);
         }
     }
@@ -304,16 +308,16 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
      */
     protected function inlineEmphasis($Excerpt)
     {
-        if (!$this->settings()->isEnabled('emphasis') || !isset($Excerpt['text'][1])) {
+        if (!$this->config()->get('emphasis') || !isset($Excerpt['text'][1])) {
             return;
         }
 
         $marker = $Excerpt['text'][0];
 
         // Check if the emphasis bold is enabled
-        if ($this->settings()->isEnabled('emphasis.bold') and preg_match($this->StrongRegex[$marker], $Excerpt['text'], $matches)) {
+        if ($this->config()->get('emphasis.bold') and preg_match($this->StrongRegex[$marker], $Excerpt['text'], $matches)) {
             $emphasis = 'strong';
-        } elseif ($this->settings()->isEnabled('emphasis.italic') and preg_match($this->EmRegex[$marker], $Excerpt['text'], $matches)) {
+        } elseif ($this->config()->get('emphasis.italic') and preg_match($this->EmRegex[$marker], $Excerpt['text'], $matches)) {
             $emphasis = 'em';
         } else {
             return;
@@ -338,7 +342,7 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
      */
     protected function inlineMarking(array $Excerpt): ?array
     {
-        if (!$this->settings()->isEnabled('emphasis.marking') || !$this->settings()->isEnabled('emphasis')) {
+        if (!$this->config()->get('emphasis.marking') || !$this->config()->get('emphasis')) {
             return null;
         }
 
@@ -364,7 +368,7 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
      */
     protected function inlineInsertions(array $Excerpt): ?array
     {
-        if (!$this->settings()->isEnabled('emphasis.insertions') || !$this->settings()->isEnabled('emphasis')) {
+        if (!$this->config()->get('emphasis.insertions') || !$this->config()->get('emphasis')) {
             return null;
         }
 
@@ -389,7 +393,7 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
      */
     protected function inlineKeystrokes(array $Excerpt): ?array
     {
-        if (!$this->settings()->isEnabled('emphasis.keystrokes') || !$this->settings()->isEnabled('emphasis')) {
+        if (!$this->config()->get('emphasis.keystrokes') || !$this->config()->get('emphasis')) {
             return null;
         }
 
@@ -416,7 +420,7 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
      */
     protected function inlineSuperscript(array $Excerpt): ?array
     {
-        if (!$this->settings()->isEnabled('emphasis.superscript') || !$this->settings()->isEnabled('emphasis')) {
+        if (!$this->config()->get('emphasis.superscript') || !$this->config()->get('emphasis')) {
             return null;
         }
 
@@ -444,7 +448,7 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
      */
     protected function inlineSubscript(array $Excerpt): ?array
     {
-        if (!$this->settings()->isEnabled('emphasis.subscript') || !$this->settings()->isEnabled('emphasis')) {
+        if (!$this->config()->get('emphasis.subscript') || !$this->config()->get('emphasis')) {
             return null;
         }
 
@@ -473,7 +477,7 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
     protected function inlineMathNotation($Excerpt)
     {
         // Check if parsing of math notation is enabled
-        if (!$this->settings()->isEnabled('math') || !$this->settings()->isEnabled('math.inline')) {
+        if (!$this->config()->get('math') || !$this->config()->get('math.inline')) {
             return null;
         }
 
@@ -530,8 +534,8 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
      */
     protected function inlineEscapeSequence($Excerpt)
     {
-        if ($this->settings()->isEnabled('math')) {
-            foreach ($this->settings()->get('math.inline.delimiters') as $config) {
+        if ($this->config()->get('math')) {
+            foreach ($this->config()->get('math.inline.delimiters') as $config) {
 
                 $leftMarker = preg_quote($config['left'], '/');
                 $rightMarker = preg_quote($config['right'], '/');
@@ -571,12 +575,12 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
      */
     protected function inlineTypographer(array $Excerpt): ?array
     {
-        if (!$this->settings()->isEnabled('typographer')) {
+        if (!$this->config()->get('typographer')) {
             return null;
         }
 
         // Check if smartypants and smart ellipses settings are enabled
-        $ellipses = $this->settings()->isEnabled('smarty') && $this->settings()->isEnabled('smarty.smart_ellipses') ? html_entity_decode($this->settings()->get('smarty.substitutions.ellipses')) : '...';
+        $ellipses = $this->config()->get('smarty') && $this->config()->get('smarty.smart_ellipses') ? html_entity_decode($this->config()->get('smarty.substitutions.ellipses')) : '...';
 
         $substitutions = [
             '/\(c\)/i' => html_entity_decode('&copy;'),
@@ -611,71 +615,48 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
      */
     protected function inlineSmartypants($Excerpt)
     {
-        if (!$this->settings()->isEnabled('smarty')) {
+        if (!$this->config()->get('smarty')) {
             return null;
         }
 
         // Substitutions
-        $backtickDoublequoteOpen = $this->settings()->get('smarty.substitutions.left-double-quote');
-        $backtickDoublequoteClose = $this->settings()->get('smarty.substitutions.right-double-quote');
-        $smartDoublequoteOpen = $this->settings()->get('smarty.substitutions.left-double-quote');
-        $smartDoublequoteClose = $this->settings()->get('smarty.substitutions.right-double-quote');
-        $smartSinglequoteOpen = $this->settings()->get('smarty.substitutions.left-single-quote');
-        $smartSinglequoteClose = $this->settings()->get('smarty.substitutions.right-single-quote');
-        $leftAngleQuote = $this->settings()->get('smarty.substitutions.left-angle-quote');
-        $rightAngleQuote = $this->settings()->get('smarty.substitutions.right-angle-quote');
+        $backtickDoublequoteOpen = $this->config()->get('smarty.substitutions.left-double-quote');
+        $backtickDoublequoteClose = $this->config()->get('smarty.substitutions.right-double-quote');
+        $smartDoublequoteOpen = $this->config()->get('smarty.substitutions.left-double-quote');
+        $smartDoublequoteClose = $this->config()->get('smarty.substitutions.right-double-quote');
+        $smartSinglequoteOpen = $this->config()->get('smarty.substitutions.left-single-quote');
+        $smartSinglequoteClose = $this->config()->get('smarty.substitutions.right-single-quote');
+        $leftAngleQuote = $this->config()->get('smarty.substitutions.left-angle-quote');
+        $rightAngleQuote = $this->config()->get('smarty.substitutions.right-angle-quote');
 
         if (!isset($Excerpt['before'])) {
             $Excerpt['before'] = '';
         }
 
-
-        if (preg_match('/(``)(?!\s)([^"\'`]{1,})(\'\')|(\")(?!\s)([^\"]{1,})(\")|(\')(?!\s)([^\']{1,})(\')|(<{2})(?!\s)([^<>]{1,})(>{2})|(?<!\.)(\.{3})(?!\.)|(-{3})|(-{2})/i', $Excerpt['text'], $matches)) {
-            $matches = array_values(array_filter($matches));
-
-            // Smart backticks
-            if ($this->settings()->isEnabled('smarty.smart_backticks') && '``' === $matches[1]) {
-                $length = strlen(trim($Excerpt['before']));
-                if ($length > 0) {
-                    return;
-                }
-
-                return [
-                    'extent' => strlen($matches[0]),
-                    'element' => [
-                        'text' => html_entity_decode($backtickDoublequoteOpen).$matches[2].html_entity_decode($backtickDoublequoteClose),
-                    ],
-                ];
-            }
-
-            // Smart quotes
-            if ($this->settings()->isEnabled('smarty.smart_quotes')) {
-                if ("'" === $matches[1]) {
-                    $length = strlen(trim($Excerpt['before']));
-                    if ($length > 0) {
-                        return;
-                    }
-
+        $patterns = [
+            'smart_backticks' => [
+                'pattern' => '/(``)(?!\s)([^"\'`]{1,})(\'\')/',
+                'callback' => function ($matches) use ($backtickDoublequoteOpen, $backtickDoublequoteClose) {
                     return [
                         'extent' => strlen($matches[0]),
                         'element' => [
-                            'text' => $substitutions['left-double-quote'] . $matches[2] . $substitutions['right-double-quote'],
+                            'text' => html_entity_decode($backtickDoublequoteOpen) . $matches[2] . html_entity_decode($backtickDoublequoteClose),
                         ],
                     ];
                 },
             ],
             'smart_quotes' => [
-                'pattern' => '/^(")(?!\s)([^"]+)(")|^(?<!\w)(\')(?!\s)([^\']+)(\')/i',
-                'callback' => function ($matches) use ($substitutions, $Excerpt) {
+                'pattern' => '/(")(?!\s)([^"]+)(")|(?<!\w)(\')(?!\s)([^\']+)(\')/',
+                'callback' => function ($matches) use ($smartSinglequoteOpen, $smartSinglequoteClose, $smartDoublequoteOpen, $smartDoublequoteClose, $Excerpt) {
                     if (strlen(trim($Excerpt['before'])) > 0) {
-                        return;
+                        return null;
                     }
 
-                    if ("'" === $matches[1]) {
+                    if ("'" === $matches[4]) {
                         return [
                             'extent' => strlen($matches[0]),
                             'element' => [
-                                'text' => $substitutions['left-single-quote'] . $matches[2] . $substitutions['right-single-quote'],
+                                'text' => html_entity_decode($smartSinglequoteOpen) . $matches[5] . html_entity_decode($smartSinglequoteClose),
                             ],
                         ];
                     }
@@ -684,80 +665,75 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
                         return [
                             'extent' => strlen($matches[0]),
                             'element' => [
-                                'text' => $substitutions['left-double-quote'] . $matches[2] . $substitutions['right-double-quote'],
+                                'text' => html_entity_decode($smartDoublequoteOpen) . $matches[2] . html_entity_decode($smartDoublequoteClose),
                             ],
                         ];
                     }
+
+                    return null;
                 },
-            ],
+        ],
             'smart_angled_quotes' => [
-                'pattern' => '/^(<{2})(?!\s)([^<>]+)(>{2})/i',
-                'callback' => function ($matches) use ($substitutions, $Excerpt) {
+                'pattern' => '/(<<)(?!\s)([^<>]{1,})(>>)/',
+                'callback' => function ($matches) use ($leftAngleQuote, $rightAngleQuote, $Excerpt) {
                     if (strlen(trim($Excerpt['before'])) > 0) {
-                        return;
+                        return null;
                     }
 
                     return [
                         'extent' => strlen($matches[0]),
                         'element' => [
-                            'text' => $substitutions['left-angle-quote'] . $matches[2] . $substitutions['right-angle-quote'],
+                            'text' => html_entity_decode($leftAngleQuote) . $matches[2] . html_entity_decode($rightAngleQuote),
                         ],
                     ];
                 },
-            ],
+        ],
             'smart_dashes' => [
-                'pattern' => '/^(-{2,3})/i',
-                'callback' => function ($matches) use ($substitutions, $Excerpt) {
+                'pattern' => '/(---|--)/',
+                'callback' => function ($matches) {
+                    if ('---' === $matches[0]) {
+                        return [
+                            'extent' => strlen($matches[0]),
+                            'element' => [
+                                'text' => html_entity_decode($this->config()->get('smarty.substitutions.mdash')),
+                            ],
+                        ];
+                    }
 
-            // Smart angled quotes
-            if ($this->settings()->isEnabled('smarty.smart_angled_quotes') && '<<' === $matches[1]) {
-                $length = strlen(trim($Excerpt['before']));
-                if ($length > 0) {
-                    return;
-                }
+                    if ('--' === $matches[0]) {
+                        return [
+                            'extent' => strlen($matches[0]),
+                            'element' => [
+                                'text' => html_entity_decode($this->config()->get('smarty.substitutions.ndash')),
+                            ],
+                        ];
+                    }
 
-                return [
-                    'extent' => strlen($matches[0]),
-                    'element' => [
-                        'text' => html_entity_decode($leftAngleQuote).$matches[2].html_entity_decode($rightAngleQuote),
-                    ],
-                ];
-            }
-
-            // Smart dashes
-            if ($this->settings()->isEnabled('smarty.smart_dashes')) {
-                if ('---' === $matches[1]) {
+                    return null;
+                },
+        ],
+            'smart_ellipses' => [
+                'pattern' => '/(\.\.\.)/',
+                'callback' => function ($matches) {
                     return [
                         'extent' => strlen($matches[0]),
                         'element' => [
-                            'text' => html_entity_decode($this->settings()->get('smarty.substitutions.mdash')),
+                            'text' => html_entity_decode($this->config()->get('smarty.substitutions.ellipses')),
                         ],
                     ];
                 },
-            ],
+        ],
         ];
 
-                if ('--' === $matches[1]) {
-                    return [
-                        'extent' => strlen($matches[0]),
-                        'element' => [
-                            'text' => html_entity_decode($this->settings()->get('smarty.substitutions.ndash')),
-                        ],
-                    ];
-                }
-            }
-
-            // Smart ellipses
-            if ($this->settings()->isEnabled('smarty.smart_ellipses') && '...' === $matches[1]) {
-                return [
-                    'extent' => strlen($matches[0]),
-                    'element' => [
-                        'text' => html_entity_decode($this->settings()->get('smarty.substitutions.ellipses')),
-                    ],
-                ];
+        foreach ($patterns as $pattern) {
+            if (preg_match($pattern['pattern'], $Excerpt['text'], $matches)) {
+                return $pattern['callback']($matches);
             }
         }
+
+        return null;
     }
+
 
 
     /**
@@ -768,7 +744,7 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
      */
     protected function inlineEmojis(array $Excerpt): ?array
     {
-        if (!$this->settings()->isEnabled('emojis')) {
+        if (!$this->config()->get('emojis')) {
             return null;
         }
 
@@ -1012,7 +988,7 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
 
     protected function parseAttributeData($attributeString)
     {
-        if($this->settings()->isEnabled('special_attributes')) {
+        if($this->config()->get('special_attributes')) {
             return parent::parseAttributeData($attributeString);
         }
 
@@ -1021,70 +997,70 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
 
     protected function blockFootnote($Line)
     {
-        if ($this->settings()->isEnabled('footnotes')) {
+        if ($this->config()->get('footnotes')) {
             return parent::blockFootnote($Line);
         }
     }
 
     protected function blockDefinitionList($Line, $Block)
     {
-        if ($this->settings()->isEnabled('definition_lists')) {
+        if ($this->config()->get('definition_lists')) {
             return parent::blockDefinitionList($Line, $Block);
         }
     }
 
     protected function blockCode($Line, $Block = null)
     {
-        if ($this->settings()->isEnabled('code') && $this->settings()->isEnabled('code.blocks')) {
+        if ($this->config()->get('code') && $this->config()->get('code.blocks')) {
             return parent::blockCode($Line, $Block);
         }
     }
 
     protected function blockComment($Line)
     {
-        if ($this->settings()->isEnabled('comments')) {
+        if ($this->config()->get('comments')) {
             return parent::blockComment($Line);
         }
     }
 
     protected function blockList($Line, array $CurrentBlock = null)
     {
-        if ($this->settings()->isEnabled('lists')) {
+        if ($this->config()->get('lists')) {
             return parent::blockList($Line, $CurrentBlock);
         }
     }
 
     protected function blockQuote($Line)
     {
-        if ($this->settings()->isEnabled('quotes')) {
+        if ($this->config()->get('quotes')) {
             return parent::blockQuote($Line);
         }
     }
 
     protected function blockRule($Line)
     {
-        if ($this->settings()->isEnabled('thematic_breaks')) {
+        if ($this->config()->get('thematic_breaks')) {
             return parent::blockRule($Line);
         }
     }
 
     protected function blockMarkup($Line)
     {
-        if ($this->settings()->isEnabled('markup')) {
+        if ($this->config()->get('markup')) {
             return parent::blockMarkup($Line);
         }
     }
 
     protected function blockReference($Line)
     {
-        if ($this->settings()->isEnabled('references')) {
+        if ($this->config()->get('references')) {
             return parent::blockReference($Line);
         }
     }
 
     protected function blockTable($Line, $Block = null)
     {
-        if ($this->settings()->isEnabled('tables')) {
+        if ($this->config()->get('tables')) {
             return parent::blockTable($Line, $Block);
         }
     }
@@ -1092,7 +1068,7 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
 
     protected function blockMathNotation($Line)
     {
-        if (!$this->settings()->isEnabled('math') || !$this->settings()->isEnabled('math.block')) {
+        if (!$this->config()->get('math') || !$this->config()->get('math.block')) {
             return null;
         }
 
@@ -1156,7 +1132,7 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
 
     protected function blockFencedCode($Line)
     {
-        if (!$this->settings()->isEnabled('code') or !$this->settings()->isEnabled('code.blocks')) {
+        if (!$this->config()->get('code') or !$this->config()->get('code.blocks')) {
             return;
         }
 
@@ -1169,7 +1145,7 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
         $language = strtolower($parts[0]);
 
         // Check if diagrams are enabled
-        if (!$this->settings()->isEnabled('diagrams')) {
+        if (!$this->config()->get('diagrams')) {
             return $Block;
         }
 
@@ -1222,7 +1198,7 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
 
     protected function li($lines)
     {
-        if (!$this->settings()->isEnabled('lists.tasks')) {
+        if (!$this->config()->get('lists.tasks')) {
             return parent::li($lines);
         }
 
@@ -1294,7 +1270,7 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
 
     protected function blockHeader($Line)
     {
-        if (!$this->settings()->isEnabled('headings')) {
+        if (!$this->config()->get('headings')) {
             return;
         }
 
@@ -1305,7 +1281,7 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
             $level = $Block['element']['name'];
 
             // check if level is allowed
-            if (!in_array($level, $this->settings()->get('headings.allowed'))) {
+            if (!in_array($level, $this->config()->get('headings.allowed'))) {
                 return;
             }
 
@@ -1316,7 +1292,7 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
             $Block['element']['attributes'] = ['id' => $id];
 
             // Check if heading level is in the selectors
-            if (!in_array($level, $this->settings()->get('toc.headings'))) {
+            if (!in_array($level, $this->config()->get('toc.headings'))) {
                 return $Block;
             }
 
@@ -1328,7 +1304,7 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
 
     protected function blockSetextHeader($Line, $Block = null)
     {
-        if (!$this->settings()->isEnabled('headings')) {
+        if (!$this->config()->get('headings')) {
             return;
         }
 
@@ -1339,7 +1315,7 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
             $level = $Block['element']['name'];
 
             // check if level is allowed
-            if (!in_array($level, $this->settings()->get('headings.allowed'))) {
+            if (!in_array($level, $this->config()->get('headings.allowed'))) {
                 return;
             }
 
@@ -1350,7 +1326,7 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
             $Block['element']['attributes'] = ['id' => $id];
 
             // Check if heading level is in the selectors
-            if (!in_array($level, $this->settings()->get('toc.headings'))) {
+            if (!in_array($level, $this->config()->get('toc.headings'))) {
                 return $Block;
             }
 
@@ -1363,12 +1339,12 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
 
     protected function blockAbbreviation($Line)
     {
-        if ($this->settings()->isEnabled('abbreviations')) {
-            foreach ($this->settings()->get('abbreviations.predefine') as $abbreviations => $description) {
+        if ($this->config()->get('abbreviations')) {
+            foreach ($this->config()->get('abbreviations.predefine') as $abbreviations => $description) {
                 $this->DefinitionData['Abbreviation'][$abbreviations] = $description;
             }
 
-            if ($this->settings()->isEnabled('abbreviations.allow_custom_abbr')) {
+            if ($this->config()->get('abbreviations.allow_custom_abbr')) {
                 return parent::blockAbbreviation($Line);
             }
 
@@ -1383,7 +1359,7 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
          */
     protected function blockTableComplete(array $block): array
     {
-        if (!$this->settings()->isEnabled('tables.tablespan')) {
+        if (!$this->config()->get('tables.tablespan')) {
             return $block;
         }
 
@@ -1594,7 +1570,7 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
     protected function createAnchorID(string $text): ?string
     {
         // Check settings
-        if (!$this->settings()->isEnabled('headings.auto_anchors')) {
+        if (!$this->config()->get('headings.auto_anchors')) {
             return null;
         }
 
@@ -1605,7 +1581,7 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
 
         // Default logic
 
-        if ($this->settings()->isEnabled('headings.auto_anchors.lowercase')) {
+        if ($this->config()->get('headings.auto_anchors.lowercase')) {
             if (extension_loaded('mbstring')) {
                 $text = mb_strtolower($text);
             } else {
@@ -1614,13 +1590,13 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
         }
 
         // Note we don't use isEnabled here
-        if($this->settings()->get('headings.auto_anchors.replacements')) {
-            $text = preg_replace(array_keys($this->settings()->get('headings.auto_anchors.replacements')), $this->settings()->get('headings.auto_anchors.replacements'), $text);
+        if($this->config()->get('headings.auto_anchors.replacements')) {
+            $text = preg_replace(array_keys($this->config()->get('headings.auto_anchors.replacements')), $this->config()->get('headings.auto_anchors.replacements'), $text);
         }
 
         $text = $this->normalizeString($text);
 
-        if ($this->settings()->isEnabled('headings.auto_anchors.transliterate')) {
+        if ($this->config()->get('headings.auto_anchors.transliterate')) {
             $text = $this->transliterate($text);
         }
 
@@ -1713,7 +1689,7 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
 
     protected function sanitizeAnchor(string $text): string
     {
-        $delimiter = $this->settings()->get('headings.auto_anchors.delimiter');
+        $delimiter = $this->config()->get('headings.auto_anchors.delimiter');
         // Replace non-alphanumeric characters with our delimiter
         $text = preg_replace('/[^\p{L}\p{Nd}]+/u', $delimiter, $text);
         // Remove consecutive delimiters
@@ -1726,7 +1702,7 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
 
     protected function uniquifyAnchorID(string $text): string
     {
-        $blacklist = $this->settings()->get('headings.auto_anchors.blacklist');
+        $blacklist = $this->config()->get('headings.auto_anchors.blacklist');
         $originalText = $text; // Keep the original text for reference
 
         // Initialize the count for this text if not already set
@@ -1875,7 +1851,7 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
     {
         $html = $this->body($text);
 
-        if (!$this->settings()->isEnabled('toc')) {
+        if (!$this->config()->get('toc')) {
             return $html;
         }
 
@@ -2144,173 +2120,129 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
     // Settings
     // -------------------------------------------------------------------------
 
-    private function initializeSettings(): void
+    // Initialize configuration based on the provided schema
+    protected function initializeConfig(array $schema)
     {
-        foreach ($this->settingsSchema as $key => $schema) {
-            if (isset($schema['type'])) {
-                $this->settings[$key] = $schema['default'];
-            } else {
-                $this->settings[$key] = [];
-                $this->initializeSettingsRecursive($this->settings[$key], $schema);
-            }
-        }
-    }
-
-    private function initializeSettingsRecursive(&$settings, $schema): void
-    {
-        foreach ($schema as $key => $value) {
-            if (isset($value['type'])) {
-                $settings[$key] = $value['default'];
-            } else {
-                $settings[$key] = [];
-                $this->initializeSettingsRecursive($settings[$key], $value);
-            }
-        }
-    }
-
-    public function settings()
-    {
-        return new class ($this->settings, $this->settingsSchema) {
-            private $settings;
-            private $schema;
-
-            public function __construct(&$settings, $schema)
-            {
-                $this->settings = &$settings;
-                $this->schema = $schema;
-            }
-
-            public function set($keyPath, $value = null): self
-            {
-                if (is_array($keyPath) && $value === null) {
-                    foreach ($keyPath as $path => $val) {
-                        $this->applySet($path, $val); // Recursive call for each setting
-                    }
-                } elseif (is_string($keyPath)) {
-                    $this->applySet($keyPath, $value); // The original logic for setting a single key-value pair
+        $config = [];
+        foreach ($schema as $key => $definition) {
+            if (isset($definition['type'])) {
+                if ($definition['type'] === 'array' && isset($definition['default'][0]['left'])) {
+                    // Handle array of delimiters
+                    $config[$key] = $definition['default'];
                 } else {
-                    $backtrace = debug_backtrace();
-                    $caller = $backtrace[1];
-                    $errorMessage = "Invalid argument for set method. Called in " . ($caller['file'] ?? 'unknown') . " on line " . ($caller['line'] ?? 'unknown');
-                    throw new InvalidArgumentException($errorMessage);
+                    $config[$key] = $definition['default'];
                 }
-
-                return $this;
+            } else {
+                // Recursively initialize nested configurations
+                $config[$key] = $this->initializeConfig($definition);
             }
+        }
+        return $config;
+    }
 
-            private function applySet(string $keyPath, $value): self
+    // Return a configuration manager instance
+    public function config()
+    {
+        return new class ($this->configSchema, $this->config) {
+            protected $schema;
+            protected $config;
+
+            public function __construct($schema, &$config)
             {
-                $keys = explode('.', $keyPath);
-                /** @psalm-suppress UnsupportedPropertyReferenceUsage */
-                $current = &$this->settings;
-                $schema = $this->schema;
-
-                foreach ($keys as $index => $key) {
-                    if (!isset($schema[$key])) {
-                        $backtrace = debug_backtrace();
-                        $caller = $backtrace[1];
-                        $errorMessage = "Setting '$keyPath' is not defined in the schema. Called in " . ($caller['file'] ?? 'unknown') . " on line " . ($caller['line'] ?? 'unknown');
-                        throw new InvalidArgumentException($errorMessage);
-                    }
-
-                    if ($index < count($keys) - 1) {
-                        $current = &$current[$key];
-                        $schema = $schema[$key];
-                    } else {
-                        if (isset($current[$key]['enabled'])) {
-                            if (!is_bool($value)) {
-                                $backtrace = debug_backtrace();
-                                $caller = $backtrace[1];
-                                $errorMessage = "Invalid type for '$key'. Expected boolean, got " . gettype($value) . ". Called in " . ($caller['file'] ?? 'unknown') . " on line " . ($caller['line'] ?? 'unknown');
-                                throw new InvalidArgumentException($errorMessage);
-                            }
-                            $current[$key]['enabled'] = $value;
-                        } elseif (isset($schema[$key]['type'])) {
-                            // Basic type validation
-                            if (gettype($value) !== $schema[$key]['type'] && !($schema[$key]['type'] === 'array' && is_array($value))) {
-                                $backtrace = debug_backtrace();
-                                $caller = $backtrace[1];
-                                $errorMessage = "Invalid type for '$key'. Expected {$schema[$key]['type']}, got " . gettype($value) . ". Called in " . ($caller['file'] ?? 'unknown') . " on line " . ($caller['line'] ?? 'unknown');
-                                throw new InvalidArgumentException($errorMessage);
-                            }
-
-                            // Deep validation for arrays
-                            if ($schema[$key]['type'] === 'array' && isset($schema[$key]['itemSchema'])) {
-                                foreach ($value as $item) {
-                                    foreach ($schema[$key]['itemSchema'] as $itemKey => $itemDef) {
-                                        if (!isset($item[$itemKey]) || gettype($item[$itemKey]) !== $itemDef['type']) {
-                                            $backtrace = debug_backtrace();
-                                            $caller = $backtrace[1];
-                                            $errorMessage = "Invalid structure for item in '$key.$itemKey'. Expected {$itemDef['type']}, got " . gettype($item[$itemKey]) . ". Called in " . ($caller['file'] ?? 'unknown') . " on line " . ($caller['line'] ?? 'unknown');
-                                            throw new InvalidArgumentException($errorMessage);
-                                        }
-                                    }
-                                }
-                            }
-
-                            // Assign the value if validation passes
-                            $current[$key] = $value;
-                        }
-                    }
-                }
-
-                return $this;
+                $this->schema = $schema;
+                $this->config = &$config;
             }
 
+            // Retrieve a configuration value based on a key path
             public function get($keyPath)
             {
                 $keys = explode('.', $keyPath);
-                $current = $this->settings;
-
+                $current = $this->config;
                 foreach ($keys as $key) {
                     if (!isset($current[$key])) {
-                        $backtrace = debug_backtrace();
-                        $caller = $backtrace[1];
-                        $errorMessage = "Setting '$keyPath' does not exist. Called in " . ($caller['file'] ?? 'unknown') . " on line " . ($caller['line'] ?? 'unknown');
-                        throw new InvalidArgumentException($errorMessage);
+                        throw new \InvalidArgumentException("Invalid key path: $keyPath");
                     }
                     $current = $current[$key];
                 }
-
-                // Exclude 'enabled' from the returned value without removing it from the setting array
-                if (is_array($current) && isset($current['enabled'])) {
-                    unset($current['enabled']);
+                // If the key points to a section, return the value of the "enabled" key if it exists
+                if (is_array($current) && array_key_exists('enabled', $current) && count($keys) === 1) {
+                    return $current['enabled'];
                 }
-
                 return $current;
             }
 
-            public function isEnabled($keyPath)
+            // Set a configuration value based on a key path
+            public function set($keyPath, $value = null): self
             {
-                $keys = explode('.', $keyPath);
-                $current = $this->settings;
+                if (is_array($keyPath)) {
+                    // Set multiple values if an associative array is provided
+                    foreach ($keyPath as $key => $val) {
+                        $this->set($key, $val);
+                    }
+                    return $this;
+                }
 
-                // Navigate through the settings hierarchy
+                $keys = explode('.', $keyPath);
+                $lastKey = array_pop($keys);
+                $current = &$this->config;
+                $currentSchema = $this->schema;
+
+                // Navigate to the desired configuration section
                 foreach ($keys as $key) {
                     if (!isset($current[$key])) {
-                        $backtrace = debug_backtrace();
-                        $caller = $backtrace[1];
-                        $errorMessage = "The setting '$keyPath' does not exist. Called in " . ($caller['file'] ?? 'unknown') . " on line " . ($caller['line'] ?? 'unknown');
-                        throw new InvalidArgumentException($errorMessage);
+                        throw new \InvalidArgumentException("Invalid key path: $keyPath");
                     }
-                    // Move to the next level in the settings array
-                    $current = $current[$key];
+                    $current = &$current[$key];
+                    $currentSchema = $currentSchema[$key];
                 }
 
-                // if key "enabled" exists, return its value
-                if (is_array($current) && isset($current['enabled'])) {
-                    return $current['enabled'];
+                // Check if setting an entire section to a boolean value
+                if (is_bool($value)) {
+                    if (isset($currentSchema[$lastKey]['enabled']) && isset($currentSchema[$lastKey]['enabled']['type'])) {
+                        $this->validateType($value, $currentSchema[$lastKey]['enabled']['type']);
+                        $current[$lastKey]['enabled'] = $value;
+                        return $this;
+                    }
+                    if ($lastKey === 'enabled' && isset($currentSchema['enabled']['type'])) {
+                        $this->validateType($value, $currentSchema['enabled']['type']);
+                        $current['enabled'] = $value;
+                        return $this;
+                    }
                 }
 
-                // if current is a boolean, return its value
-                if (is_bool($current)) {
-                    return $current;
+                // Validate and set the value for the specified key
+                if (!isset($currentSchema[$lastKey])) {
+                    throw new \InvalidArgumentException("Invalid key path: $keyPath");
                 }
 
-                $backtrace = debug_backtrace();
-                $caller = $backtrace[1];
-                $errorMessage = "The setting '$keyPath' is not a boolean.";
-                throw new InvalidArgumentException($errorMessage);
+                $expectedType = $currentSchema[$lastKey]['type'];
+                $this->validateType($value, $expectedType, $currentSchema[$lastKey]);
+
+                $current[$lastKey] = $value;
+
+                return $this;
+            }
+
+            // Validate the type of a value against the expected type
+            protected function validateType($value, $expectedType, $schema = null)
+            {
+                $type = gettype($value);
+                if ($expectedType === 'array' && $type === 'array') {
+                    // Additional checks for array types
+                    if (isset($schema['itemSchema'])) {
+                        foreach ($value as $item) {
+                            foreach ($schema['itemSchema']['keys'] as $key => $itemType) {
+                                if (!isset($item[$key]) || gettype($item[$key]) !== $itemType) {
+                                    throw new \InvalidArgumentException("Array items must have '$key' of type '$itemType'");
+                                }
+                            }
+                        }
+                    }
+                    return;
+                }
+                if ($type !== $expectedType) {
+                    throw new \InvalidArgumentException("Expected type $expectedType, got $type");
+                }
             }
         };
     }
