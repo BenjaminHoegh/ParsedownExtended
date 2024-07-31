@@ -30,128 +30,10 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
     private string $tag_toc = '';
     private $createAnchorIDCallback = null;
     private array $settings;
-
     private bool $legacyMode = false;
+    private mixed $config;
+    private array $configSchema;
 
-    private array $configSchema = [
-        'abbreviations' => [
-            'enabled' => ['type' => 'boolean', 'default' => true],
-            'allow_custom_abbr' => ['type' => 'boolean', 'default' => true],
-            'predefine' => ['type' => 'array', 'default' => []],
-        ],
-        'code' => [
-            'enabled' => ['type' => 'boolean', 'default' => true],
-            'blocks' => ['type' => 'boolean', 'default' => true],
-            'inline' => ['type' => 'boolean', 'default' => true],
-        ],
-        'comments' => ['type' => 'boolean', 'default' => true],
-        'definition_lists' => ['type' => 'boolean', 'default' => true],
-        'diagrams' => [
-            'enabled' => ['type' => 'boolean', 'default' => false],
-            'chartjs' => ['type' => 'boolean', 'default' => true],
-            'mermaid' => ['type' => 'boolean', 'default' => true],
-        ],
-        'emojis' => ['type' => 'boolean', 'default' => true],
-        'emphasis' => [
-            'enabled' => ['type' => 'boolean', 'default' => true],
-            'bold' => ['type' => 'boolean', 'default' => true],
-            'italic' => ['type' => 'boolean', 'default' => true],
-            'strikethroughs' => ['type' => 'boolean', 'default' => true],
-            'insertions' => ['type' => 'boolean', 'default' => true],
-            'subscript' => ['type' => 'boolean', 'default' => false],
-            'superscript' => ['type' => 'boolean', 'default' => false],
-            'keystrokes' => ['type' => 'boolean', 'default' => true],
-            'marking' => ['type' => 'boolean', 'default' => true],
-        ],
-        'footnotes' => ['type' => 'boolean', 'default' => true],
-        'headings' => [
-            'enabled' => ['type' => 'boolean', 'default' => true],
-            'allowed' => ['type' => 'array', 'default' => ['h1', 'h2', 'h3', 'h4', 'h5', 'h6']],
-            'auto_anchors' => [
-                'enabled' => ['type' => 'boolean', 'default' => true],
-                'delimiter' => ['type' => 'string', 'default' => '-'],
-                'lowercase' => ['type' => 'boolean', 'default' => true],
-                'replacements' => ['type' => 'array', 'default' => []],
-                'transliterate' => ['type' => 'boolean', 'default' => false],
-                'blacklist' => ['type' => 'array', 'default' => []],
-            ],
-        ],
-        'images' => ['type' => 'boolean', 'default' => true],
-        'links' => [
-            'enabled' => ['type' => 'boolean', 'default' => true],
-            'email_links' => ['type' => 'boolean', 'default' => true],
-        ],
-        'lists' => [
-            'enabled' => ['type' => 'boolean', 'default' => true],
-            'tasks' => ['type' => 'boolean', 'default' => true],
-        ],
-        'markup' => ['type' => 'boolean', 'default' => true],
-        'math' => [
-            'enabled' => ['type' => 'boolean', 'default' => false],
-            'inline' => [
-                'enabled' => ['type' => 'boolean', 'default' => true],
-                'delimiters' => [
-                    'type' => 'array',
-                    'default' => [['left' => '\\(', 'right' => '\\)']],
-                    'itemSchema' => ['type' => 'array', 'keys' => ['left' => 'string', 'right' => 'string']]
-                ],
-            ],
-            'block' => [
-                'enabled' => ['type' => 'boolean', 'default' => true],
-                'delimiters' => [
-                    'type' => 'array',
-                    'default' => [
-                        ['left' => '$$', 'right' => '$$'],
-                        ['left' => '\\begin{equation}', 'right' => '\\end{equation}'],
-                        ['left' => '\\begin{align}', 'right' => '\\end{align}'],
-                        ['left' => '\\begin{alignat}', 'right' => '\\end{alignat}'],
-                        ['left' => '\\begin{gather}', 'right' => '\\end{gather}'],
-                        ['left' => '\\begin{CD}', 'right' => '\\end{CD}'],
-                        ['left' => '\\[', 'right' => '\\]'],
-                    ],
-                    'itemSchema' => ['type' => 'array', 'keys' => ['left' => 'string', 'right' => 'string']]
-                ],
-            ],
-        ],
-        'quotes' => ['type' => 'boolean', 'default' => true],
-        'references' => ['type' => 'boolean', 'default' => true],
-        'smarty' => [
-            'enabled' => ['type' => 'boolean', 'default' => false],
-            'smart_angled_quotes' => ['type' => 'boolean', 'default' => true],
-            'smart_backticks' => ['type' => 'boolean', 'default' => true],
-            'smart_dashes' => ['type' => 'boolean', 'default' => true],
-            'smart_ellipses' => ['type' => 'boolean', 'default' => true],
-            'smart_quotes' => ['type' => 'boolean', 'default' => true],
-            'substitutions' => [
-                'type' => 'array',
-                'default' => [
-                    'ellipses' => '&hellip;',
-                    'left-angle-quote' => '&laquo;',
-                    'left-double-quote' => '&ldquo;',
-                    'left-single-quote' => '&lsquo;',
-                    'mdash' => '&mdash;',
-                    'ndash' => '&ndash;',
-                    'right-angle-quote' => '&raquo;',
-                    'right-double-quote' => '&rdquo;',
-                    'right-single-quote' => '&rsquo;',
-                ],
-            ],
-        ],
-        'special_attributes' => ['type' => 'boolean', 'default' => true],
-        'tables' => [
-            'enabled' => ['type' => 'boolean', 'default' => true],
-            'tablespan' => ['type' => 'boolean', 'default' => true],
-        ],
-        'thematic_breaks' => ['type' => 'boolean', 'default' => true],
-        'toc' => [
-            'enabled' => ['type' => 'boolean', 'default' => true],
-            'headings' => ['type' => 'array', 'default' => ['h1', 'h2', 'h3', 'h4', 'h5', 'h6']],
-            'toc_tag' => ['type' => 'string', 'default' => '[toc]'],
-        ],
-        'typographer' => ['type' => 'boolean', 'default' => true],
-    ];
-
-    protected $config;
 
     public function __construct()
     {
@@ -197,7 +79,8 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
             $this->legacyMode = true;
         }
 
-        // Initialize settings
+        // Initialize settings with the provided schema
+        $this->configSchema = $this->defineConfigSchema();
         $this->config = $this->initializeConfig($this->configSchema);
 
         // Add inline types
@@ -1339,17 +1222,17 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
 
     protected function blockAbbreviation($Line)
     {
-        if ($this->config()->get('abbreviations')) {
-            foreach ($this->config()->get('abbreviations.predefine') as $abbreviations => $description) {
-                $this->DefinitionData['Abbreviation'][$abbreviations] = $description;
-            }
+        // if ($this->config()->get('abbreviations')) {
+        //     foreach ($this->config()->get('abbreviations.predefine') as $abbreviations => $description) {
+        //         $this->DefinitionData['Abbreviation'][$abbreviations] = $description;
+        //     }
 
-            if ($this->config()->get('abbreviations.allow_custom_abbr')) {
-                return parent::blockAbbreviation($Line);
-            }
+        //     if ($this->config()->get('abbreviations.allow_custom_abbr')) {
+        //         return parent::blockAbbreviation($Line);
+        //     }
 
-            return;
-        }
+        //     return;
+        // }
     }
 
     /**
@@ -2117,8 +2000,133 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
     }
 
 
-    // Settings
+    // Configurations Handler
     // -------------------------------------------------------------------------
+
+    protected function defineConfigSchema(): array
+    {
+        return [
+            'abbreviations' => [
+                'enabled' => ['type' => 'boolean', 'default' => true],
+                'allow_custom_abbr' => ['type' => 'boolean', 'default' => true],
+                'predefine' => [
+                    'type' => 'array',
+                    'default' => [],
+                    'itemSchema' => ['type' => 'array', 'keys' => ['abbr' => 'string', 'expansion' => 'string']]
+                ],
+            ],
+            'code' => [
+                'enabled' => ['type' => 'boolean', 'default' => true],
+                'blocks' => ['type' => 'boolean', 'default' => true],
+                'inline' => ['type' => 'boolean', 'default' => true],
+            ],
+            'comments' => ['type' => 'boolean', 'default' => true],
+            'definition_lists' => ['type' => 'boolean', 'default' => true],
+            'diagrams' => [
+                'enabled' => ['type' => 'boolean', 'default' => false],
+                'chartjs' => ['type' => 'boolean', 'default' => true],
+                'mermaid' => ['type' => 'boolean', 'default' => true],
+            ],
+            'emojis' => ['type' => 'boolean', 'default' => true],
+            'emphasis' => [
+                'enabled' => ['type' => 'boolean', 'default' => true],
+                'bold' => ['type' => 'boolean', 'default' => true],
+                'italic' => ['type' => 'boolean', 'default' => true],
+                'strikethroughs' => ['type' => 'boolean', 'default' => true],
+                'insertions' => ['type' => 'boolean', 'default' => true],
+                'subscript' => ['type' => 'boolean', 'default' => false],
+                'superscript' => ['type' => 'boolean', 'default' => false],
+                'keystrokes' => ['type' => 'boolean', 'default' => true],
+                'marking' => ['type' => 'boolean', 'default' => true],
+            ],
+            'footnotes' => ['type' => 'boolean', 'default' => true],
+            'headings' => [
+                'enabled' => ['type' => 'boolean', 'default' => true],
+                'allowed' => ['type' => 'array', 'default' => ['h1', 'h2', 'h3', 'h4', 'h5', 'h6']],
+                'auto_anchors' => [
+                    'enabled' => ['type' => 'boolean', 'default' => true],
+                    'delimiter' => ['type' => 'string', 'default' => '-'],
+                    'lowercase' => ['type' => 'boolean', 'default' => true],
+                    'replacements' => ['type' => 'array', 'default' => []],
+                    'transliterate' => ['type' => 'boolean', 'default' => false],
+                    'blacklist' => ['type' => 'array', 'default' => []],
+                ],
+            ],
+            'images' => ['type' => 'boolean', 'default' => true],
+            'links' => [
+                'enabled' => ['type' => 'boolean', 'default' => true],
+                'email_links' => ['type' => 'boolean', 'default' => true],
+            ],
+            'lists' => [
+                'enabled' => ['type' => 'boolean', 'default' => true],
+                'tasks' => ['type' => 'boolean', 'default' => true],
+            ],
+            'markup' => ['type' => 'boolean', 'default' => true],
+            'math' => [
+                'enabled' => ['type' => 'boolean', 'default' => false],
+                'inline' => [
+                    'enabled' => ['type' => 'boolean', 'default' => true],
+                    'delimiters' => [
+                        'type' => 'array',
+                        'default' => [['left' => '\\(', 'right' => '\\)']],
+                        'itemSchema' => ['type' => 'array', 'keys' => ['left' => 'string', 'right' => 'string']]
+                    ],
+                ],
+                'block' => [
+                    'enabled' => ['type' => 'boolean', 'default' => true],
+                    'delimiters' => [
+                        'type' => 'array',
+                        'default' => [
+                            ['left' => '$$', 'right' => '$$'],
+                            ['left' => '\\begin{equation}', 'right' => '\\end{equation}'],
+                            ['left' => '\\begin{align}', 'right' => '\\end{align}'],
+                            ['left' => '\\begin{alignat}', 'right' => '\\end{alignat}'],
+                            ['left' => '\\begin{gather}', 'right' => '\\end{gather}'],
+                            ['left' => '\\begin{CD}', 'right' => '\\end{CD}'],
+                            ['left' => '\\[', 'right' => '\\]'],
+                        ],
+                        'itemSchema' => ['type' => 'array', 'keys' => ['left' => 'string', 'right' => 'string']]
+                    ],
+                ],
+            ],
+            'quotes' => ['type' => 'boolean', 'default' => true],
+            'references' => ['type' => 'boolean', 'default' => true],
+            'smarty' => [
+                'enabled' => ['type' => 'boolean', 'default' => false],
+                'smart_angled_quotes' => ['type' => 'boolean', 'default' => true],
+                'smart_backticks' => ['type' => 'boolean', 'default' => true],
+                'smart_dashes' => ['type' => 'boolean', 'default' => true],
+                'smart_ellipses' => ['type' => 'boolean', 'default' => true],
+                'smart_quotes' => ['type' => 'boolean', 'default' => true],
+                'substitutions' => [
+                    'type' => 'array',
+                    'default' => [
+                        'ellipses' => ['type' => 'string', 'default' => '&hellip;'],
+                        'left-angle-quote' => ['type' => 'string', 'default' => '&laquo;'],
+                        'left-double-quote' => ['type' => 'string', 'default' => '&ldquo;'],
+                        'left-single-quote' => ['type' => 'string', 'default' => '&lsquo;'],
+                        'mdash' => ['type' => 'string', 'default' => '&mdash;'],
+                        'ndash' => ['type' => 'string', 'default' => '&ndash;'],
+                        'right-angle-quote' => ['type' => 'string', 'default' => '&raquo;'],
+                        'right-double-quote' => ['type' => 'string', 'default' => '&rdquo;'],
+                        'right-single-quote' => ['type' => 'string', 'default' => '&rsquo;'],
+                    ],
+                ],
+            ],
+            'special_attributes' => ['type' => 'boolean', 'default' => true],
+            'tables' => [
+                'enabled' => ['type' => 'boolean', 'default' => true],
+                'tablespan' => ['type' => 'boolean', 'default' => true],
+            ],
+            'thematic_breaks' => ['type' => 'boolean', 'default' => true],
+            'toc' => [
+                'enabled' => ['type' => 'boolean', 'default' => true],
+                'headings' => ['type' => 'array', 'default' => ['h1', 'h2', 'h3', 'h4', 'h5', 'h6']],
+                'toc_tag' => ['type' => 'string', 'default' => '[toc]'],
+            ],
+            'typographer' => ['type' => 'boolean', 'default' => true],
+        ];
+    }
 
     // Initialize configuration based on the provided schema
     protected function initializeConfig(array $schema)
@@ -2126,15 +2134,20 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
         $config = [];
         foreach ($schema as $key => $definition) {
             if (isset($definition['type'])) {
-                if ($definition['type'] === 'array' && isset($definition['default'][0]['left'])) {
-                    // Handle array of delimiters
-                    $config[$key] = $definition['default'];
+                if ($definition['type'] === 'array' && is_array($definition['default'])) {
+                    // Handle array types with nested defaults
+                    $config[$key] = $this->initializeConfig($definition['default']);
                 } else {
                     $config[$key] = $definition['default'];
                 }
             } else {
-                // Recursively initialize nested configurations
-                $config[$key] = $this->initializeConfig($definition);
+                if (is_array($definition)) {
+                    // Recursively initialize nested configurations
+                    $config[$key] = $this->initializeConfig($definition);
+                } else {
+                    // If the definition is not an array, assign it directly
+                    $config[$key] = $definition;
+                }
             }
         }
         return $config;
@@ -2153,22 +2166,24 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
                 $this->config = &$config;
             }
 
-            // Retrieve a configuration value based on a key path
-            public function get($keyPath)
+            public function get(string $keyPath)
             {
+                // Split the key path into an array
                 $keys = explode('.', $keyPath);
-                $current = $this->config;
+                $value = $this->config;
+
                 foreach ($keys as $key) {
-                    if (!isset($current[$key])) {
-                        throw new \InvalidArgumentException("Invalid key path: $keyPath");
+                    if (!array_key_exists($key, $value)) {
+                        throw new \InvalidArgumentException("Invalid key path: \"$keyPath\"");
                     }
-                    $current = $current[$key];
+                    $value = $value[$key];
                 }
-                // If the key points to a section, return the value of the "enabled" key if it exists
-                if (is_array($current) && array_key_exists('enabled', $current) && count($keys) === 1) {
-                    return $current['enabled'];
+
+                if (is_array($value) && isset($value['enabled'])) {
+                    return $value['enabled'];
                 }
-                return $current;
+
+                return $value;
             }
 
             // Set a configuration value based on a key path
@@ -2190,35 +2205,30 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
                 // Navigate to the desired configuration section
                 foreach ($keys as $key) {
                     if (!isset($current[$key])) {
-                        throw new \InvalidArgumentException("Invalid key path: $keyPath");
+                        throw new \InvalidArgumentException("Invalid key path: " . implode('.', $keys));
                     }
                     $current = &$current[$key];
+                    if (!isset($currentSchema[$key])) {
+                        throw new \InvalidArgumentException("Invalid schema path: " . implode('.', $keys));
+                    }
                     $currentSchema = $currentSchema[$key];
                 }
 
-                // Check if setting an entire section to a boolean value
-                if (is_bool($value)) {
-                    if (isset($currentSchema[$lastKey]['enabled']) && isset($currentSchema[$lastKey]['enabled']['type'])) {
-                        $this->validateType($value, $currentSchema[$lastKey]['enabled']['type']);
-                        $current[$lastKey]['enabled'] = $value;
-                        return $this;
-                    }
-                    if ($lastKey === 'enabled' && isset($currentSchema['enabled']['type'])) {
-                        $this->validateType($value, $currentSchema['enabled']['type']);
-                        $current['enabled'] = $value;
-                        return $this;
-                    }
-                }
-
                 // Validate and set the value for the specified key
-                if (!isset($currentSchema[$lastKey])) {
-                    throw new \InvalidArgumentException("Invalid key path: $keyPath");
+                if (isset($currentSchema['default'][$lastKey])) {
+                    $expectedType = $currentSchema['default'][$lastKey]['type'];
+                    $this->validateType($value, $expectedType, $currentSchema['default'][$lastKey]);
+                    $current[$lastKey] = $value;
+                } else {
+                    if (!isset($currentSchema[$lastKey])) {
+                        throw new \InvalidArgumentException("Invalid key path: $keyPath");
+                    }
+                    $expectedType = $currentSchema[$lastKey]['type'] ?? null;
+                    if ($expectedType) {
+                        $this->validateType($value, $expectedType, $currentSchema[$lastKey]);
+                    }
+                    $current[$lastKey] = $value;
                 }
-
-                $expectedType = $currentSchema[$lastKey]['type'];
-                $this->validateType($value, $expectedType, $currentSchema[$lastKey]);
-
-                $current[$lastKey] = $value;
 
                 return $this;
             }
