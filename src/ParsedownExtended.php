@@ -15,7 +15,7 @@ if (class_exists('ParsedownExtra')) {
 
 class ParsedownExtended extends \ParsedownExtendedParentAlias
 {
-    public const VERSION = '1.2.10';
+    public const VERSION = '1.3.0';
     public const VERSION_PARSEDOWN_REQUIRED = '1.7.4';
     public const VERSION_PARSEDOWN_EXTRA_REQUIRED = '0.8.1';
     public const MIN_PHP_VERSION = '7.4';
@@ -29,7 +29,6 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
     private string $id_toc = '';
     private string $tag_toc = '';
     private $createAnchorIDCallback = null;
-    private array $settings;
     private bool $legacyMode = false;
     private mixed $config;
     private array $configSchema;
@@ -37,47 +36,15 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
 
     public function __construct()
     {
-        // Check if PHP version is supported
-        if (version_compare(PHP_VERSION, self::MIN_PHP_VERSION) < 0) {
-            $msg_error  = 'Version Error.' . PHP_EOL;
-            $msg_error .= '  ParsedownExtended requires PHP version ' . self::MIN_PHP_VERSION . ' or later.' . PHP_EOL;
-            $msg_error .= '  - Current version : ' . PHP_VERSION . PHP_EOL;
-            $msg_error .= '  - Required version: ' . self::MIN_PHP_VERSION . PHP_EOL;
-            throw new \Exception($msg_error);
-        }
+        $this->checkVersion('PHP', PHP_VERSION, self::MIN_PHP_VERSION);
+        $this->checkVersion('Parsedown', \Parsedown::version, self::VERSION_PARSEDOWN_REQUIRED);
 
-        // Check if Parsedown is installed
-        if (version_compare(\Parsedown::version, self::VERSION_PARSEDOWN_REQUIRED) < 0) {
-            $msg_error  = 'Version Error.' . PHP_EOL;
-            $msg_error .= '  ParsedownExtended requires a later version of Parsedown.' . PHP_EOL;
-            $msg_error .= '  - Current version : ' . \Parsedown::version . PHP_EOL;
-            $msg_error .= '  - Required version: ' . self::VERSION_PARSEDOWN_REQUIRED .' and later'. PHP_EOL;
-            throw new \Exception($msg_error);
-        }
-
-        // If ParsedownExtra is installed, check its version
         if (class_exists('ParsedownExtra')) {
-            if (version_compare(\ParsedownExtra::version, self::VERSION_PARSEDOWN_EXTRA_REQUIRED) < 0) {
-                $msg_error  = 'Version Error.' . PHP_EOL;
-                $msg_error .= '  ParsedownExtended requires a later version of ParsedownExtra.' . PHP_EOL;
-                $msg_error .= '  - Current version : ' . \ParsedownExtra::version . PHP_EOL;
-                $msg_error .= '  - Required version: ' . self::VERSION_PARSEDOWN_EXTRA_REQUIRED .' and later'. PHP_EOL;
-                throw new \Exception($msg_error);
-            }
-
-            // Get parent constructor
+            $this->checkVersion('ParsedownExtra', \ParsedownExtra::version, self::VERSION_PARSEDOWN_EXTRA_REQUIRED);
             parent::__construct();
-
         }
 
-        // Remove any suffix from the Parsedown version
-        $parsedownVersion = preg_replace('/-.*$/', '', \Parsedown::version);
-
-        // Check if Parsedown 1.7.4 or later is installed but not 1.8
-        if (version_compare($parsedownVersion, '1.8.0') < 0 && version_compare($parsedownVersion, '1.7.4') >= 0) {
-            // set legacy mode to true
-            $this->legacyMode = true;
-        }
+        $this->setLegacyMode();
 
         // Initialize settings with the provided schema
         $this->configSchema = $this->defineConfigSchema();
@@ -121,6 +88,26 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
     public function getConfigSchema(): array
     {
         return $this->configSchema;
+    }
+
+    private function checkVersion($component, $currentVersion, $requiredVersion)
+    {
+        if (version_compare($currentVersion, $requiredVersion) < 0) {
+            $msg_error  = 'Version Error.' . PHP_EOL;
+            $msg_error .= "  ParsedownExtended requires a later version of $component." . PHP_EOL;
+            $msg_error .= "  - Current version : $currentVersion" . PHP_EOL;
+            $msg_error .= "  - Required version: $requiredVersion and later" . PHP_EOL;
+            throw new \Exception($msg_error);
+        }
+    }
+
+    private function setLegacyMode()
+    {
+        $parsedownVersion = preg_replace('/-.*$/', '', \Parsedown::version);
+
+        if (version_compare($parsedownVersion, '1.8.0') < 0 && version_compare($parsedownVersion, '1.7.4') >= 0) {
+            $this->legacyMode = true;
+        }
     }
 
     // Inline types
@@ -375,7 +362,7 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
         }
 
         // Iterate through the inline math delimiters
-        foreach ($this->settings['math']['inline']['delimiters'] as $config) {
+        foreach ($this->config()->get('math.inline.delimiters') as $config) {
             $leftMarker = preg_quote($config['left'], '/');
             $rightMarker = preg_quote($config['right'], '/');
 
@@ -955,7 +942,7 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
             return null;
         }
 
-        foreach ($this->settings['math']['block']['delimiters'] as $config) {
+        foreach ($this->config()->get('math.block.delimiters') as $config) {
 
             $leftMarker = preg_quote($config['left'], '/');
             $rightMarker = preg_quote($config['right'], '/');
@@ -1222,24 +1209,25 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
 
     protected function blockAbbreviation($Line)
     {
-        // if ($this->config()->get('abbreviations')) {
-        //     foreach ($this->config()->get('abbreviations.predefine') as $abbreviations => $description) {
-        //         $this->DefinitionData['Abbreviation'][$abbreviations] = $description;
-        //     }
+        if ($this->config()->get('abbreviations')) {
+            foreach ($this->config()->get('abbreviations.predefine') as $abbreviations => $description) {
+                $this->DefinitionData['Abbreviation'][$abbreviations] = $description;
+            }
 
-        //     if ($this->config()->get('abbreviations.allow_custom_abbr')) {
-        //         return parent::blockAbbreviation($Line);
-        //     }
+            if ($this->config()->get('abbreviations.allow_custom_abbr')) {
+                return parent::blockAbbreviation($Line);
+            }
 
-        //     return;
-        // }
+            return;
+        }
     }
 
+
+
     /**
-         * (Override)
-         * Tablespan
-         * Modifyed version of Tablespan by @KENNYSOFT
-         */
+     * Tablespan
+     * Modifyed version of Tablespan by @KENNYSOFT
+     */
     protected function blockTableComplete(array $block): array
     {
         if (!$this->config()->get('tables.tablespan')) {
@@ -1414,6 +1402,8 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
 
 
 
+
+
     // Functions related to Table of Contents
     // Modified version of ToC by @KEINOS
     // -------------------------------------------------------------------------
@@ -1459,7 +1449,7 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
 
         // Use user-defined logic if a callback is provided
         if (is_callable($this->createAnchorIDCallback)) {
-            return call_user_func($this->createAnchorIDCallback, $text, $this->settings());
+            return call_user_func($this->createAnchorIDCallback, $text, $this->config()());
         }
 
         // Default logic
@@ -2227,11 +2217,17 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
                     if ($expectedType) {
                         $this->validateType($value, $expectedType, $currentSchema[$lastKey]);
                     }
-                    $current[$lastKey] = $value;
+                    // Update to handle 'enabled' field specifically
+                    if (isset($current[$lastKey]) && is_array($current[$lastKey]) && isset($current[$lastKey]['enabled'])) {
+                        $current[$lastKey]['enabled'] = $value;
+                    } else {
+                        $current[$lastKey] = $value;
+                    }
                 }
 
                 return $this;
             }
+
 
             // Validate the type of a value against the expected type
             protected function validateType($value, $expectedType, $schema = null)
