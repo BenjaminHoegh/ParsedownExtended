@@ -1488,8 +1488,32 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
         }
     }
 
-
+    /**
+     * Transliterates the given text to ASCII.
+     *
+     * @param string $text The text to transliterate.
+     * @return string The transliterated text.
+     */
     protected function transliterate(string $text): string
+    {
+        if (class_exists('\Transliterator')) {
+            $transliterator = \Transliterator::create('Any-Latin; Latin-ASCII;');
+            if ($transliterator) {
+                return $transliterator->transliterate($text);
+            }
+        }
+
+        return $this->manualTransliterate($text);
+    }
+
+
+    /**
+     * Manually transliterates the given text to ASCII using a predefined character map.
+     *
+     * @param string $text The text to transliterate.
+     * @return string The transliterated text.
+     */
+    protected function manualTransliterate(string $text): string
     {
         $characterMap = [
             // Latin
@@ -1560,6 +1584,12 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
     }
 
 
+    /**
+     * Sanitizes the given text to create a valid anchor for headings.
+     *
+     * @param string $text The text to sanitize.
+     * @return string The sanitized anchor.
+     */
     protected function sanitizeAnchor(string $text): string
     {
         $delimiter = $this->config()->get('headings.auto_anchors.delimiter');
@@ -1573,6 +1603,12 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
     }
 
 
+    /**
+     * Generates a unique anchor ID based on the given text.
+     *
+     * @param string $text The text to generate the anchor ID from.
+     * @return string The unique anchor ID.
+     */
     protected function uniquifyAnchorID(string $text): string
     {
         $blacklist = $this->config()->get('headings.auto_anchors.blacklist');
@@ -1606,6 +1642,12 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
 
 
 
+    /**
+     * Decodes a tag in the given text.
+     *
+     * @param string $text The text to decode the tag from.
+     * @return string The decoded text with the tag replaced.
+     */
     protected function decodeTag(string $text): string
     {
         $salt = $this->getSalt();
@@ -1620,6 +1662,12 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
     }
 
 
+    /**
+     * Encodes a tag in the given text by replacing it with a hashed version.
+     *
+     * @param string $text The text to encode the tag in.
+     * @return string The text with the tag encoded.
+     */
     protected function encodeTag(string $text): string
     {
         $salt = $this->getSalt();
@@ -1635,12 +1683,29 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
     }
 
 
+    /**
+     * Fetches the text content from the given input text.
+     *
+     * This method trims the text and removes any HTML tags using the `strip_tags` function.
+     * It then passes the trimmed text to the `line` method to further process it.
+     *
+     * @param string $text The input text to fetch the content from.
+     * @return string The fetched text content.
+     */
     protected function fetchText($text): string
     {
         return trim(strip_tags($this->line($text)));
     }
 
 
+    /**
+     * Get the ID attribute for the Table of Contents (TOC).
+     *
+     * If the ID attribute for the TOC is set, it will be returned.
+     * Otherwise, the default ID attribute defined in the class constant `TOC_ID_ATTRIBUTE_DEFAULT` will be returned.
+     *
+     * @return string The ID attribute for the TOC.
+     */
     protected function getIdAttributeToc(): string
     {
         if (!empty($this->id_toc)) {
@@ -1651,6 +1716,11 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
     }
 
 
+    /**
+     * Retrieves a salt value used for hashing.
+     *
+     * @return string The salt value.
+     */
     protected function getSalt(): string
     {
         static $salt;
@@ -1663,6 +1733,14 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
     }
 
 
+    /**
+     * Retrieves the tag for the table of contents (TOC).
+     *
+     * If the tag for the TOC is not empty, it returns the tag.
+     * Otherwise, it returns the default TOC tag.
+     *
+     * @return string The tag for the table of contents.
+     */
     protected function getTagToc(): string
     {
         if (!empty($this->tag_toc)) {
@@ -1673,6 +1751,14 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
     }
 
 
+    /**
+     * Sets the contents list.
+     *
+     * This method takes an array of content and stores it both as an array and as a string in markdown list format.
+     *
+     * @param array $Content The array of content.
+     * @return void
+     */
     protected function setContentsList(array $Content): void
     {
         // Stores as an array
@@ -1682,12 +1768,29 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
     }
 
 
+    /**
+     * Adds an array of content to the contents list.
+     *
+     * @param array $Content The array of content to be added.
+     * @return void
+     */
     protected function setContentsListAsArray(array $Content): void
     {
         $this->contentsListArray[] = $Content;
     }
 
 
+    /**
+     * Sets the contents list as a string.
+     *
+     * This method takes an array of content and constructs a string representation of the contents list.
+     * It fetches the text, ID, and level from the content array, and constructs a link using the text and ID.
+     * The level is used to determine the indentation level of the link in the contents list.
+     * The constructed link is then appended to the contents list string.
+     *
+     * @param array $Content The content array containing the text, ID, and level.
+     * @return void
+     */
     protected function setContentsListAsString(array $Content): void
     {
         $text = $this->fetchText($Content['text']);
@@ -1705,6 +1808,12 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
     }
 
 
+    /**
+     * Sets the tag for the Table of Contents (ToC).
+     *
+     * @param string $tag The tag to be used for the Table of Contents.
+     * @throws \InvalidArgumentException If the provided tag is malformed.
+     */
     public function setTagToc($tag): void
     {
         $tag = trim($tag);
@@ -1720,6 +1829,12 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
     }
 
 
+    /**
+     * Converts the given text to HTML and adds a table of contents (TOC) if enabled.
+     *
+     * @param string $text The text to be converted to HTML.
+     * @return string The converted HTML with the TOC if enabled.
+     */
     public function text($text): string
     {
         $html = $this->body($text);
@@ -1743,6 +1858,13 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
     // -------------------------------------------------------------------------
 
 
+    /**
+     * Adds an inline type to the ParsedownExtended class.
+     *
+     * @param string|array $markers The marker(s) representing the inline type(s) to be added.
+     * @param string $funcName The name of the function to be associated with the inline type.
+     * @return void
+     */
     private function addInlineType($markers, string $funcName): void
     {
         // Ensure $markers is an array, even if it's a single marker
@@ -1766,6 +1888,17 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
 
 
 
+    /**
+     * Adds a block type to the ParsedownExtended class.
+     *
+     * This method adds a block type to the ParsedownExtended class by registering the given markers and associating them with the specified function name.
+     * The markers are added to the BlockTypes array and the specialCharacters array.
+     * The function name is added to the corresponding marker's array in the BlockTypes array.
+     *
+     * @param array $markers An array of markers to be registered as block types.
+     * @param string $funcName The name of the function to be associated with the markers.
+     * @return void
+     */
     private function addBlockType(array $markers, string $funcName): void
     {
         foreach ($markers as $marker) {
@@ -1993,16 +2126,51 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
     // Configurations Handler
     // -------------------------------------------------------------------------
 
-    protected function defineConfigSchema(): array
+    /**
+     * Initializes the configuration array based on the given schema.
+     *
+     * @param array $schema The schema defining the configuration structure.
+     * @return array The initialized configuration array.
+     */
+    private function initializeConfig(array $schema)
+    {
+        $config = [];
+        foreach ($schema as $key => $definition) {
+            if (isset($definition['type'])) {
+                if ($definition['type'] === 'array' && is_array($definition['default'])) {
+                    // Handle array types with nested defaults
+                    $config[$key] = $this->initializeConfig($definition['default']);
+                } else {
+                    $config[$key] = $definition['default'];
+                }
+            } else {
+                if (is_array($definition)) {
+                    // Recursively initialize nested configurations
+                    $config[$key] = $this->initializeConfig($definition);
+                } else {
+                    // If the definition is not an array, assign it directly
+                    $config[$key] = $definition;
+                }
+            }
+        }
+        return $config;
+    }
+
+    /**
+     * Defines the configuration schema for ParsedownExtended.
+     *
+     * @return array The configuration schema.
+     */
+    private function defineConfigSchema(): array
     {
         return [
             'abbreviations' => [
                 'enabled' => ['type' => 'boolean', 'default' => true],
-                'allow_custom_abbr' => ['type' => 'boolean', 'default' => true],
-                'predefine' => [
+                'allow_custom' => ['type' => 'boolean', 'default' => true],
+                'predefined' => [
                     'type' => 'array',
                     'default' => [],
-                    'itemSchema' => ['type' => 'array', 'keys' => ['abbr' => 'string', 'expansion' => 'string']]
+                    'item_schema' => ['type' => 'array', 'keys' => ['abbr' => 'string', 'expansion' => 'string']]
                 ],
             ],
             'code' => [
@@ -2027,12 +2195,12 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
                 'subscript' => ['type' => 'boolean', 'default' => false],
                 'superscript' => ['type' => 'boolean', 'default' => false],
                 'keystrokes' => ['type' => 'boolean', 'default' => true],
-                'marking' => ['type' => 'boolean', 'default' => true],
+                'mark' => ['type' => 'boolean', 'default' => true],
             ],
             'footnotes' => ['type' => 'boolean', 'default' => true],
             'headings' => [
                 'enabled' => ['type' => 'boolean', 'default' => true],
-                'allowed' => ['type' => 'array', 'default' => ['h1', 'h2', 'h3', 'h4', 'h5', 'h6']],
+                'allowed_levels' => ['type' => 'array', 'default' => ['h1', 'h2', 'h3', 'h4', 'h5', 'h6']],
                 'auto_anchors' => [
                     'enabled' => ['type' => 'boolean', 'default' => true],
                     'delimiter' => ['type' => 'string', 'default' => '-'],
@@ -2059,7 +2227,7 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
                     'delimiters' => [
                         'type' => 'array',
                         'default' => [['left' => '\\(', 'right' => '\\)']],
-                        'itemSchema' => ['type' => 'array', 'keys' => ['left' => 'string', 'right' => 'string']]
+                        'item_schema' => ['type' => 'array', 'keys' => ['left' => 'string', 'right' => 'string']]
                     ],
                 ],
                 'block' => [
@@ -2075,7 +2243,7 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
                             ['left' => '\\begin{CD}', 'right' => '\\end{CD}'],
                             ['left' => '\\[', 'right' => '\\]'],
                         ],
-                        'itemSchema' => ['type' => 'array', 'keys' => ['left' => 'string', 'right' => 'string']]
+                        'item_schema' => ['type' => 'array', 'keys' => ['left' => 'string', 'right' => 'string']]
                     ],
                 ],
             ],
@@ -2089,18 +2257,15 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
                 'smart_ellipses' => ['type' => 'boolean', 'default' => true],
                 'smart_quotes' => ['type' => 'boolean', 'default' => true],
                 'substitutions' => [
-                    'type' => 'array',
-                    'default' => [
-                        'ellipses' => ['type' => 'string', 'default' => '&hellip;'],
-                        'left-angle-quote' => ['type' => 'string', 'default' => '&laquo;'],
-                        'left-double-quote' => ['type' => 'string', 'default' => '&ldquo;'],
-                        'left-single-quote' => ['type' => 'string', 'default' => '&lsquo;'],
-                        'mdash' => ['type' => 'string', 'default' => '&mdash;'],
-                        'ndash' => ['type' => 'string', 'default' => '&ndash;'],
-                        'right-angle-quote' => ['type' => 'string', 'default' => '&raquo;'],
-                        'right-double-quote' => ['type' => 'string', 'default' => '&rdquo;'],
-                        'right-single-quote' => ['type' => 'string', 'default' => '&rsquo;'],
-                    ],
+                    'ellipses' => ['type' => 'string', 'default' => '&hellip;'],
+                    'left_angle_quote' => ['type' => 'string', 'default' => '&laquo;'],
+                    'left_double_quote' => ['type' => 'string', 'default' => '&ldquo;'],
+                    'left_single_quote' => ['type' => 'string', 'default' => '&lsquo;'],
+                    'mdash' => ['type' => 'string', 'default' => '&mdash;'],
+                    'ndash' => ['type' => 'string', 'default' => '&ndash;'],
+                    'right_angle_quote' => ['type' => 'string', 'default' => '&raquo;'],
+                    'right_double_quote' => ['type' => 'string', 'default' => '&rdquo;'],
+                    'right_single_quote' => ['type' => 'string', 'default' => '&rsquo;'],
                 ],
             ],
             'special_attributes' => ['type' => 'boolean', 'default' => true],
@@ -2118,37 +2283,15 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
         ];
     }
 
-    // Initialize configuration based on the provided schema
-    protected function initializeConfig(array $schema)
-    {
-        $config = [];
-        foreach ($schema as $key => $definition) {
-            if (isset($definition['type'])) {
-                if ($definition['type'] === 'array' && is_array($definition['default'])) {
-                    // Handle array types with nested defaults
-                    $config[$key] = $this->initializeConfig($definition['default']);
-                } else {
-                    $config[$key] = $definition['default'];
-                }
-            } else {
-                if (is_array($definition)) {
-                    // Recursively initialize nested configurations
-                    $config[$key] = $this->initializeConfig($definition);
-                } else {
-                    // If the definition is not an array, assign it directly
-                    $config[$key] = $definition;
-                }
-            }
-        }
-        return $config;
-    }
-
-    // Return a configuration manager instance
+    /**
+     * Represents a configuration object for ParsedownExtended.
+     * This class provides methods to retrieve and set configuration values based on key paths.
+     */
     public function config()
     {
         return new class ($this->configSchema, $this->config) {
-            protected $schema;
-            protected $config;
+            private $schema;
+            private $config;
 
             public function __construct($schema, &$config)
             {
@@ -2156,15 +2299,51 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
                 $this->config = &$config;
             }
 
+
+            private function translateDeprecatedKeyPath($keyPath)
+            {
+                $deprecatedMapping = [
+                    'abbreviations.allow_custom_abbr' => 'abbreviations.allow_custom',
+                    'abbreviations.predefine' => 'abbreviations.predefined',
+                    'emphasis.marking' => 'emphasis.mark',
+                    'headings.allowed' => 'headings.allowed_levels',
+                    'smarty.substitutions.left-angle-quote' => 'smarty.substitutions.left_angle_quote',
+                    'smarty.substitutions.left-double-quote' => 'smarty.substitutions.left_double_quote',
+                    'smarty.substitutions.left-single-quote' => 'smarty.substitutions.left_single_quote',
+                    'smarty.substitutions.right-angle-quote' => 'smarty.substitutions.right_angle_quote',
+                    'smarty.substitutions.right-double-quote' => 'smarty.substitutions.right_double_quote',
+                    'smarty.substitutions.right-single-quote' => 'smarty.substitutions.right_single_quote',
+                    'toc.toc_tag' => 'tog.tag',
+                ];
+
+                if (isset($deprecatedMapping[$keyPath])) {
+                    return $deprecatedMapping[$keyPath];
+                }
+                return $keyPath;
+            }
+
+            /**
+             * Retrieves the value from the configuration based on the given key path.
+             *
+             * @param string $keyPath The key path to retrieve the value from.
+             * @return mixed The value retrieved from the configuration.
+             * @throws \InvalidArgumentException If the key path is invalid.
+             */
             public function get(string $keyPath)
             {
+                // Translate deprecated key paths
+                $keyPath = $this->translateDeprecatedKeyPath($keyPath);
+
                 // Split the key path into an array
                 $keys = explode('.', $keyPath);
                 $value = $this->config;
 
                 foreach ($keys as $key) {
                     if (!array_key_exists($key, $value)) {
-                        throw new \InvalidArgumentException("Invalid key path: \"$keyPath\"");
+                        $backtrace = debug_backtrace();
+                        $caller = $backtrace[0];
+                        $errorMessage = "Invalid key path '{$keyPath}' given. Called in " . ($caller['file'] ?? 'unknown') . " on line " . ($caller['line'] ?? 'unknown');
+                        throw new \InvalidArgumentException($errorMessage);
                     }
                     $value = $value[$key];
                 }
@@ -2176,9 +2355,17 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
                 return $value;
             }
 
-            // Set a configuration value based on a key path
+            /**
+             * Set a configuration value based on a key path.
+             *
+             * @param string|array $keyPath The key path or an associative array of key-value pairs.
+             * @param mixed $value The value to set.
+             * @return self Returns an instance of the class.
+             * @throws \InvalidArgumentException If an invalid key path is given or if the value does not match the expected type.
+             */
             public function set($keyPath, $value = null): self
             {
+
                 if (is_array($keyPath)) {
                     // Set multiple values if an associative array is provided
                     foreach ($keyPath as $key => $val) {
@@ -2187,7 +2374,12 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
                     return $this;
                 }
 
+                // Translate deprecated key paths
+                $keyPath = $this->translateDeprecatedKeyPath($keyPath);
+
+                // Split the key path into an array
                 $keys = explode('.', $keyPath);
+
                 $lastKey = array_pop($keys);
                 $current = &$this->config;
                 $currentSchema = $this->schema;
@@ -2195,7 +2387,10 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
                 // Navigate to the desired configuration section
                 foreach ($keys as $key) {
                     if (!isset($current[$key])) {
-                        throw new \InvalidArgumentException("Invalid key path: " . implode('.', $keys));
+                        $backtrace = debug_backtrace();
+                        $caller = $backtrace[0];
+                        $errorMessage = "Invalid key path '{$keyPath}' given. Called in " . ($caller['file'] ?? 'unknown') . " on line " . ($caller['line'] ?? 'unknown');
+                        throw new \InvalidArgumentException($errorMessage);
                     }
                     $current = &$current[$key];
                     if (!isset($currentSchema[$key])) {
@@ -2211,7 +2406,10 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
                     $current[$lastKey] = $value;
                 } else {
                     if (!isset($currentSchema[$lastKey])) {
-                        throw new \InvalidArgumentException("Invalid key path: $keyPath");
+                        $backtrace = debug_backtrace();
+                        $caller = $backtrace[0];
+                        $errorMessage = "Invalid key path '{$keyPath}' given. Called in " . ($caller['file'] ?? 'unknown') . " on line " . ($caller['line'] ?? 'unknown');
+                        throw new \InvalidArgumentException($errorMessage);
                     }
                     $expectedType = $currentSchema[$lastKey]['type'] ?? null;
                     if ($expectedType) {
@@ -2229,15 +2427,22 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
             }
 
 
-            // Validate the type of a value against the expected type
+            /**
+             * Validates the type of a value against an expected type.
+             *
+             * @param mixed $value The value to validate.
+             * @param string $expectedType The expected type.
+             * @param array|null $schema Optional schema for additional checks.
+             * @throws \InvalidArgumentException If the value does not match the expected type.
+             */
             protected function validateType($value, $expectedType, $schema = null)
             {
                 $type = gettype($value);
                 if ($expectedType === 'array' && $type === 'array') {
                     // Additional checks for array types
-                    if (isset($schema['itemSchema'])) {
+                    if (isset($schema['item_schema'])) {
                         foreach ($value as $item) {
-                            foreach ($schema['itemSchema']['keys'] as $key => $itemType) {
+                            foreach ($schema['item_schema']['keys'] as $key => $itemType) {
                                 if (!isset($item[$key]) || gettype($item[$key]) !== $itemType) {
                                     throw new \InvalidArgumentException("Array items must have '$key' of type '$itemType'");
                                 }
