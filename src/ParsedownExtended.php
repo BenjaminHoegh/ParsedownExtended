@@ -15,7 +15,7 @@ if (class_exists('ParsedownExtra')) {
 
 class ParsedownExtended extends \ParsedownExtendedParentAlias
 {
-    public const VERSION = '1.3.0';
+    public const VERSION = '2.0.0';
     public const VERSION_PARSEDOWN_REQUIRED = '1.7.4';
     public const VERSION_PARSEDOWN_EXTRA_REQUIRED = '0.8.1';
     public const MIN_PHP_VERSION = '7.4';
