@@ -1,5 +1,6 @@
 <?php
 
+use BenjaminHoegh\ParsedownExtended\ParsedownExtended;
 use PHPUnit\Framework\TestCase;
 
 class SettingsTest extends TestCase
@@ -9,148 +10,116 @@ class SettingsTest extends TestCase
     protected function setUp(): void
     {
         $this->ParsedownExtended = new ParsedownExtended();
-        $this->ParsedownExtended->setSafeMode(true); // As we always want to support safe mode
+        // $this->ParsedownExtended->setSafeMode(true); // As we always want to support safe mode
     }
 
     protected function tearDown(): void
     {
+        # Ensure that the ParsedownExtended instance is destroyed after each test
         unset($this->ParsedownExtended);
     }
 
 
-    public function testGetSetting()
+    public function testSetTopLevelSimpleKey()
     {
-        $setting = $this->ParsedownExtended->settings()->get('emphasis');
-        $this->assertIsArray($setting);
-        $this->assertArrayHasKey('italic', $setting);
+        # Enable
+        $this->ParsedownExtended->config()->set('comments', true);
+        $result = $this->ParsedownExtended->config()->get('comments');
+        $this->assertTrue($result);
+        $this->assertIsBool($result);
 
-        // test nested setting
-        $setting = $this->ParsedownExtended->settings()->get('emphasis.italic');
-        $this->assertIsBool($setting);
+        # Disable
+        $this->ParsedownExtended->config()->set('comments', false);
+        $result = $this->ParsedownExtended->config()->get('comments');
+        $this->assertFalse($result);
+        $this->assertIsBool($result);
+    }
 
-        // test on boolean value
-        $setting = $this->ParsedownExtended->settings()->get('comments');
-        $this->assertIsBool($setting);
+    public function testSetTopLevelAdvanceKey()
+    {
+        # Enable
+        $this->ParsedownExtended->config()->set('abbreviations', true);
+        $result = $this->ParsedownExtended->config()->get('abbreviations');
+        $this->assertTrue($result);
+        $this->assertIsBool($result);
 
-        // test on string value
-        $setting = $this->ParsedownExtended->settings()->get('toc.toc_tag');
-        $this->assertIsString($setting);
+        # Disable
+        $this->ParsedownExtended->config()->set('abbreviations', false);
+        $result = $this->ParsedownExtended->config()->get('abbreviations');
+        $this->assertFalse($result);
+        $this->assertIsBool($result);
+    }
+
+    public function testSetNestedSimpleKey()
+    {
+        # Enable
+        $this->ParsedownExtended->config()->set('tables.tablespan', true);
+        $result = $this->ParsedownExtended->config()->get('tables.tablespan');
+        $this->assertTrue($result);
+        $this->assertIsBool($result);
+
+        # Disable
+        $this->ParsedownExtended->config()->set('tables.tablespan', false);
+        $result = $this->ParsedownExtended->config()->get('tables.tablespan');
+        $this->assertFalse($result);
+        $this->assertIsBool($result);
+    }
+
+    public function testSetNestedAdvanceKey()
+    {
+        # Enable
+        $this->ParsedownExtended->config()->set('math.block', true);
+        $result = $this->ParsedownExtended->config()->get('math.block');
+        $this->assertTrue($result);
+        $this->assertIsBool($result);
+
+        # Disable
+        $this->ParsedownExtended->config()->set('math.block', false);
+        $result = $this->ParsedownExtended->config()->get('math.block');
+        $this->assertFalse($result);
+        $this->assertIsBool($result);
+    }
+
+    public function testSetSection()
+    {
+        // Enable
+        $this->ParsedownExtended->config()->set('math', true);
+        $result = $this->ParsedownExtended->config()->get('math');
+        $this->assertTrue($result);
+        $this->assertIsBool($result);
+
+        // Disable
+        $this->ParsedownExtended->config()->set('math', false);
+        $result = $this->ParsedownExtended->config()->get('math');
+        $this->assertFalse($result);
+        $this->assertIsBool($result);
+    }
+
+    public function testSetNestedSection()
+    {
+        // Enable
+        $this->ParsedownExtended->config()->set('math.block', true);
+        $result = $this->ParsedownExtended->config()->get('math.block');
+        $this->assertTrue($result);
+        $this->assertIsBool($result);
+
+        // Disable
+        $this->ParsedownExtended->config()->set('math.block', false);
+        $result = $this->ParsedownExtended->config()->get('math.block');
+        $this->assertFalse($result);
+        $this->assertIsBool($result);
     }
 
 
-    public function testSetSetting()
+    public function testInvalidKeyPath()
     {
-        // Test setting boolean value on top level setting (hidden enabled key)
-        $this->ParsedownExtended->settings()->set('emphasis', false);
-        $this->assertFalse($this->ParsedownExtended->settings()->isEnabled('emphasis'));
-
-        $this->ParsedownExtended->settings()->set('emphasis', true);
-        $this->assertTrue($this->ParsedownExtended->settings()->isEnabled('emphasis'));
-
-        // Test setting boolean value on boolean value
-        $this->ParsedownExtended->settings()->set('comments', true);
-        $this->assertTrue($this->ParsedownExtended->settings()->isEnabled('comments'));
-
-        // Test setting nested value
-        $this->ParsedownExtended->settings()->set('emphasis.italic', true);
-        $this->assertTrue($this->ParsedownExtended->settings()->isEnabled('emphasis.italic'));
-
-        // Test setting string
-        $this->ParsedownExtended->settings()->set('toc.toc_tag', '[[toc]]');
-        $this->assertEquals('[[toc]]', $this->ParsedownExtended->settings()->get('toc.toc_tag'));
-
-        // Don't have a test for setting an integer value as we don't have any settings that are integers
+        $this->expectException(\InvalidArgumentException::class);
+        $this->ParsedownExtended->config()->get('nonexistent.key');
     }
 
-    public function testIsEnabled()
+    public function testInvalidTypeSet()
     {
-        // test top level setting (hidden enabled key)
-        $this->ParsedownExtended->settings()->set('emphasis', true);
-        $this->assertTrue($this->ParsedownExtended->settings()->isEnabled('emphasis'));
-
-        // test boolean value
-        $this->ParsedownExtended->settings()->set('comments', false);
-        $this->assertFalse($this->ParsedownExtended->settings()->isEnabled('comments'));
-    }
-
-    public function testSetMultiple()
-    {
-        $this->ParsedownExtended->settings()->set([
-            'diagrams' => true,
-            'comments' => false,
-            'emphasis.bold' => false,
-            'headings.auto_anchors' => false,
-        ]);
-        $this->assertTrue($this->ParsedownExtended->settings()->isEnabled('diagrams'));
-        $this->assertFalse($this->ParsedownExtended->settings()->isEnabled('comments'));
-        $this->assertFalse($this->ParsedownExtended->settings()->isEnabled('emphasis.bold'));
-        $this->assertFalse($this->ParsedownExtended->settings()->isEnabled('headings.auto_anchors'));
-    }
-
-    public function testSetArray()
-    {
-        $this->ParsedownExtended->settings()->set('math.inline.delimiters', [['left' => '$', 'right' => '$']]);
-        $this->assertEquals([['left' => '$', 'right' => '$']], $this->ParsedownExtended->settings()->get('math.inline.delimiters'));
-    }
-
-    public function testNonExistentSetting()
-    {
-        $this->expectException(InvalidArgumentException::class);
-        $this->ParsedownExtended->settings()->set('invalid.setting', true);
-
-        $this->expectException(InvalidArgumentException::class);
-        $this->ParsedownExtended->settings()->get('invalid.setting');
-
-        $this->expectException(InvalidArgumentException::class);
-        $this->ParsedownExtended->settings()->isEnabled('invalid.setting');
-
-        $this->expectException(InvalidArgumentException::class);
-        $this->ParsedownExtended->settings()->set([
-            'invalid.setting' => true,
-            'another.invalid.setting' => false,
-        ]);
-    }
-
-    public function testInvalidType()
-    {
-        $this->expectException(InvalidArgumentException::class);
-        $this->ParsedownExtended->settings()->set('emphasis.bold', 123);
-
-        $this->expectException(InvalidArgumentException::class);
-        $this->ParsedownExtended->settings()->set([
-            'emphasis.bold' => 123,
-        ]);
-    }
-
-    public function testInvalidTypeParentKey()
-    {
-        $this->expectException(InvalidArgumentException::class);
-        $this->ParsedownExtended->settings()->set('emphasis', 123);
-
-        $this->expectException(InvalidArgumentException::class);
-        $this->ParsedownExtended->settings()->set([
-            'emphasis' => 123,
-        ]);
-    }
-
-
-    public function testSettingArray(): void
-    {
-        $this->parsedownExtended->setSetting('math', [
-            'inline' => [
-                'delimiters' => [
-                    ['$', '$'],
-                    ['\\(', '\\)']
-                ],
-            ],
-            'block' => [
-                'delimiters' => [
-                    ['$$', '$$'],
-                    ['\\[', '\\]']
-                ],
-            ]
-        ]);
-        $this->assertTrue($this->parsedownExtended->isEnabled('math'));
-        $this->assertTrue($this->parsedownExtended->isEnabled('math.inline'));
+        $this->expectException(\InvalidArgumentException::class);
+        $this->ParsedownExtended->config()->set('comments', 'not-a-boolean');
     }
 }
