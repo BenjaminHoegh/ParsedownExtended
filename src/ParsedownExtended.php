@@ -936,6 +936,16 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
     }
 
 
+    /**
+     * Parses a line of text to check for block math notation.
+     *
+     * This method checks if the configuration allows for block math notation and if the line contains any block math delimiters.
+     * It iterates through the block math delimiters defined in the configuration and uses regular expressions to match the delimiters in the line.
+     * If a match is found, it returns an array containing the matched text, start marker, and end marker.
+     *
+     * @param array $Line The line of text to parse.
+     * @return array|null An array containing the matched text, start marker, and end marker, or null if no match is found.
+     */
     protected function blockMathNotation($Line)
     {
         if (!$this->config()->get('math') || !$this->config()->get('math.block')) {
@@ -963,6 +973,13 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
     }
 
 
+    /**
+     * Continues the block for math notation parsing.
+     *
+     * @param array $Line The current line being processed.
+     * @param array $Block The current block being processed.
+     * @return array|null The updated block or null if the block is complete.
+     */
     protected function blockMathNotationContinue($Line, $Block)
     {
         if (isset($Block['complete'])) {
@@ -993,6 +1010,14 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
     }
 
 
+    /**
+     * Block Math Notation Complete
+     *
+     * This method is responsible for processing a block of math notation and returning the processed block.
+     *
+     * @param mixed $Block The block to be processed.
+     * @return mixed The processed block.
+     */
     protected function blockMathNotationComplete($Block)
     {
         return $Block;
@@ -1000,6 +1025,17 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
 
 
 
+    /**
+     * Block Fenced Code
+     *
+     * This method is responsible for handling fenced code blocks in the ParsedownExtended class.
+     * It checks if the code blocks are enabled in the configuration and extracts the language from the line.
+     * If diagrams are enabled, it checks if the language is supported and returns the corresponding element.
+     * The method returns the block with the necessary information based on the Parsedown version.
+     *
+     * @param array $Line The line of text containing the fenced code block
+     * @return array|null The block with the necessary information or null if code blocks are disabled
+     */
     protected function blockFencedCode($Line)
     {
         if (!$this->config()->get('code') or !$this->config()->get('code.blocks')) {
@@ -1066,6 +1102,12 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
     }
 
 
+    /**
+     * Modifies the list item markup based on the configuration settings.
+     *
+     * @param array $lines The lines of the list item.
+     * @return string|array The modified list item markup or elements.
+     */
     protected function li($lines)
     {
         if (!$this->config()->get('lists.tasks')) {
@@ -1138,6 +1180,21 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
 
 
 
+    /**
+     * This method is responsible for handling block headers in the ParsedownExtended class.
+     * It checks if headings are enabled in the configuration and then calls the parent's blockHeader method.
+     * If the block is not empty, it extracts the text and level of the header element.
+     * It checks if the level is allowed based on the configuration.
+     * If the level is not allowed, it returns.
+     * It generates an ID for the header element by using the text or the existing ID attribute.
+     * It sets the ID attribute of the header element.
+     * If the heading level is not in the table of contents headings, it returns the block.
+     * It adds the header information to the contents list.
+     * Finally, it returns the block.
+     *
+     * @param array $Line The line of text representing the header.
+     * @return array|null The modified block or null if headings are not enabled or the level is not allowed.
+     */
     protected function blockHeader($Line)
     {
         if (!$this->config()->get('headings')) {
@@ -1172,6 +1229,22 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
         }
     }
 
+    /**
+     * Block Setext Header
+     *
+     * This method is responsible for handling setext headers in the ParsedownExtended class.
+     * It checks if headings are enabled in the configuration and then calls the parent's blockSetextHeader method.
+     * If the resulting block is not empty, it extracts the text and level of the header element.
+     * It checks if the level is allowed based on the configuration.
+     * If the level is allowed, it generates an ID for the header element and assigns it to the 'id' attribute.
+     * It then checks if the heading level is included in the table of contents (TOC) selectors.
+     * If it is, it adds the header to the contents list.
+     * Finally, it returns the modified block.
+     *
+     * @param array $Line The line of text being parsed.
+     * @param array|null $Block The current block being parsed.
+     * @return array|null The modified block or null if headings are not enabled or the level is not allowed.
+     */
     protected function blockSetextHeader($Line, $Block = null)
     {
         if (!$this->config()->get('headings')) {
@@ -1207,6 +1280,17 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
     }
 
 
+    /**
+     * Block Abbreviation
+     *
+     * This method is responsible for handling the block abbreviation in the ParsedownExtended class.
+     * It checks if the 'abbreviations' configuration option is enabled and adds predefined abbreviations
+     * to the DefinitionData array. If the 'allow_custom_abbr' configuration option is also enabled,
+     * it calls the parent's blockAbbreviation method. Otherwise, it returns null.
+     *
+     * @param array $Line The line being processed.
+     * @return void|null
+     */
     protected function blockAbbreviation($Line)
     {
         if ($this->config()->get('abbreviations')) {
