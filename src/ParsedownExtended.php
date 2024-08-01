@@ -90,7 +90,7 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
         return $this->configSchema;
     }
 
-    private function checkVersion($component, $currentVersion, $requiredVersion)
+    private function checkVersion(string $component, string $currentVersion, string $requiredVersion): void
     {
         if (version_compare($currentVersion, $requiredVersion) < 0) {
             $msg_error  = 'Version Error.' . PHP_EOL;
@@ -101,7 +101,7 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
         }
     }
 
-    private function setLegacyMode()
+    private function setLegacyMode(): void
     {
         $parsedownVersion = preg_replace('/-.*$/', '', \Parsedown::version);
 
@@ -946,7 +946,7 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
      * @param array $Line The line of text to parse.
      * @return array|null An array containing the matched text, start marker, and end marker, or null if no match is found.
      */
-    protected function blockMathNotation($Line)
+    protected function blockMathNotation(array $Line): ?array
     {
         if (!$this->config()->get('math') || !$this->config()->get('math.block')) {
             return null;
@@ -969,7 +969,7 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
             }
         }
 
-        return;
+        return null;
     }
 
 
@@ -980,10 +980,10 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
      * @param array $Block The current block being processed.
      * @return array|null The updated block or null if the block is complete.
      */
-    protected function blockMathNotationContinue($Line, $Block)
+    protected function blockMathNotationContinue(array $Line, array $Block): ?array
     {
         if (isset($Block['complete'])) {
-            return;
+            return null;
         }
 
         if (isset($Block['interrupted'])) {
@@ -1009,15 +1009,6 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
         return $Block;
     }
 
-
-    /**
-     * Block Math Notation Complete
-     *
-     * This method is responsible for processing a block of math notation and returning the processed block.
-     *
-     * @param mixed $Block The block to be processed.
-     * @return mixed The processed block.
-     */
     protected function blockMathNotationComplete($Block)
     {
         return $Block;
@@ -1546,7 +1537,6 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
             }
         }
 
-        // Note we don't use isEnabled here
         if($this->config()->get('headings.auto_anchors.replacements')) {
             $text = preg_replace(array_keys($this->config()->get('headings.auto_anchors.replacements')), $this->config()->get('headings.auto_anchors.replacements'), $text);
         }
@@ -1563,7 +1553,7 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
     }
 
 
-    protected function normalizeString(string $text)
+    protected function normalizeString(string $text): string
     {
         if (extension_loaded('mbstring')) {
             return mb_convert_encoding($text, 'UTF-8', mb_list_encodings());
@@ -1776,7 +1766,7 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
      * @param string $text The input text to fetch the content from.
      * @return string The fetched text content.
      */
-    protected function fetchText($text): string
+    protected function fetchText(string $text): string
     {
         return trim(strip_tags($this->line($text)));
     }
@@ -2384,7 +2374,7 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
             }
 
 
-            private function translateDeprecatedKeyPath($keyPath)
+            private function translateDeprecatedKeyPath(string $keyPath): string
             {
                 $deprecatedMapping = [
                     'abbreviations.allow_custom_abbr' => 'abbreviations.allow_custom',
@@ -2413,7 +2403,7 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
              * @return mixed The value retrieved from the configuration.
              * @throws \InvalidArgumentException If the key path is invalid.
              */
-            public function get(string $keyPath)
+            public function get(string $keyPath): mixed
             {
                 // Translate deprecated key paths
                 $keyPath = $this->translateDeprecatedKeyPath($keyPath);
@@ -2447,7 +2437,7 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
              * @return self Returns an instance of the class.
              * @throws \InvalidArgumentException If an invalid key path is given or if the value does not match the expected type.
              */
-            public function set($keyPath, $value = null): self
+            public function set(string|array $keyPath, mixed $value = null): self
             {
 
                 if (is_array($keyPath)) {
@@ -2519,7 +2509,7 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
              * @param array|null $schema Optional schema for additional checks.
              * @throws \InvalidArgumentException If the value does not match the expected type.
              */
-            protected function validateType($value, $expectedType, $schema = null)
+            protected function validateType(mixed $value, string $expectedType, ?array $schema = null)
             {
                 $type = gettype($value);
                 if ($expectedType === 'array' && $type === 'array') {
