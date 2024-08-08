@@ -2084,6 +2084,25 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
         }
     }
 
+    /*
+     * This function is used to warn users about deprecated functions
+     *
+     * @param string $functionName The name of the function that is deprecated
+     * @param string $version The version in which the function was deprecated
+     * @param string $alternative The alternative function to use
+     *
+     * @return void
+     */
+    private function deprecated(string $functionName, string $version, string $alternative = ''): void
+    {
+        $backtrace = debug_backtrace();
+        $caller = $backtrace[1];
+        $message = "Function $functionName is deprecated as of version $version and will be removed in the future. ";
+        $message .= $alternative ? "Use $alternative instead." : '';
+        $message .= "Called in " . ($caller['file'] ?? 'unknown') . " on line " . ($caller['line'] ?? 'unknown');
+        trigger_error($message, E_USER_DEPRECATED);
+    }
+
 
     // Overwriting core Parsedown functions
     // -------------------------------------------------------------------------
