@@ -2,9 +2,15 @@
 <psalm
     errorLevel="8"
     useDocblockTypes="false"
-    phpVersion="7.4"
+    phpVersion="8.0"
+    findUnusedCode="true"
+    findUnusedBaselineEntry="true"
 >
     <projectFiles>
         <directory name="src" />
     </projectFiles>
+    <issueHandlers>
+        <InvalidReturnType severity="info" />
+        <InvalidParamDefault severity="info" />
+    </issueHandlers>
 </psalm>

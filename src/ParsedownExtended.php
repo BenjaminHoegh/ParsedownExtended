@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace BenjaminHoegh\ParsedownExtended;
 
 /**
@@ -18,7 +20,7 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
     public const VERSION = '2.0.0';
     public const VERSION_PARSEDOWN_REQUIRED = '1.7.4';
     public const VERSION_PARSEDOWN_EXTRA_REQUIRED = '0.8.1';
-    public const MIN_PHP_VERSION = '7.4';
+    public const MIN_PHP_VERSION = '8.0';
 
     private const TOC_TAG_DEFAULT = '[toc]';
     private const TOC_ID_ATTRIBUTE_DEFAULT = 'toc';
@@ -32,7 +34,6 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
     private bool $legacyMode = false;
     private mixed $config;
     private array $configSchema;
-
 
     public function __construct()
     {
@@ -113,6 +114,10 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
     // Inline types
     // -------------------------------------------------------------------------
 
+    /**
+     * @psalm-suppress MissingReturnType
+     * @psalm-suppress MissingParamType
+     */
     protected function inlineCode($Excerpt)
     {
         if ($this->config()->get('code') && $this->config()->get('code.inline')) {
@@ -120,7 +125,10 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
         }
     }
 
-
+    /**
+     * @psalm-suppress MissingReturnType
+     * @psalm-suppress MissingParamType
+     */
     protected function inlineEmailTag($Excerpt)
     {
         if ($this->config()->get('links') && $this->config()->get('links.email_links')) {
@@ -128,6 +136,10 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
         }
     }
 
+    /**
+     * @psalm-suppress MissingReturnType
+     * @psalm-suppress MissingParamType
+     */
     protected function inlineImage($Excerpt)
     {
         if ($this->config()->get('images')) {
@@ -135,6 +147,10 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
         }
     }
 
+    /**
+     * @psalm-suppress MissingReturnType
+     * @psalm-suppress MissingParamType
+     */
     protected function inlineLink($Excerpt)
     {
         if ($this->config()->get('links')) {
@@ -142,6 +158,10 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
         }
     }
 
+    /**
+     * @psalm-suppress MissingReturnType
+     * @psalm-suppress MissingParamType
+     */
     protected function inlineMarkup($Excerpt)
     {
         if ($this->config()->get('markup')) {
@@ -149,6 +169,10 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
         }
     }
 
+    /**
+     * @psalm-suppress MissingReturnType
+     * @psalm-suppress MissingParamType
+     */
     protected function inlineStrikethrough($Excerpt)
     {
         if ($this->config()->get('emphasis.strikethroughs') && $this->config()->get('emphasis')) {
@@ -156,6 +180,10 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
         }
     }
 
+    /**
+     * @psalm-suppress MissingReturnType
+     * @psalm-suppress MissingParamType
+     */
     protected function inlineUrl($Excerpt)
     {
         if ($this->config()->get('links')) {
@@ -163,6 +191,10 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
         }
     }
 
+    /**
+     * @psalm-suppress MissingReturnType
+     * @psalm-suppress MissingParamType
+     */
     protected function inlineUrlTag($Excerpt)
     {
         if ($this->config()->get('links')) {
@@ -175,11 +207,14 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
      *
      * @param array $Excerpt The excerpt containing the text to be parsed.
      * @return array|null The parsed emphasis element or null if no emphasis is found.
+     *
+     * @psalm-suppress MissingParamType
+     * @psalm-suppress MissingReturnType
      */
     protected function inlineEmphasis($Excerpt)
     {
         if (!$this->config()->get('emphasis') || !isset($Excerpt['text'][1])) {
-            return;
+            return null;
         }
 
         $marker = $Excerpt['text'][0];
@@ -190,7 +225,7 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
         } elseif ($this->config()->get('emphasis.italic') and preg_match($this->EmRegex[$marker], $Excerpt['text'], $matches)) {
             $emphasis = 'em';
         } else {
-            return;
+            return null;
         }
 
         return [
@@ -344,7 +379,7 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
      * @param array $Excerpt The excerpt to parse.
      * @return array|null The parsed math notation or null if parsing is disabled.
      */
-    protected function inlineMathNotation($Excerpt)
+    protected function inlineMathNotation(array $Excerpt): ?array
     {
         // Check if parsing of math notation is enabled
         if (!$this->config()->get('math') || !$this->config()->get('math.inline')) {
@@ -353,12 +388,12 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
 
         // Check if the excerpt has enough characters
         if (!isset($Excerpt['text'][1])) {
-            return;
+            return null;
         }
 
         // Check if there is whitespace before the excerpt
         if ($Excerpt['before'] !== '' && preg_match('/\s/', $Excerpt['before']) === 0) {
-            return;
+            return null;
         }
 
         // Iterate through the inline math delimiters
@@ -384,7 +419,7 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
             }
         }
 
-        return;
+        return null;
     }
 
 
@@ -401,6 +436,9 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
      *
      * @param array $Excerpt The Excerpt containing the text to be processed.
      * @return array|null Returns an array with the 'markup' and 'extent' values if a special character is found, otherwise returns null.
+     *
+     * @psalm-suppress MissingReturnType
+     * @psalm-suppress MissingParamType
      */
     protected function inlineEscapeSequence($Excerpt)
     {
@@ -417,7 +455,7 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
                 }
 
                 if (preg_match($regex, $Excerpt['text'])) {
-                    return;
+                    return null;
                 }
             }
         }
@@ -483,7 +521,7 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
      * @param array $Excerpt The excerpt containing the inline text.
      * @return array|null The modified excerpt with SmartyPants substitutions applied, or null if SmartyPants is not enabled.
      */
-    protected function inlineSmartypants($Excerpt)
+    protected function inlineSmartypants(array $Excerpt): ?array
     {
         if (!$this->config()->get('smarty')) {
             return null;
@@ -856,6 +894,10 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
     // Block types
     // -------------------------------------------------------------------------
 
+    /**
+     * @psalm-suppress MissingReturnType
+     * @psalm-suppress MissingParamType
+     */
     protected function parseAttributeData($attributeString)
     {
         if($this->config()->get('special_attributes')) {
@@ -865,6 +907,10 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
         return [];
     }
 
+    /**
+     * @psalm-suppress MissingReturnType
+     * @psalm-suppress MissingParamType
+     */
     protected function blockFootnote($Line)
     {
         if ($this->config()->get('footnotes')) {
@@ -872,6 +918,10 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
         }
     }
 
+    /**
+     * @psalm-suppress MissingReturnType
+     * @psalm-suppress MissingParamType
+     */
     protected function blockDefinitionList($Line, $Block)
     {
         if ($this->config()->get('definition_lists')) {
@@ -879,6 +929,10 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
         }
     }
 
+    /**
+     * @psalm-suppress MissingReturnType
+     * @psalm-suppress MissingParamType
+     */
     protected function blockCode($Line, $Block = null)
     {
         if ($this->config()->get('code') && $this->config()->get('code.blocks')) {
@@ -886,6 +940,10 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
         }
     }
 
+    /**
+     * @psalm-suppress MissingReturnType
+     * @psalm-suppress MissingParamType
+     */
     protected function blockComment($Line)
     {
         if ($this->config()->get('comments')) {
@@ -893,6 +951,10 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
         }
     }
 
+    /**
+     * @psalm-suppress MissingReturnType
+     * @psalm-suppress MissingParamType
+     */
     protected function blockList($Line, array $CurrentBlock = null)
     {
         if ($this->config()->get('lists')) {
@@ -900,6 +962,10 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
         }
     }
 
+    /**
+     * @psalm-suppress MissingReturnType
+     * @psalm-suppress MissingParamType
+     */
     protected function blockQuote($Line)
     {
         if ($this->config()->get('quotes')) {
@@ -907,6 +973,10 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
         }
     }
 
+    /**
+     * @psalm-suppress MissingReturnType
+     * @psalm-suppress MissingParamType
+     */
     protected function blockRule($Line)
     {
         if ($this->config()->get('thematic_breaks')) {
@@ -914,6 +984,10 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
         }
     }
 
+    /**
+     * @psalm-suppress MissingReturnType
+     * @psalm-suppress MissingParamType
+     */
     protected function blockMarkup($Line)
     {
         if ($this->config()->get('markup')) {
@@ -921,6 +995,10 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
         }
     }
 
+    /**
+     * @psalm-suppress MissingReturnType
+     * @psalm-suppress MissingParamType
+     */
     protected function blockReference($Line)
     {
         if ($this->config()->get('references')) {
@@ -928,6 +1006,10 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
         }
     }
 
+    /**
+     * @psalm-suppress MissingReturnType
+     * @psalm-suppress MissingParamType
+     */
     protected function blockTable($Line, $Block = null)
     {
         if ($this->config()->get('tables')) {
@@ -1009,7 +1091,7 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
         return $Block;
     }
 
-    protected function blockMathNotationComplete($Block)
+    protected function blockMathNotationComplete(array $Block): array
     {
         return $Block;
     }
@@ -1030,7 +1112,7 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
     protected function blockFencedCode($Line)
     {
         if (!$this->config()->get('code') or !$this->config()->get('code.blocks')) {
-            return;
+            return null;
         }
 
         $Block = parent::blockFencedCode($Line);
@@ -1189,7 +1271,7 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
     protected function blockHeader($Line)
     {
         if (!$this->config()->get('headings')) {
-            return;
+            return null;
         }
 
         $Block = parent::blockHeader($Line);
@@ -1200,7 +1282,7 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
 
             // check if level is allowed
             if (!in_array($level, $this->config()->get('headings.allowed'))) {
-                return;
+                return null;
             }
 
             // Prepare value for id generation by checking if the id attribute is set else use the text
@@ -1239,7 +1321,7 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
     protected function blockSetextHeader($Line, $Block = null)
     {
         if (!$this->config()->get('headings')) {
-            return;
+            return null;
         }
 
         $Block = parent::blockSetextHeader($Line, $Block);
@@ -1250,7 +1332,7 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
 
             // check if level is allowed
             if (!in_array($level, $this->config()->get('headings.allowed'))) {
-                return;
+                return null;
             }
 
             // Prepare value for id generation by checking if the id attribute is set else use the text
@@ -1293,7 +1375,7 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
                 return parent::blockAbbreviation($Line);
             }
 
-            return;
+            return null;
         }
     }
 
@@ -1368,7 +1450,7 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
         }
 
         // Colspan
-        foreach ($rows as $rowNo => &$row) {
+        foreach ($rows as &$row) {
             if ($this->legacyMode === true) {
                 // 1.7
                 $elements = & $row['text'];
@@ -1455,7 +1537,7 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
             }
         }
 
-        foreach ($rows as $rowNo => &$row) {
+        foreach ($rows as &$row) {
 
             if ($this->legacyMode === true) {
                 // 1.7
@@ -1728,7 +1810,7 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
         $tag_origin = $this->getTagToc();
         $tag_hashed = hash('sha256', $salt . $tag_origin);
 
-        if (strpos($text, $tag_hashed) === false) {
+        if (!str_contains($text, $tag_hashed)) {
             return $text;
         }
 
@@ -1747,7 +1829,7 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
         $salt = $this->getSalt();
         $tag_origin = $this->getTagToc();
 
-        if (strpos($text, $tag_origin) === false) {
+        if (!str_contains($text, $tag_origin)) {
             return $text;
         }
 
@@ -1918,7 +2000,7 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
         }
 
         $tag_origin = $this->getTagToc();
-        if (strpos($text, $tag_origin) === false) {
+        if (!str_contains($text, $tag_origin)) {
             return $html;
         }
 
@@ -2009,6 +2091,9 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
      * Overwrite line from Parsedown to allow for more precise control over inline elements
      * line() is 1.7 version of lineElements() from 1.8, so we overwrite it too, it will not be called
      * when using 1.8 version of parsedown
+     *
+     * @psalm-suppress MissingReturnType
+     * @psalm-suppress MissingParamType
      */
     public function line($text, $nonNestables = [])
     {
@@ -2244,7 +2329,7 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
                 'predefined' => [
                     'type' => 'array',
                     'default' => [],
-                    'item_schema' => ['type' => 'array', 'keys' => ['abbr' => 'string', 'expansion' => 'string']]
+                    'item_schema' => ['type' => 'array', 'keys' => ['abbr' => 'string', 'expansion' => 'string']],
                 ],
             ],
             'code' => [
@@ -2301,7 +2386,7 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
                     'delimiters' => [
                         'type' => 'array',
                         'default' => [['left' => '\\(', 'right' => '\\)']],
-                        'item_schema' => ['type' => 'array', 'keys' => ['left' => 'string', 'right' => 'string']]
+                        'item_schema' => ['type' => 'array', 'keys' => ['left' => 'string', 'right' => 'string']],
                     ],
                 ],
                 'block' => [
@@ -2317,7 +2402,7 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
                             ['left' => '\\begin{CD}', 'right' => '\\end{CD}'],
                             ['left' => '\\[', 'right' => '\\]'],
                         ],
-                        'item_schema' => ['type' => 'array', 'keys' => ['left' => 'string', 'right' => 'string']]
+                        'item_schema' => ['type' => 'array', 'keys' => ['left' => 'string', 'right' => 'string']],
                     ],
                 ],
             ],
@@ -2367,7 +2452,7 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
             private $schema;
             private $config;
 
-            public function __construct($schema, &$config)
+            public function __construct(array $schema, &$config)
             {
                 $this->schema = $schema;
                 $this->config = &$config;
@@ -2455,6 +2540,7 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
                 $keys = explode('.', $keyPath);
 
                 $lastKey = array_pop($keys);
+                /** @psalm-suppress UnsupportedPropertyReferenceUsage */
                 $current = &$this->config;
                 $currentSchema = $this->schema;
 
@@ -2509,7 +2595,7 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
              * @param array|null $schema Optional schema for additional checks.
              * @throws \InvalidArgumentException If the value does not match the expected type.
              */
-            protected function validateType(mixed $value, string $expectedType, ?array $schema = null)
+            protected function validateType(mixed $value, string $expectedType, ?array $schema = null): void
             {
                 $type = gettype($value);
                 if ($expectedType === 'array' && $type === 'array') {
@@ -2523,8 +2609,8 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
                             }
                         }
                     }
-                    return;
                 }
+
                 if ($type !== $expectedType) {
                     throw new \InvalidArgumentException("Expected type $expectedType, got $type");
                 }
