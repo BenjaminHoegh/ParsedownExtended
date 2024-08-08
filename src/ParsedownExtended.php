@@ -2085,6 +2085,9 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
     }
 
 
+    // Overwriting core Parsedown functions
+    // -------------------------------------------------------------------------
+
     protected function element(array $Element)
     {
         if ($this->legacyMode) {
