@@ -2100,10 +2100,10 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
 
 
     /**
-         * Overwrite line from Parsedown to allow for more precise control over inline elements
-         * line() is 1.7 version of lineElements() from 1.8, so we overwrite it too, it will not be called
-         * when using 1.8 version of parsedown
-         */
+     * Overwrite line from Parsedown to allow for more precise control over inline elements
+     * line() is 1.7 version of lineElements() from 1.8, so we overwrite it too, it will not be called
+     * when using 1.8 version of parsedown
+     */
     public function line($text, $nonNestables = [])
     {
         $markup = '';
