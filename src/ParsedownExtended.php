@@ -2097,8 +2097,8 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
     {
         $backtrace = debug_backtrace();
         $caller = $backtrace[1];
-        $message = "Function $functionName is deprecated as of version $version and will be removed in the future. ";
-        $message .= $alternative ? "Use $alternative instead." : '';
+        $message = "Function '$functionName' is deprecated as of version $version and will be removed in the future. ";
+        $message .= $alternative ? "Use '$alternative' instead." : '';
         $message .= "Called in " . ($caller['file'] ?? 'unknown') . " on line " . ($caller['line'] ?? 'unknown');
         trigger_error($message, E_USER_DEPRECATED);
     }
