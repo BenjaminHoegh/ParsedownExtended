@@ -1639,8 +1639,31 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
         }
     }
 
-
+    /**
+     * Transliterates the given text to ASCII.
+     *
+     * @param string $text The text to transliterate.
+     * @return string The transliterated text.
+     */
     protected function transliterate(string $text): string
+    {
+        if (class_exists('\Transliterator')) {
+            $transliterator = \Transliterator::create('Any-Latin; Latin-ASCII;');
+            if ($transliterator) {
+                return $transliterator->transliterate($text);
+            }
+        }
+
+        return $this->manualTransliterate($text);
+    }
+
+    /**
+     * Manually transliterates the given text to ASCII using a predefined character map.
+     *
+     * @param string $text The text to transliterate.
+     * @return string The transliterated text.
+     */
+    protected function manualTransliterate(string $text): string
     {
         $characterMap = [
             // Latin
