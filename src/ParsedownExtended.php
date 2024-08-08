@@ -1931,7 +1931,7 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
             // Check if the part exists in the current settings
             if (!isset($current[$part])) {
                 // The setting name is invalid, return an error message
-                throw new \\InvalidArgumentException("Invalid setting name: $settingName");
+                throw new \InvalidArgumentException("Invalid setting name: $settingName");
             }
             // Move to the next level of settings
             $current = &$current[$part];
