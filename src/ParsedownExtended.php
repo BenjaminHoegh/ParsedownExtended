@@ -2096,12 +2096,15 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
     private function deprecated(string $functionName, string $version, string $alternative = ''): void
     {
         $backtrace = debug_backtrace();
-        $caller = $backtrace[1];
-        $message = "Function '$functionName' is deprecated as of version $version and will be removed in the future. ";
-        $message .= $alternative ? "Use '$alternative' instead." : '';
-        $message .= "Called in " . ($caller['file'] ?? 'unknown') . " on line " . ($caller['line'] ?? 'unknown');
+        $caller = $backtrace[1] ?? ['file' => 'unknown', 'line' => 'unknown'];
+        $message = "Function {$functionName} is deprecated as of version {$version} and will be removed in the future. ";
+        $message .= $alternative ? "Use {$alternative} instead." : '';
+        $message .= "Called in {$caller['file']} on line {$caller['line']}";
+
         trigger_error($message, E_USER_DEPRECATED);
     }
+
+
 
 
     // Overwriting core Parsedown functions
