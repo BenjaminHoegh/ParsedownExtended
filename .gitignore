@@ -2,6 +2,7 @@
 vendor/
 lab/
 tools/
+benchmarks/
 
 # PHP-CS-Fixer
 .php_cs.cache
@@ -23,3 +24,8 @@ Thumbs.db
 
 # IDE
 .vscode/
+
+
+# Becouse I sometimes forget to remove it from the commit :D
+index.php
+test.md
