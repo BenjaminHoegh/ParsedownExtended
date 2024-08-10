@@ -107,14 +107,6 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
         }
     }
 
-
-    protected function inlineEmailTag($Excerpt)
-    {
-        if ($this->config()->get('links') && $this->config()->get('links.email_links')) {
-            return parent::inlineEmailTag($Excerpt);
-        }
-    }
-
     protected function inlineImage($Excerpt)
     {
         if ($this->config()->get('images')) {
@@ -122,12 +114,6 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
         }
     }
 
-    protected function inlineLink($Excerpt)
-    {
-        if ($this->config()->get('links')) {
-            return parent::inlineLink($Excerpt);
-        }
-    }
 
     protected function inlineMarkup($Excerpt)
     {
@@ -143,19 +129,144 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
         }
     }
 
+    // protected function inlineLink($Excerpt)
+    // {
+    //     if ($this->config()->get('links')) {
+    //         return parent::inlineLink($Excerpt);
+    //     }
+    // }
+
+    // protected function inlineUrl($Excerpt)
+    // {
+    //     if ($this->config()->get('links')) {
+    //         return parent::inlineUrl($Excerpt);
+    //     }
+    // }
+
+    // protected function inlineUrlTag($Excerpt)
+    // {
+    //     if ($this->config()->get('links')) {
+    //         return parent::inlineUrlTag($Excerpt);
+    //     }
+    // }
+
+    // protected function inlineEmailTag($Excerpt)
+    // {
+    //     if ($this->config()->get('links') && $this->config()->get('links.email_links')) {
+    //         return parent::inlineEmailTag($Excerpt);
+    //     }
+    // }
+
+    protected function inlineLink($Excerpt)
+    {
+        if ($this->config()->get('links')) {
+            $Excerpt = parent::inlineLink($Excerpt);
+
+            if ($Excerpt && isset($Excerpt['element']['attributes']['href'])) {
+                $href = $Excerpt['element']['attributes']['href'];
+                $isExternal = $this->isExternalLink($href);
+
+                // Check if all links should open in a new window
+                if ($this->config()->get('links.all_in_new_window')) {
+                    $Excerpt['element']['attributes']['target'] = '_blank';
+                }
+
+                // Check if only external links should open in a new window
+                elseif ($isExternal && $this->config()->get('links.ext_in_new_window')) {
+                    $Excerpt['element']['attributes']['target'] = '_blank';
+                }
+
+                // Check if it is a mailto link
+                if (preg_match('/^mailto:/i', $href) && $this->config()->get('links.email_links')) {
+                    $Excerpt['element']['attributes']['target'] = '_blank';
+                }
+            }
+
+            return $Excerpt;
+        }
+    }
+
     protected function inlineUrl($Excerpt)
     {
         if ($this->config()->get('links')) {
-            return parent::inlineUrl($Excerpt);
+            $Excerpt = parent::inlineUrl($Excerpt);
+
+            if ($Excerpt && isset($Excerpt['element']['attributes']['href'])) {
+                $href = $Excerpt['element']['attributes']['href'];
+                $isExternal = $this->isExternalLink($href);
+
+                // Check if all links should open in a new window
+                if ($this->config()->get('links.all_in_new_window')) {
+                    $Excerpt['element']['attributes']['target'] = '_blank';
+                }
+
+                // Check if only external links should open in a new window
+                elseif ($isExternal && $this->config()->get('links.ext_in_new_window')) {
+                    $Excerpt['element']['attributes']['target'] = '_blank';
+                }
+            }
+
+            return $Excerpt;
         }
     }
 
     protected function inlineUrlTag($Excerpt)
     {
         if ($this->config()->get('links')) {
-            return parent::inlineUrlTag($Excerpt);
+            $Excerpt = parent::inlineUrlTag($Excerpt);
+
+            if ($Excerpt && isset($Excerpt['element']['attributes']['href'])) {
+                $href = $Excerpt['element']['attributes']['href'];
+                $isExternal = $this->isExternalLink($href);
+
+                // Check if all links should open in a new window
+                if ($this->config()->get('links.all_in_new_window')) {
+                    $Excerpt['element']['attributes']['target'] = '_blank';
+                }
+            }
         }
     }
+
+    protected function inlineEmailTag($Excerpt)
+    {
+        if ($this->config()->get('links') && $this->config()->get('links.email_links')) {
+            $Excerpt = parent::inlineEmailTag($Excerpt);
+
+            if ($Excerpt && isset($Excerpt['element']['attributes']['href'])) {
+                $Excerpt['element']['attributes']['target'] = '_blank';
+            }
+
+            return $Excerpt;
+        }
+    }
+
+    /**
+     * Determines if a link is external based on its href.
+     *
+     * @param string $href
+     * @return bool
+     */
+    protected function isExternalLink($href)
+    {
+        $isProtocolRelative = preg_match('/^\/\//', $href);
+        $isAbsolute = preg_match('/^https?:\/\//i', $href);
+
+        if ($isProtocolRelative || $isAbsolute) {
+            $host = parse_url($href, PHP_URL_HOST);
+
+            // Check if the domain matches the current domain
+            if ($host && $host !== $_SERVER['HTTP_HOST']) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+
+
+
+
 
     /**
      * Parses inline emphasis in the text.
@@ -1924,6 +2035,8 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
             'links' => [
                 'enabled' => ['type' => 'boolean', 'default' => true],
                 'email_links' => ['type' => 'boolean', 'default' => true],
+                'ext_in_new_window' => ['type' => 'boolean', 'default' => true],
+                'all_in_new_window' => ['type' => 'boolean', 'default' => false],
             ],
             'lists' => [
                 'enabled' => ['type' => 'boolean', 'default' => true],
