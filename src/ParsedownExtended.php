@@ -6,11 +6,7 @@ namespace BenjaminHoegh\ParsedownExtended;
  * This code checks if the class 'ParsedownExtra' exists. If it does, it creates an alias for it called 'ParsedownExtendedParentAlias'.
  * If the class 'ParsedownExtra' does not exist, it creates an alias for the class 'Parsedown' called 'ParsedownExtendedParentAlias'.
  */
-if (class_exists('ParsedownExtra')) {
-    class_alias('ParsedownExtra', 'ParsedownExtendedParentAlias');
-} else {
-    class_alias('Parsedown', 'ParsedownExtendedParentAlias');
-}
+class_alias(class_exists('ParsedownExtra') ? 'ParsedownExtra' : 'Parsedown', 'ParsedownExtendedParentAlias');
 
 
 class ParsedownExtended extends \ParsedownExtendedParentAlias
@@ -18,179 +14,29 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
     public const VERSION = '1.3.0';
     public const VERSION_PARSEDOWN_REQUIRED = '1.7.4';
     public const VERSION_PARSEDOWN_EXTRA_REQUIRED = '0.8.1';
-    public const MIN_PHP_VERSION = '7.4';
+    public const MIN_PHP_VERSION = '8.0';
 
-    private const TOC_TAG_DEFAULT = '[toc]';
-    private const TOC_ID_ATTRIBUTE_DEFAULT = 'toc';
     private array $anchorRegister = [];
     private array $contentsListArray = [];
     private int $firstHeadLevel = 0;
     private string $contentsListString = '';
-    private string $id_toc = '';
-    private string $tag_toc = '';
     private $createAnchorIDCallback = null;
     private mixed $config;
     private array $configSchema;
 
     private bool $legacyMode = false;
-    private array $settings;
 
-    // Standard settings
-    private array $defaultSettings = [
-        'abbreviations' => [
-            'enabled' => true,
-            'allow_custom_abbr' => true,
-            'predefine' => [],
-        ],
-        'code' => [
-            'enabled' => true,
-            'blocks' => true,
-            'inline' => true,
-        ],
-        'comments' => true,
-        'definition_lists' => true,
-        'diagrams' => [
-            'enabled' => false,
-            'chartjs' => true,
-            'mermaid' => true,
-        ],
-        'emojis' => true,
-        'emphasis' => [
-            'enabled' => true,
-            'bold' => true,
-            'italic' => true,
-            'strikethroughs' => true,
-            'insertions' => true,
-            'subscript' => false,
-            'superscript' => false,
-            'keystrokes' => true,
-            'marking' => true,
-        ],
-        'footnotes' => true,
-        'headings' => [
-            'enabled' => true,
-            'allowed' => ['h1', 'h2', 'h3', 'h4', 'h5', 'h6'],
-            'auto_anchors' => [
-                'enabled' => true,
-                'delimiter' => '-',
-                'lowercase' => true,
-                'replacements' => [],
-                'transliterate' => false,
-                'blacklist' => [],
-            ],
-        ],
-        'images' => true,
-        'links' => [
-            'enabled' => true,
-            'email_links' => true,
-        ],
-        'lists' => [
-            'enabled' => true,
-            'tasks' => true,
-        ],
-        'markup' => true,
-        'math' => [
-            'enabled' => false,
-            'inline' => [
-                'enabled' => true,
-                'delimiters' => [
-                    ['left' => '\\(', 'right' => '\\)'],
-                ],
-            ],
-            'block' => [
-                'enabled' => true,
-                'delimiters' => [
-                    ['left' => '$$', 'right' => '$$'],
-                    ['left' => '\\begin{equation}', 'right' => '\\end{equation}'],
-                    ['left' => '\\begin{align}', 'right' => '\\end{align}'],
-                    ['left' => '\\begin{alignat}', 'right' => '\\end{alignat}'],
-                    ['left' => '\\begin{gather}', 'right' => '\\end{gather}'],
-                    ['left' => '\\begin{CD}', 'right' => '\\end{CD}'],
-                    ['left' => '\\[', 'right' => '\\]'],
-                ],
-            ],
-        ],
-        'quotes' => true,
-        'references' => true,
-        'smarty' => [
-            'enabled' => false,
-            'smart_angled_quotes' => true,
-            'smart_backticks' => true,
-            'smart_dashes' => true,
-            'smart_ellipses' => true,
-            'smart_quotes' => true,
-            'substitutions' => [
-                'ellipses' => '&hellip;',
-                'left-angle-quote' => '&laquo;',
-                'left-double-quote' => '&ldquo;',
-                'left-single-quote' => '&lsquo;',
-                'mdash' => '&mdash;',
-                'ndash' => '&ndash;',
-                'right-angle-quote' => '&raquo;',
-                'right-double-quote' => '&rdquo;',
-                'right-single-quote' => '&rsquo;',
-            ],
-        ],
-        'special_attributes' => true,
-        'tables' => [
-            'enabled' => true,
-            'tablespan' => true,
-        ],
-        'thematic_breaks' => true,
-        'toc' => [
-            'enabled' => true,
-            'headings' => ['h1', 'h2', 'h3', 'h4', 'h5', 'h6'],
-            'toc_tag' => '[toc]',
-        ],
-        'typographer' => true,
-    ];
-
-    public function __construct(array $userSettings = [])
+    public function __construct()
     {
-        // Check if PHP version is supported
-        if (version_compare(PHP_VERSION, self::MIN_PHP_VERSION) < 0) {
-            $msg_error  = 'Version Error.' . PHP_EOL;
-            $msg_error .= '  ParsedownExtended requires PHP version ' . self::MIN_PHP_VERSION . ' or later.' . PHP_EOL;
-            $msg_error .= '  - Current version : ' . PHP_VERSION . PHP_EOL;
-            $msg_error .= '  - Required version: ' . self::MIN_PHP_VERSION . PHP_EOL;
-            throw new Exception($msg_error);
-        }
+        $this->checkVersion('PHP', PHP_VERSION, self::MIN_PHP_VERSION);
+        $this->checkVersion('Parsedown', \Parsedown::version, self::VERSION_PARSEDOWN_REQUIRED);
 
-        // Check if Parsedown is installed
-        if (version_compare(\Parsedown::version, self::VERSION_PARSEDOWN_REQUIRED) < 0) {
-            $msg_error  = 'Version Error.' . PHP_EOL;
-            $msg_error .= '  ParsedownExtended requires a later version of Parsedown.' . PHP_EOL;
-            $msg_error .= '  - Current version : ' . \Parsedown::version . PHP_EOL;
-            $msg_error .= '  - Required version: ' . self::VERSION_PARSEDOWN_REQUIRED .' and later'. PHP_EOL;
-            throw new Exception($msg_error);
-        }
-
-        // If ParsedownExtra is installed, check its version
         if (class_exists('ParsedownExtra')) {
-            if (version_compare(\ParsedownExtra::version, self::VERSION_PARSEDOWN_EXTRA_REQUIRED) < 0) {
-                $msg_error  = 'Version Error.' . PHP_EOL;
-                $msg_error .= '  ParsedownExtended requires a later version of ParsedownExtra.' . PHP_EOL;
-                $msg_error .= '  - Current version : ' . \ParsedownExtra::version . PHP_EOL;
-                $msg_error .= '  - Required version: ' . self::VERSION_PARSEDOWN_EXTRA_REQUIRED .' and later'. PHP_EOL;
-                throw new Exception($msg_error);
-            }
-
-            // Get parent constructor
+            $this->checkVersion('ParsedownExtra', \ParsedownExtra::version, self::VERSION_PARSEDOWN_EXTRA_REQUIRED);
             parent::__construct();
-
         }
 
-        // Remove any suffix from the Parsedown version
-        $parsedownVersion = preg_replace('/-.*$/', '', \Parsedown::version);
-
-        // Check if Parsedown 1.7.4 or later is installed but not 1.8
-        if (version_compare($parsedownVersion, '1.8.0') < 0 && version_compare($parsedownVersion, '1.7.4') >= 0) {
-            // set legacy mode to true
-            $this->legacyMode = true;
-        }
-
-        $this->settings = $this->defaultSettings; // Start with default settings
-        $this->initializeSettings($userSettings);
+        $this->setLegacyMode();
 
         // Initialize settings with the provided schema
         $this->configSchema = $this->defineConfigSchema();
@@ -231,42 +77,23 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
         }
     }
 
-
-    private function initializeSettings(array $userSettings): void
+    private function checkVersion(string $component, string $currentVersion, string $requiredVersion): void
     {
-        foreach ($userSettings as $key => $value) {
-            if (!isset($this->settings[$key])) {
-                // Throw an error for non-existent setting
-                throw new \InvalidArgumentException("Setting '$key' does not exist.");
-            }
+        if (version_compare($currentVersion, $requiredVersion) < 0) {
+            $msg_error  = 'Version Error.' . PHP_EOL;
+            $msg_error .= "  ParsedownExtended requires a later version of $component." . PHP_EOL;
+            $msg_error .= "  - Current version : $currentVersion" . PHP_EOL;
+            $msg_error .= "  - Required version: $requiredVersion and later" . PHP_EOL;
+            throw new \Exception($msg_error);
+        }
+    }
 
-            if (is_array($this->settings[$key])) {
-                if (!is_array($value) && !is_bool($value)) {
-                    // Throw an error for incorrect type for complex settings
-                    throw new \InvalidArgumentException("Invalid type for setting '$key'. Expected array or boolean.");
-                }
+    private function setLegacyMode(): void
+    {
+        $parsedownVersion = preg_replace('/-.*$/', '', \Parsedown::version);
 
-                if (is_bool($value)) {
-                    // Set the entire feature to the boolean value
-                    $this->settings[$key]['enabled'] = $value;
-                } else {
-                    // Merge or replace the settings array
-                    foreach ($value as $subKey => $subValue) {
-                        if (!isset($this->settings[$key][$subKey])) {
-                            // Throw an error for non-existent sub-setting
-                            throw new \InvalidArgumentException("Sub-setting '$subKey' does not exist in '$key'.");
-                        }
-                        // Optionally validate $subValue type here
-                        $this->settings[$key][$subKey] = $subValue;
-                    }
-                }
-            } else {
-                if (!is_bool($value)) {
-                    // Throw an error for incorrect type for simple settings
-                    throw new \InvalidArgumentException("Invalid type for setting '$key'. Expected boolean.");
-                }
-                $this->settings[$key] = $value;
-            }
+        if (version_compare($parsedownVersion, '1.8.0') < 0 && version_compare($parsedownVersion, '1.7.4') >= 0) {
+            $this->legacyMode = true;
         }
     }
 
@@ -339,7 +166,7 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
     protected function inlineEmphasis($Excerpt)
     {
         if (!$this->config()->get('emphasis') || !isset($Excerpt['text'][1])) {
-            return;
+            return null;
         }
 
         $marker = $Excerpt['text'][0];
@@ -350,7 +177,7 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
         } elseif ($this->config()->get('emphasis.italic') and preg_match($this->EmRegex[$marker], $Excerpt['text'], $matches)) {
             $emphasis = 'em';
         } else {
-            return;
+            return null;
         }
 
         return [
@@ -513,12 +340,12 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
 
         // Check if the excerpt has enough characters
         if (!isset($Excerpt['text'][1])) {
-            return;
+            return null;
         }
 
         // Check if there is whitespace before the excerpt
         if ($Excerpt['before'] !== '' && preg_match('/\s/', $Excerpt['before']) === 0) {
-            return;
+            return null;
         }
 
         // Iterate through the inline math delimiters
@@ -544,7 +371,7 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
             }
         }
 
-        return;
+        return null;
     }
 
 
@@ -577,7 +404,7 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
                 }
 
                 if (preg_match($regex, $Excerpt['text'])) {
-                    return;
+                    return null;
                 }
             }
         }
@@ -625,14 +452,17 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
 
         ];
 
-        if (preg_match('/\+-|\(p\)|\(tm\)|\(r\)|\(c\)|\.{2,}|\!\.{3,}|\?\.{3,}/i', $Excerpt['text'], $matches)) {
+        $result = preg_replace_callback(array_keys($substitutions), function ($matches) use ($substitutions) {
+            return preg_replace(array_keys($substitutions), array_values($substitutions), $matches[0]);
+        }, $Excerpt['text'], -1, $count);
+
+        if ($count > 0) {
             return [
-                'extent' => strlen($matches[0]),
-                'element' => [
-                    'text' => preg_replace(array_keys($substitutions), array_values($substitutions), $matches[0]),
-                ],
+                'extent' => strlen($result),
+                'element' => ['text' => $result],
             ];
         }
+
         return null;
     }
 
@@ -668,7 +498,7 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
                 'pattern' => '/^(``)(?!\s)([^"\'`]{1,})(\'\')/i',
                 'callback' => function ($matches) use ($substitutions, $Excerpt) {
                     if (strlen(trim($Excerpt['before'])) > 0) {
-                        return;
+                        return null;
                     }
 
                     return [
@@ -683,7 +513,7 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
                 'pattern' => '/^(")(?!\s)([^"]+)(")|^(?<!\w)(\')(?!\s)([^\']+)(\')/i',
                 'callback' => function ($matches) use ($substitutions, $Excerpt) {
                     if (strlen(trim($Excerpt['before'])) > 0) {
-                        return;
+                        return null;
                     }
 
                     if ("'" === $matches[1]) {
@@ -709,7 +539,7 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
                 'pattern' => '/^(<{2})(?!\s)([^<>]+)(>{2})/i',
                 'callback' => function ($matches) use ($substitutions, $Excerpt) {
                     if (strlen(trim($Excerpt['before'])) > 0) {
-                        return;
+                        return null;
                     }
 
                     return [
@@ -1118,14 +948,14 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
             }
         }
 
-        return;
+        return null;
     }
 
 
     protected function blockMathNotationContinue($Line, $Block)
     {
         if (isset($Block['complete'])) {
-            return;
+            return null;
         }
 
         if (isset($Block['interrupted'])) {
@@ -1162,7 +992,7 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
     protected function blockFencedCode($Line)
     {
         if (!$this->config()->get('code') or !$this->config()->get('code.blocks')) {
-            return;
+            return null;
         }
 
         $Block = parent::blockFencedCode($Line);
@@ -1300,7 +1130,7 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
     protected function blockHeader($Line)
     {
         if (!$this->config()->get('headings')) {
-            return;
+            return null;
         }
 
         $Block = parent::blockHeader($Line);
@@ -1311,7 +1141,7 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
 
             // check if level is allowed
             if (!in_array($level, $this->config()->get('headings.allowed'))) {
-                return;
+                return null;
             }
 
             // Prepare value for id generation by checking if the id attribute is set else use the text
@@ -1334,7 +1164,7 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
     protected function blockSetextHeader($Line, $Block = null)
     {
         if (!$this->config()->get('headings')) {
-            return;
+            return null;
         }
 
         $Block = parent::blockSetextHeader($Line, $Block);
@@ -1345,7 +1175,7 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
 
             // check if level is allowed
             if (!in_array($level, $this->config()->get('headings.allowed'))) {
-                return;
+                return null;
             }
 
             // Prepare value for id generation by checking if the id attribute is set else use the text
@@ -1377,7 +1207,7 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
                 return parent::blockAbbreviation($Line);
             }
 
-            return;
+            return null;
         }
     }
 
@@ -1788,7 +1618,7 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
     protected function decodeTag(string $text): string
     {
         $salt = $this->getSalt();
-        $tag_origin = $this->getTagToc();
+        $tag_origin = $this->config()->get('toc.tag');
         $tag_hashed = hash('sha256', $salt . $tag_origin);
 
         if (strpos($text, $tag_hashed) === false) {
@@ -1802,7 +1632,7 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
     protected function encodeTag(string $text): string
     {
         $salt = $this->getSalt();
-        $tag_origin = $this->getTagToc();
+        $tag_origin = $this->config()->get('toc.tag');
 
         if (strpos($text, $tag_origin) === false) {
             return $text;
@@ -1819,17 +1649,6 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
         return trim(strip_tags($this->line($text)));
     }
 
-
-    protected function getIdAttributeToc(): string
-    {
-        if (!empty($this->id_toc)) {
-            return $this->id_toc;
-        }
-
-        return self::TOC_ID_ATTRIBUTE_DEFAULT;
-    }
-
-
     protected function getSalt(): string
     {
         static $salt;
@@ -1839,16 +1658,6 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
 
         $salt = hash('md5', (string) time());
         return $salt;
-    }
-
-
-    protected function getTagToc(): string
-    {
-        if (!empty($this->tag_toc)) {
-            return $this->tag_toc;
-        }
-
-        return self::TOC_TAG_DEFAULT;
     }
 
 
@@ -1883,22 +1692,6 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
         $this->contentsListString .= "{$indent}- {$link}" . PHP_EOL;
     }
 
-
-    public function setTagToc($tag): void
-    {
-        $tag = trim($tag);
-        if (self::escape($tag) === $tag) {
-            // Set ToC tag if it's safe
-            $this->tag_toc = $tag;
-        } else {
-            $backtrace = debug_backtrace();
-            $caller = $backtrace[0];
-            $errorMessage = "Malformed ToC user tag given: {$tag}. Called in " . ($caller['file'] ?? 'unknown') . " on line " . ($caller['line'] ?? 'unknown');
-            throw new \InvalidArgumentException($errorMessage);
-        }
-    }
-
-
     public function text($text): string
     {
         $html = $this->body($text);
@@ -1907,13 +1700,13 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
             return $html;
         }
 
-        $tag_origin = $this->getTagToc();
+        $tag_origin = $this->config()->get('toc.tag');
         if (strpos($text, $tag_origin) === false) {
             return $html;
         }
 
         $toc_data = $this->contentsList();
-        $toc_id = $this->getIdAttributeToc();
+        $toc_id = $this->config()->get('toc.id');
         return str_replace("<p>{$tag_origin}</p>", "<div id=\"{$toc_id}\">{$toc_data}</div>", $html);
     }
 
@@ -1922,6 +1715,7 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
     // -------------------------------------------------------------------------
 
 
+    // DEPRECATED: Use the new configuration system instead
     public function setSetting(string $settingName, $value, bool $overwrite = false)
     {
         $this->deprecated(__METHOD__, '1.2.0', '$ParsedownExtended->config()->set()');
@@ -1931,7 +1725,7 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
     }
 
 
-
+    // DEPRECATED: Use the new configuration system instead
     public function setSettings(array $settings)
     {
         $this->deprecated(__METHOD__, '1.2.0', '$ParsedownExtended->config()->set()');
@@ -1944,8 +1738,7 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
         return $this;
     }
 
-
-    // Deprecated function
+    // DEPRECATED: Use the new configuration system instead
     public function isEnabled(string $keyPath)
     {
         $this->deprecated(__METHOD__, '1.2.0', '$ParsedownExtended->config()->get()');
@@ -1955,7 +1748,7 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
     }
 
 
-
+    // DEPRECATED: Use the new configuration system instead
     public function getSetting(string $key)
     {
         $this->deprecated(__METHOD__, '1.2.0', '$ParsedownExtended->config()->get()');
@@ -1964,7 +1757,7 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
         return $this->config()->get($key);
     }
 
-
+    // DEPRECATED: Use the new configuration system instead
     public function getSettings()
     {
         $this->deprecated(__METHOD__, '1.2.0', '$ParsedownExtended->config()->get()');
@@ -2194,7 +1987,8 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
             'toc' => [
                 'enabled' => ['type' => 'boolean', 'default' => true],
                 'headings' => ['type' => 'array', 'default' => ['h1', 'h2', 'h3', 'h4', 'h5', 'h6']],
-                'toc_tag' => ['type' => 'string', 'default' => '[toc]'],
+                'tag' => ['type' => 'string', 'default' => '[toc]'],
+                'id' => ['type' => 'string', 'default' => 'toc'],
             ],
             'typographer' => ['type' => 'boolean', 'default' => true],
         ];
@@ -2224,7 +2018,7 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
 
             private function translateDeprecatedKeyPath(string $keyPath): string
             {
-                $deprecatedMapping = [
+                static $deprecatedMapping = [
                     'abbreviations.allow_custom_abbr' => 'abbreviations.allow_custom',
                     'abbreviations.predefine' => 'abbreviations.predefined',
                     'emphasis.marking' => 'emphasis.mark',
@@ -2235,14 +2029,12 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
                     'smarty.substitutions.right-angle-quote' => 'smarty.substitutions.right_angle_quote',
                     'smarty.substitutions.right-double-quote' => 'smarty.substitutions.right_double_quote',
                     'smarty.substitutions.right-single-quote' => 'smarty.substitutions.right_single_quote',
-                    'toc.toc_tag' => 'tog.tag',
+                    'toc.toc_tag' => 'toc.tag',
                 ];
 
-                if (isset($deprecatedMapping[$keyPath])) {
-                    return $deprecatedMapping[$keyPath];
-                }
-                return $keyPath;
+                return $deprecatedMapping[$keyPath] ?? $keyPath;
             }
+
 
             /**
              * Retrieves the value from the configuration based on the given key path.
@@ -2270,11 +2062,7 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
                     $value = $value[$key];
                 }
 
-                if (is_array($value) && isset($value['enabled'])) {
-                    return $value['enabled'];
-                }
-
-                return $value;
+                return is_array($value) && isset($value['enabled']) ? $value['enabled'] : $value;
             }
 
             /**
@@ -2361,21 +2149,31 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
             protected function validateType(mixed $value, string $expectedType, ?array $schema = null): void
             {
                 $type = gettype($value);
+
                 if ($expectedType === 'array' && $type === 'array') {
-                    // Additional checks for array types
                     if (isset($schema['item_schema'])) {
                         foreach ($value as $item) {
                             foreach ($schema['item_schema']['keys'] as $key => $itemType) {
                                 if (!isset($item[$key]) || gettype($item[$key]) !== $itemType) {
-                                    throw new \InvalidArgumentException("Array items must have '$key' of type '$itemType'");
+                                    // Include debug information in the exception
+                                    $backtrace = debug_backtrace();
+                                    $caller = $backtrace[0];
+                                    $errorMessage = "Array items must have '$key' of type '$itemType'. Called in " . ($caller['file'] ?? 'unknown') . " on line " . ($caller['line'] ?? 'unknown');
+                                    throw new \InvalidArgumentException($errorMessage);
                                 }
                             }
                         }
                     }
+                    // Early return as the type is already confirmed
+                    return;
                 }
 
+                // If types do not match, throw an error with debug information
                 if ($type !== $expectedType) {
-                    throw new \InvalidArgumentException("Expected type $expectedType, got $type");
+                    $backtrace = debug_backtrace();
+                    $caller = $backtrace[0];
+                    $errorMessage = "Expected type $expectedType, got $type. Called in " . ($caller['file'] ?? 'unknown') . " on line " . ($caller['line'] ?? 'unknown');
+                    throw new \InvalidArgumentException($errorMessage);
                 }
             }
         };
