@@ -1,9 +1,0 @@
-<?xml version="1.0" encoding="UTF-8" ?>
-
-<ruleset name="super-linter">
-    <description>The default coding standard for usage with Super-Linter. It just includes PSR12 and excludes line length checks.</description>
-
-    <!-- Include PSR12 Standard -->
-    <rule ref="PSR12" />
-    <exclude name="Generic.Files.LineLength" />
-</ruleset>
