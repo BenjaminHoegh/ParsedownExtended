@@ -2,7 +2,6 @@
 vendor/
 lab/
 tools/
-benchmarks/
 
 # PHP-CS-Fixer
 .php_cs.cache
