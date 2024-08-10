@@ -55,6 +55,7 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
 
         // Add block types
         $this->addBlockType(['\\','$'], 'MathNotation');
+        $this->addBlockType('>', 'Alert');
 
         /**
          * Move 'SpecialCharacter' to the end of the list if it exists.
@@ -128,34 +129,6 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
             return parent::inlineStrikethrough($Excerpt);
         }
     }
-
-    // protected function inlineLink($Excerpt)
-    // {
-    //     if ($this->config()->get('links')) {
-    //         return parent::inlineLink($Excerpt);
-    //     }
-    // }
-
-    // protected function inlineUrl($Excerpt)
-    // {
-    //     if ($this->config()->get('links')) {
-    //         return parent::inlineUrl($Excerpt);
-    //     }
-    // }
-
-    // protected function inlineUrlTag($Excerpt)
-    // {
-    //     if ($this->config()->get('links')) {
-    //         return parent::inlineUrlTag($Excerpt);
-    //     }
-    // }
-
-    // protected function inlineEmailTag($Excerpt)
-    // {
-    //     if ($this->config()->get('links') && $this->config()->get('links.email_links')) {
-    //         return parent::inlineEmailTag($Excerpt);
-    //     }
-    // }
 
     protected function inlineLink($Excerpt)
     {
@@ -246,7 +219,7 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
      * @param string $href
      * @return bool
      */
-    protected function isExternalLink($href)
+    private function isExternalLink($href)
     {
         $isProtocolRelative = preg_match('/^\/\//', $href);
         $isAbsolute = preg_match('/^https?:\/\//i', $href);
@@ -262,10 +235,6 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
 
         return false;
     }
-
-
-
-
 
 
     /**
@@ -1034,6 +1003,68 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
             return parent::blockTable($Line, $Block);
         }
     }
+
+    /**
+     * Handle the GFM Alert block.
+     */
+    protected function blockAlert($Line)
+    {
+        if (preg_match('/^> \[!(NOTE|TIP|IMPORTANT|WARNING|CAUTION)\]/', $Line['text'], $matches)) {
+            $type = strtolower($matches[1]);
+            $title = ucfirst(strtolower($matches[1]));
+
+            $Block = [
+                'element' => [
+                    'name' => 'div',
+                    'attributes' => [
+                        'class' => 'markdown-alert markdown-alert-' . $type,
+                    ],
+                    'handler' => 'lines',
+                    'text' => [
+                        '<p class="markdown-alert-title">' . $title . '</p>',
+                    ],
+                ],
+            ];
+
+            return $Block;
+        }
+
+        return null;
+    }
+
+    protected function blockAlertContinue($Line, array $Block)
+    {
+        if (preg_match('/^> \[!(NOTE|TIP|IMPORTANT|WARNING|CAUTION)\]/', $Line['text'])) {
+            // Complete the current block and return null to start a new block
+            return null;
+        }
+
+        if ($Line['text'][0] === '>' && preg_match('/^>[ ]?(.*)/', $Line['text'], $matches)) {
+            if (isset($Block['interrupted'])) {
+                $Block['element']['text'][] = '';
+                unset($Block['interrupted']);
+            }
+
+            $Block['element']['text'][] = $matches[1];
+
+            return $Block;
+        }
+
+        if (!isset($Block['interrupted'])) {
+            $Block['element']['text'][] = $Line['text'];
+
+            return $Block;
+        }
+
+        return null;
+    }
+
+    protected function blockAlertComplete($Block)
+    {
+        return $Block;
+    }
+
+
 
 
     protected function blockMathNotation($Line)
@@ -1881,7 +1912,7 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
     // -------------------------------------------------------------------------
 
 
-    private function addInlineType($markers, string $funcName): void
+    private function addInlineType(array|string $markers, string $funcName): void
     {
         // Ensure $markers is an array, even if it's a single marker
         $markers = (array) $markers;
@@ -1897,15 +1928,17 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
             }
 
             // add to the beginning of the array so it has priority
-            $this->InlineTypes[$marker][] = $funcName;
+            array_unshift($this->InlineTypes[$marker], $funcName);
             $this->inlineMarkerList .= $marker;
         }
     }
 
 
 
-    private function addBlockType(array $markers, string $funcName): void
+    private function addBlockType(array|string $markers, string $funcName): void
     {
+        $markers = (array) $markers;
+
         foreach ($markers as $marker) {
             if (!isset($this->BlockTypes[$marker])) {
                 $this->BlockTypes[$marker] = [];
@@ -1917,7 +1950,7 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
             }
 
             // add to the beginning of the array so it has priority
-            $this->BlockTypes[$marker][] = $funcName;
+            array_unshift($this->BlockTypes[$marker], $funcName);
         }
     }
 
