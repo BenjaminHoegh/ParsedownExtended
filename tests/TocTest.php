@@ -1,5 +1,6 @@
 <?php
 
+use BenjaminHoegh\ParsedownExtended\ParsedownExtended;
 use PHPUnit\Framework\TestCase;
 
 class TocTest extends TestCase
@@ -22,8 +23,8 @@ class TocTest extends TestCase
      */
     public function testTocEnabled()
     {
-        $this->parsedownExtended->setSetting('headings.auto_anchors', true);
-        $this->parsedownExtended->setSetting('toc', true);
+        $this->parsedownExtended->config()->set('headings.auto_anchors', true);
+        $this->parsedownExtended->config()->set('toc', true);
 
         $markdown = <<<MARKDOWN
         # Heading 1
@@ -56,8 +57,8 @@ class TocTest extends TestCase
 
     public function testTocDisabled()
     {
-        $this->parsedownExtended->setSetting('headings.auto_anchors', true);
-        $this->parsedownExtended->setSetting('toc', false);
+        $this->parsedownExtended->config()->set('headings.auto_anchors', true);
+        $this->parsedownExtended->config()->set('toc', false);
 
         $markdown = <<<MARKDOWN
         [toc]
@@ -88,8 +89,8 @@ class TocTest extends TestCase
      */
     public function testTocWithCustomHeadingLevels()
     {
-        $this->parsedownExtended->setSetting('headings.auto_anchors', true);
-        $this->parsedownExtended->setSetting('toc.headings', ['h1', 'h2'], true);
+        $this->parsedownExtended->config()->set('headings.auto_anchors', true);
+        $this->parsedownExtended->config()->set('toc.headings', ['h1', 'h2'], true);
 
         $markdown = <<<MARKDOWN
         # Heading 1
@@ -130,8 +131,8 @@ class TocTest extends TestCase
 
     public function testTocTag()
     {
-        $this->parsedownExtended->setSetting('headings.auto_anchors', true);
-        $this->parsedownExtended->setSetting('toc.toc_tag', '[toc]');
+        $this->parsedownExtended->config()->set('headings.auto_anchors', true);
+        $this->parsedownExtended->config()->set('toc.tag', '[toc]');
 
         $markdown = <<<MARKDOWN
         [toc]
