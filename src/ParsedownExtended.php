@@ -21,9 +21,8 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
     private int $firstHeadLevel = 0;
     private string $contentsListString = '';
     private $createAnchorIDCallback = null;
-    private mixed $config;
+    private array $config;
     private array $configSchema;
-
     private bool $legacyMode = false;
 
     public function __construct()
@@ -2151,7 +2150,7 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
     public function config()
     {
         return new class ($this->configSchema, $this->config) {
-            private $schema;
+            private array $schema;
             private $config;
 
             public function __construct(array $schema, &$config)
