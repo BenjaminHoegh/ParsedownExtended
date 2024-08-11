@@ -14,7 +14,7 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
     public const VERSION = '1.3.0';
     public const VERSION_PARSEDOWN_REQUIRED = '1.7.4';
     public const VERSION_PARSEDOWN_EXTRA_REQUIRED = '0.8.1';
-    public const MIN_PHP_VERSION = '8.0';
+    public const MIN_PHP_VERSION = '7.4';
 
     private array $anchorRegister = [];
     private array $contentsListArray = [];
@@ -27,6 +27,7 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
 
     public function __construct()
     {
+
         $this->checkVersion('PHP', PHP_VERSION, self::MIN_PHP_VERSION);
         $this->checkVersion('Parsedown', \Parsedown::version, self::VERSION_PARSEDOWN_REQUIRED);
 
