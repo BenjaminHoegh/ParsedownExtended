@@ -1356,7 +1356,7 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
             $level = $Block['element']['name'];
 
             // check if level is allowed
-            if (!in_array($level, $this->config()->get('headings.allowed'))) {
+            if (!in_array($level, $this->config()->get('headings.allowed_levels'))) {
                 return null;
             }
 
@@ -2356,12 +2356,24 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
                 if ($expectedType === 'array' && $type === 'array') {
                     if (isset($schema['item_schema'])) {
                         foreach ($value as $item) {
-                            foreach ($schema['item_schema']['keys'] as $key => $itemType) {
-                                if (!isset($item[$key]) || gettype($item[$key]) !== $itemType) {
+                            if (isset($schema['item_schema']['keys'])) {
+                                foreach ($schema['item_schema']['keys'] as $key => $itemType) {
+                                    if (!isset($item[$key]) || gettype($item[$key]) !== $itemType) {
+                                        // Include debug information in the exception
+                                        $backtrace = debug_backtrace();
+                                        $caller = $backtrace[1] ?? $backtrace[0];
+                                        $errorMessage = "Array items must have '$key' of type '$itemType'. Called in " . ($caller['file'] ?? 'unknown') . " on line " . ($caller['line'] ?? 'unknown');
+                                        throw new \InvalidArgumentException($errorMessage);
+                                    }
+                                }
+                            } else {
+                                // If no keys are specified, validate the type of the entire item
+                                $itemType = $schema['item_schema']['type'];
+                                if (gettype($item) !== $itemType) {
                                     // Include debug information in the exception
                                     $backtrace = debug_backtrace();
                                     $caller = $backtrace[1] ?? $backtrace[0];
-                                    $errorMessage = "Array items must have '$key' of type '$itemType'. Called in " . ($caller['file'] ?? 'unknown') . " on line " . ($caller['line'] ?? 'unknown');
+                                    $errorMessage = "Array items must be of type '$itemType'. Called in " . ($caller['file'] ?? 'unknown') . " on line " . ($caller['line'] ?? 'unknown');
                                     throw new \InvalidArgumentException($errorMessage);
                                 }
                             }
@@ -2379,6 +2391,7 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
                     throw new \InvalidArgumentException($errorMessage);
                 }
             }
+
         };
     }
 
