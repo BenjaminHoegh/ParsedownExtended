@@ -24,4 +24,6 @@ Thumbs.db
 
 # IDE
 .vscode/
+.idea/
+qodana.yaml
 
