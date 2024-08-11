@@ -118,7 +118,7 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
 
     protected function inlineMarkup($Excerpt)
     {
-        if ($this->config()->get('markup')) {
+        if ($this->config()->get('allow_raw_html')) {
             return parent::inlineMarkup($Excerpt);
         }
     }
@@ -279,7 +279,7 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
      */
     protected function inlineMarking(array $Excerpt): ?array
     {
-        if (!$this->config()->get('emphasis.marking') || !$this->config()->get('emphasis')) {
+        if (!$this->config()->get('emphasis.mark') || !$this->config()->get('emphasis')) {
             return null;
         }
 
@@ -985,7 +985,7 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
 
     protected function blockMarkup($Line)
     {
-        if ($this->config()->get('markup')) {
+        if ($this->config()->get('allow_raw_html')) {
             return parent::blockMarkup($Line);
         }
     }
@@ -1007,21 +1007,34 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
     /**
      * Handle the GFM Alert block.
      */
-    protected function blockAlert($Line)
+    protected function blockAlert($Line): ?array
     {
+        if (!$this->config()->get('alerts.enabled')) {
+            return null;
+        }
+
         if (preg_match('/^> \[!(NOTE|TIP|IMPORTANT|WARNING|CAUTION)\]/', $Line['text'], $matches)) {
             $type = strtolower($matches[1]);
-            $title = ucfirst(strtolower($matches[1]));
+            $title = ucfirst($type);
+
+            // Get class and prefix from config
+            $class = $this->config()->get('alerts.class');
 
             $Block = [
                 'element' => [
                     'name' => 'div',
                     'attributes' => [
-                        'class' => 'markdown-alert markdown-alert-' . $type,
+                        'class' => "{$class} {$class}-{$type}",
                     ],
-                    'handler' => 'lines',
+                    'handler' => 'elements', // We use 'elements' because we'll add more elements later
                     'text' => [
-                        '<p class="markdown-alert-title">' . $title . '</p>',
+                        [
+                            'name' => 'p',
+                            'attributes' => [
+                                'class' => "{$class}-title",
+                            ],
+                            'text' => $title,
+                        ],
                     ],
                 ],
             ];
@@ -1032,32 +1045,39 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
         return null;
     }
 
+
     protected function blockAlertContinue($Line, array $Block)
     {
         if (preg_match('/^> \[!(NOTE|TIP|IMPORTANT|WARNING|CAUTION)\]/', $Line['text'])) {
-            // Complete the current block and return null to start a new block
-            return null;
+            return null; // Terminate the current block if a new alert block starts
         }
 
         if ($Line['text'][0] === '>' && preg_match('/^> ?(.*)/', $Line['text'], $matches)) {
             if (isset($Block['interrupted'])) {
-                $Block['element']['text'][] = '';
+                $Block['element']['text'][] = ['text' => ''];
                 unset($Block['interrupted']);
             }
 
-            $Block['element']['text'][] = $matches[1];
+            $Block['element']['text'][] = [
+                'name' => 'p',
+                'text' => $matches[1]
+            ];
 
             return $Block;
         }
 
         if (!isset($Block['interrupted'])) {
-            $Block['element']['text'][] = $Line['text'];
+            $Block['element']['text'][] = [
+                'name' => 'p',
+                'text' => $Line['text']
+            ];
 
             return $Block;
         }
 
         return null;
     }
+
 
     protected function blockAlertComplete($Block)
     {
@@ -1282,7 +1302,7 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
             $level = $Block['element']['name'];
 
             // check if level is allowed
-            if (!in_array($level, $this->config()->get('headings.allowed'))) {
+            if (!in_array($level, $this->config()->get('headings.allowed_levels'))) {
                 return null;
             }
 
@@ -1341,11 +1361,11 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
     protected function blockAbbreviation($Line)
     {
         if ($this->config()->get('abbreviations')) {
-            foreach ($this->config()->get('abbreviations.predefine') as $abbreviations => $description) {
+            foreach ($this->config()->get('abbreviations.predefined') as $abbreviations => $description) {
                 $this->DefinitionData['Abbreviation'][$abbreviations] = $description;
             }
 
-            if ($this->config()->get('abbreviations.allow_custom_abbr')) {
+            if ($this->config()->get('abbreviations.allow_custom')) {
                 return parent::blockAbbreviation($Line);
             }
 
@@ -1554,7 +1574,7 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
                 return json_encode($this->contentsListArray);
             default:
                 $backtrace = debug_backtrace();
-                $caller = $backtrace[0];
+                $caller = $backtrace[1] ?? $backtrace[0];
                 $errorMessage = "Unknown return type '{$type_return}' given while parsing ToC. Called in " . ($caller['file'] ?? 'unknown') . " on line " . ($caller['line'] ?? 'unknown');
                 throw new \InvalidArgumentException($errorMessage);
         }
@@ -1965,7 +1985,7 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
     private function deprecated(string $functionName, string $version, string $alternative = ''): void
     {
         $backtrace = debug_backtrace();
-        $caller = $backtrace[1] ?? ['file' => 'unknown', 'line' => 'unknown'];
+        $caller = $backtrace[1] ?? $backtrace[0];
         $message = "Function {$functionName} is deprecated as of version {$version} and will be removed in the future. ";
         $message .= $alternative ? "Use {$alternative} instead." : '';
         $message .= "Called in {$caller['file']} on line {$caller['line']}";
@@ -2074,7 +2094,16 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
                 'enabled' => ['type' => 'boolean', 'default' => true],
                 'tasks' => ['type' => 'boolean', 'default' => true],
             ],
-            'markup' => ['type' => 'boolean', 'default' => true],
+            'allow_raw_html' => ['type' => 'boolean', 'default' => true],
+            'alerts' => [
+                'enabled' => ['type' => 'boolean', 'default' => true],
+                'types' => [
+                    'type' => 'array',
+                    'default' => ['note', 'tip', 'important', 'warning', 'caution'],
+                    'item_schema' => ['type' => 'string'],
+                ],
+                'class' => ['type' => 'string', 'default' => 'markdown-alert'],
+            ],
             'math' => [
                 'enabled' => ['type' => 'boolean', 'default' => false],
                 'inline' => [
@@ -2175,7 +2204,16 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
                     'smarty.substitutions.right-double-quote' => 'smarty.substitutions.right_double_quote',
                     'smarty.substitutions.right-single-quote' => 'smarty.substitutions.right_single_quote',
                     'toc.toc_tag' => 'toc.tag',
+                    'markup' => 'allow_raw_html',
                 ];
+
+                // If the key path is deprecated we should alert the user
+                if (isset($deprecatedMapping[$keyPath])) {
+                    $backtrace = debug_backtrace();
+                    $caller = $backtrace[1] ?? $backtrace[0];
+                    $message = "The config path '{$keyPath}' is deprecated. Use '{$deprecatedMapping[$keyPath]}' instead. Called in " . ($caller['file'] ?? 'unknown') . " on line " . ($caller['line'] ?? 'unknown');
+                    trigger_error($message, E_USER_DEPRECATED);
+                }
 
                 return $deprecatedMapping[$keyPath] ?? $keyPath;
             }
@@ -2200,7 +2238,7 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
                 foreach ($keys as $key) {
                     if (!array_key_exists($key, $value)) {
                         $backtrace = debug_backtrace();
-                        $caller = $backtrace[0];
+                        $caller = $backtrace[1] ?? $backtrace[0];
                         $errorMessage = "Invalid key path '{$keyPath}' given. Called in " . ($caller['file'] ?? 'unknown') . " on line " . ($caller['line'] ?? 'unknown');
                         throw new \InvalidArgumentException($errorMessage);
                     }
@@ -2244,7 +2282,7 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
                 foreach ($keys as $key) {
                     if (!isset($current[$key])) {
                         $backtrace = debug_backtrace();
-                        $caller = $backtrace[0];
+                        $caller = $backtrace[1] ?? $backtrace[0];
                         $errorMessage = "Invalid key path '{$keyPath}' given. Called in " . ($caller['file'] ?? 'unknown') . " on line " . ($caller['line'] ?? 'unknown');
                         throw new \InvalidArgumentException($errorMessage);
                     }
@@ -2263,7 +2301,7 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
                 } else {
                     if (!isset($currentSchema[$lastKey])) {
                         $backtrace = debug_backtrace();
-                        $caller = $backtrace[0];
+                        $caller = $backtrace[1] ?? $backtrace[0];
                         $errorMessage = "Invalid key path '{$keyPath}' given. Called in " . ($caller['file'] ?? 'unknown') . " on line " . ($caller['line'] ?? 'unknown');
                         throw new \InvalidArgumentException($errorMessage);
                     }
@@ -2302,7 +2340,7 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
                                 if (!isset($item[$key]) || gettype($item[$key]) !== $itemType) {
                                     // Include debug information in the exception
                                     $backtrace = debug_backtrace();
-                                    $caller = $backtrace[0];
+                                    $caller = $backtrace[1] ?? $backtrace[0];
                                     $errorMessage = "Array items must have '$key' of type '$itemType'. Called in " . ($caller['file'] ?? 'unknown') . " on line " . ($caller['line'] ?? 'unknown');
                                     throw new \InvalidArgumentException($errorMessage);
                                 }
@@ -2316,7 +2354,7 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
                 // If types do not match, throw an error with debug information
                 if ($type !== $expectedType) {
                     $backtrace = debug_backtrace();
-                    $caller = $backtrace[0];
+                    $caller = $backtrace[1] ?? $backtrace[0];
                     $errorMessage = "Expected type $expectedType, got $type. Called in " . ($caller['file'] ?? 'unknown') . " on line " . ($caller['line'] ?? 'unknown');
                     throw new \InvalidArgumentException($errorMessage);
                 }
