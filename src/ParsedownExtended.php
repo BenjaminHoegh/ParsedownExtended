@@ -1911,7 +1911,7 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
     // -------------------------------------------------------------------------
 
 
-    private function addInlineType(array|string $markers, string $funcName): void
+    private function addInlineType(mixed $markers, string $funcName): void
     {
         // Ensure $markers is an array, even if it's a single marker
         $markers = (array) $markers;
@@ -1934,7 +1934,7 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
 
 
 
-    private function addBlockType(array|string $markers, string $funcName): void
+    private function addBlockType(mixed $markers, string $funcName): void
     {
         $markers = (array) $markers;
 
@@ -2218,7 +2218,7 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
              * @return self Returns an instance of the class.
              * @throws \InvalidArgumentException If an invalid key path is given or if the value does not match the expected type.
              */
-            public function set(string|array $keyPath, mixed $value = null): self
+            public function set(mixed $keyPath, mixed $value = null): self
             {
 
                 if (is_array($keyPath)) {
