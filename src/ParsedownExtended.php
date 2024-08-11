@@ -1013,7 +1013,17 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
             return null;
         }
 
-        if (preg_match('/^> \[!(NOTE|TIP|IMPORTANT|WARNING|CAUTION)\]/', $Line['text'], $matches)) {
+        // Retrieve the alert types from the config
+        $alertTypes = $this->config()->get('alerts.types');
+
+        // Build the regex pattern dynamically based on the alert types
+        $alertTypesPattern = implode('|', array_map('strtoupper', $alertTypes));
+
+        // Create the full regex pattern
+        $pattern = '/^> \[!(' . $alertTypesPattern . ')\]/';
+
+
+        if (preg_match($pattern, $Line['text'], $matches)) {
             $type = strtolower($matches[1]);
             $title = ucfirst($type);
 
@@ -1048,7 +1058,17 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
 
     protected function blockAlertContinue($Line, array $Block)
     {
-        if (preg_match('/^> \[!(NOTE|TIP|IMPORTANT|WARNING|CAUTION)\]/', $Line['text'])) {
+
+        // Retrieve the alert types from the config
+        $alertTypes = $this->config()->get('alerts.types');
+
+        // Build the regex pattern dynamically based on the alert types
+        $alertTypesPattern = implode('|', array_map('strtoupper', $alertTypes));
+
+        // Create the full regex pattern
+        $pattern = '/^> \[!(' . $alertTypesPattern . ')\]/';
+
+        if (preg_match($pattern, $Line['text'])) {
             return null; // Terminate the current block if a new alert block starts
         }
 
