@@ -361,7 +361,7 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
             return null;
         }
 
-        if (preg_match('/^[\^]((?:\\\\\\^|[^\^]|[\^][^\^]+?[\^][\^])+?)[\^](?![\^])/s', $Excerpt['text'], $matches)) {
+        if (preg_match('/^\^((?:\\\\\\^|[^\^]|\^[^\^]+?\^\^)+?)\^(?!\^)/s', $Excerpt['text'], $matches)) {
             return [
                 'extent' => strlen($matches[0]),
                 'element' => [
@@ -1039,7 +1039,7 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
             return null;
         }
 
-        if ($Line['text'][0] === '>' && preg_match('/^>[ ]?(.*)/', $Line['text'], $matches)) {
+        if ($Line['text'][0] === '>' && preg_match('/^> ?(.*)/', $Line['text'], $matches)) {
             if (isset($Block['interrupted'])) {
                 $Block['element']['text'][] = '';
                 unset($Block['interrupted']);
@@ -1577,7 +1577,7 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
 
         // Use user-defined logic if a callback is provided
         if (is_callable($this->createAnchorIDCallback)) {
-            return call_user_func($this->createAnchorIDCallback, $text, $this->getSettings());
+            return call_user_func($this->createAnchorIDCallback, $text, $this->config());
         }
 
         // Default logic
@@ -1590,9 +1590,8 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
             }
         }
 
-        // Note we don't use isEnabled here
         if($this->config()->get('headings.auto_anchors.replacements')) {
-            $text = preg_replace(array_keys($this->config()->get('headings.auto_anchors.replacements')), $this->getSetting('headings.auto_anchors.replacements'), $text);
+            $text = preg_replace(array_keys($this->config()->get('headings.auto_anchors.replacements')), $this->config()->get('headings.auto_anchors.replacements'), $text);
         }
 
         $text = $this->normalizeString($text);
