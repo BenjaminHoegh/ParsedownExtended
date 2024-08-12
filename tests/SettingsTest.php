@@ -1,139 +1,94 @@
 <?php
 
+use BenjaminHoegh\ParsedownExtended\ParsedownExtended;
 use PHPUnit\Framework\TestCase;
 
-class SettingsTest extends TestCase
+class ParsedownExtendedConfigTest extends TestCase
 {
-    protected $parsedownExtended;
-
-    protected function setUp(): void
+    /**
+     * Test default configuration initialization
+     */
+    public function testDefaultConfigInitialization()
     {
-        $this->parsedownExtended = new ParsedownExtended();
-        $this->parsedownExtended->setSafeMode(true); // As we always want to support safe mode
-    }
+        $parsedownExtended = new ParsedownExtended();
 
-    protected function tearDown(): void
-    {
-        unset($this->parsedownExtended);
+        // Retrieve the configuration object
+        $config = $parsedownExtended->config();
+
+        // Test some default settings
+        $this->assertTrue($config->get('code.enabled'), 'Code blocks should be enabled by default');
+        $this->assertTrue($config->get('emojis'), 'Emojis should be enabled by default');
+        $this->assertFalse($config->get('diagrams.enabled'), 'Diagrams should be disabled by default');
     }
 
     /**
-     * Invokes a protected or private method of an object using reflection.
-     *
-     * @param object $object The object whose method needs to be invoked.
-     * @param string $methodName The name of the method to be invoked.
-     * @param array $parameters An array of parameters to be passed to the method.
-     * @return mixed The result of the method invocation.
+     * Test setting a configuration value
      */
-    protected function invokeMethod(&$object, $methodName, array $parameters = [])
+    public function testSetConfigValue()
     {
-        $reflection = new ReflectionClass(get_class($object));
-        $method = $reflection->getMethod($methodName);
-        $method->setAccessible(true);
-        return $method->invokeArgs($object, $parameters);
-    }
+        $parsedownExtended = new ParsedownExtended();
 
+        // Set a new value
+        $parsedownExtended->config()->set('emojis', false);
 
-    /**
-     * Accesses a protected or private property of an object using reflection.
-     *
-     * @param object $object The object whose property needs to be accessed.
-     * @param string $propertyName The name of the property to be accessed.
-     * @return ReflectionProperty The accessed property.
-     */
-    protected function accessProperty(&$object, $propertyName)
-    {
-        $reflection = new ReflectionClass($object);
-        $property = $reflection->getProperty($propertyName);
-        $property->setAccessible(true);
-        return $property->getValue($object);
-    }
-
-
-    /**
-     * Test case for setting a single value in ParsedownExtended.
-     *
-     * This test verifies that the `setSetting` method correctly sets a single value in the ParsedownExtended instance,
-     * and that the `isEnabled` method returns the expected value for the specified setting.
-     */
-    public function testSetSettingSingleValue(): void
-    {
-        $this->parsedownExtended->setSetting('emphasis', false);
-        $this->assertEquals(false, $this->parsedownExtended->isEnabled('emphasis'));
+        // Assert the value has changed
+        $this->assertFalse($parsedownExtended->config()->get('emojis'), 'Emojis should be disabled after setting to false');
     }
 
     /**
-     * Test case for setting a nested value in the ParsedownExtended class.
+     * Test setting a nested configuration value
      */
-    public function testSetSettingNestedValue(): void
+    public function testSetNestedConfigValue()
     {
-        $this->parsedownExtended->setSetting('emphasis.italic', false);
-        $this->assertEquals(false, $this->parsedownExtended->isEnabled('emphasis.italic'));
+        $parsedownExtended = new ParsedownExtended();
+
+        // Set a nested value
+        $parsedownExtended->config()->set('headings.auto_anchors.lowercase', false);
+
+        // Assert the value has changed
+        $this->assertFalse($parsedownExtended->config()->get('headings.auto_anchors.lowercase'), 'Headings auto anchor lowercase should be false after setting');
     }
 
     /**
-     * Test case for setting a boolean value in the ParsedownExtended class.
-     *
-     * This test verifies that the `setSetting` method correctly sets a boolean value for a specific setting,
-     * and that the `isEnabled` method returns the expected value for that setting.
+     * Test deprecated configuration paths
      */
-    public function testSetSettingBooleanValue(): void
+    public function testDeprecatedConfigPaths()
     {
-        $this->parsedownExtended->setSetting('emphasis', false);
-        $this->assertEquals(false, $this->parsedownExtended->isEnabled('emphasis'));
+        $parsedownExtended = new ParsedownExtended();
+
+        // Set and retrieve a deprecated path
+        $parsedownExtended->config()->set('smarty.substitutions.left-double-quote', '“');
+        $this->assertEquals('“', $parsedownExtended->config()->get('smarty.substitutions.left-double-quote'), 'Left double quote substitution should be set correctly');
     }
 
     /**
-     * Test case for setting an array value in the ParsedownExtended class.
-     *
-     * This test verifies that the `setSetting` method correctly sets a new value for the specified setting,
-     * and that the `getSetting` method returns the expected merged setting.
+     * Test invalid configuration key path
      */
-    public function testSetSettingArrayValue(): void
+    public function testInvalidConfigKeyPath()
     {
-        // Get the default setting
-        $defaultSetting = $this->accessProperty($this->parsedownExtended, 'defaultSettings');
+        $this->expectException(InvalidArgumentException::class);
 
-        // setting the new value
-        $newSetting = ['italic' => false, 'bold' => false];
-
-        // expected setting should be the default setting with the new value merged
-        $expectedSetting = array_merge($defaultSetting['emphasis'], $newSetting);
-
-        $this->parsedownExtended->setSetting('emphasis', $newSetting);
-        $this->assertEquals($expectedSetting, $this->parsedownExtended->getSetting('emphasis'));
+        $parsedownExtended = new ParsedownExtended();
+        $parsedownExtended->config()->get('non.existent.path');
     }
 
     /**
-     * Test case for overriding a setting.
-     *
-     * This method tests the functionality of overriding a setting in the ParsedownExtended class.
-     * It sets the 'emphasis' setting to disable italics clear all other settings in that category.
+     * Test multiple settings at once
      */
-    public function testOverrideSetting(): void
+    public function testSetMultipleConfigValues()
     {
-        $this->parsedownExtended->setSetting('emphasis', ['italic' => false], true);
-        $this->assertEquals(['italic' => false, 'enabled' => true], $this->parsedownExtended->getSetting('emphasis'));
-    }
+        $parsedownExtended = new ParsedownExtended();
 
-
-    public function testSettingArray(): void
-    {
-        $this->parsedownExtended->setSetting('math', [
-            'inline' => [
-                'delimiters' => [
-                    ['$', '$'],
-                    ['\\(', '\\)']
-                ],
-            ],
-            'block' => [
-                'delimiters' => [
-                    ['$$', '$$'],
-                    ['\\[', '\\]']
-                ],
-            ]
+        // Set multiple values
+        $parsedownExtended->config()->set([
+            'emojis' => false,
+            'code.enabled' => false,
+            'lists.tasks' => false,
         ]);
-        $this->assertTrue($this->parsedownExtended->isEnabled('math'));
-        $this->assertTrue($this->parsedownExtended->isEnabled('math.inline'));
+
+        // Assert the values have changed
+        $this->assertFalse($parsedownExtended->config()->get('emojis'), 'Emojis should be disabled');
+        $this->assertFalse($parsedownExtended->config()->get('code.enabled'), 'Code should be disabled');
+        $this->assertFalse($parsedownExtended->config()->get('lists.tasks'), 'Task lists should be disabled');
     }
 }
