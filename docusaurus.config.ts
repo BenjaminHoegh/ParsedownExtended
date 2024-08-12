@@ -77,18 +77,18 @@ const config: Config = {
       theme: prismThemes.github,
       darkTheme: prismThemes.dracula,
     },
-    // algolia: {
-    //   // The application ID provided by Algolia
-    //   appId: 'B59KS6JY8P',
+    algolia: {
+      // The application ID provided by Algolia
+      appId: 'IKKENHCO1V',
 
-    //   // Public API key: it is safe to commit it
-    //   apiKey: 'b878c55047a3baf1724d36e0a5c58c52',
+      // Public API key: it is safe to commit it
+      apiKey: '592380ed7332a627f9ebb69993ba442e',
 
-    //   indexName: 'ParsedownExtended',
+      indexName: 'IKKENHCO1V',
 
-    //   // Optional: see doc section below
-    //   contextualSearch: true,
-    // },
+      // Optional: see doc section below
+      contextualSearch: true,
+    },
   } satisfies Preset.ThemeConfig,
 };
 
