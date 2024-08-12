@@ -1107,6 +1107,17 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
 
 
 
+    /**
+     * Parses a line of text to check for block math notation.
+     *
+     * This method checks if the configuration allows for block math notation and if the line contains any block math delimiters.
+     * It iterates through the block math delimiters defined in the configuration and uses regular expressions to match the delimiters in the line.
+     * If a match is found, it returns an array containing the matched text, start marker, and end marker.
+     * If no match is found, it returns null.
+     *
+     * @param array $Line The line of text to parse.
+     * @return array|null An array containing the matched text, start marker, and end marker, or null if no match is found.
+     */
     protected function blockMathNotation($Line)
     {
         if (!$this->config()->get('math') || !$this->config()->get('math.block')) {
@@ -1117,7 +1128,7 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
 
             $leftMarker = preg_quote($config['left'], '/');
             $rightMarker = preg_quote($config['right'], '/');
-            $regex = '/^(?<!\\\\)('. $leftMarker . ')(.*?)(?=(?<!\\\\)' . $rightMarker . '|$)/';
+            $regex = '/^(?<!\\\\)('. $leftMarker . ')(.*?)(?:(' . $rightMarker . ')|$)/';
 
             if (preg_match($regex, $Line['text'], $matches)) {
                 return [
@@ -1133,7 +1144,16 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
         return null;
     }
 
-
+    /**
+     * Continues a block of math notation.
+     *
+     * This method is responsible for continuing a block of math notation when a new line is encountered.
+     *
+     * @param array $Line The current line being processed.
+     * @param array $Block The current block of math notation being processed.
+     *
+     * @return array The updated block of math notation.
+     */
     protected function blockMathNotationContinue($Line, $Block)
     {
         if (isset($Block['complete'])) {
@@ -1164,6 +1184,15 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
     }
 
 
+    /**
+     * Block Math Notation Complete
+     *
+     * This method is responsible for handling a block of complete math notation.
+     * It receives a block as a parameter and returns the same block.
+     *
+     * @param mixed $Block The block to be processed.
+     * @return mixed The processed block.
+     */
     protected function blockMathNotationComplete($Block)
     {
         return $Block;
@@ -1951,7 +1980,7 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
     // -------------------------------------------------------------------------
 
 
-    private function addInlineType(mixed $markers, string $funcName): void
+    private function addInlineType($markers, string $funcName): void
     {
         // Ensure $markers is an array, even if it's a single marker
         $markers = (array) $markers;
@@ -1974,7 +2003,7 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
 
 
 
-    private function addBlockType(mixed $markers, string $funcName): void
+    private function addBlockType($markers, string $funcName): void
     {
         $markers = (array) $markers;
 
@@ -2246,7 +2275,7 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
              * @return mixed The value retrieved from the configuration.
              * @throws \InvalidArgumentException If the key path is invalid.
              */
-            public function get(string $keyPath): mixed
+            public function get(string $keyPath)
             {
                 // Translate deprecated key paths
                 $keyPath = $this->translateDeprecatedKeyPath($keyPath);
@@ -2276,7 +2305,7 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
              * @return self Returns an instance of the class.
              * @throws \InvalidArgumentException If an invalid key path is given or if the value does not match the expected type.
              */
-            public function set(mixed $keyPath, mixed $value = null): self
+            public function set($keyPath, $value = null): self
             {
 
                 if (is_array($keyPath)) {
@@ -2349,7 +2378,7 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
              * @param array|null $schema Optional schema for additional checks.
              * @throws \InvalidArgumentException If the value does not match the expected type.
              */
-            protected function validateType(mixed $value, string $expectedType, ?array $schema = null): void
+            protected function validateType($value, string $expectedType, ?array $schema = null): void
             {
                 $type = gettype($value);
 
