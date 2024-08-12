@@ -9,11 +9,11 @@ const config: Config = {
   favicon: 'img/favicon.ico',
 
   url: 'https://benjaminhoegh.github.io',
-  baseUrl: '/TestRepository/',
+  baseUrl: '/ParsedownExtended/',
 
   // GitHub pages deployment config.
   organizationName: 'BenjaminHoegh',
-  projectName: 'TestRepository',
+  projectName: 'ParsedownExtended',
 
   onBrokenLinks: 'warn',
   onBrokenMarkdownLinks: 'warn',
@@ -34,7 +34,7 @@ const config: Config = {
           remarkPlugins: [remarkMath],
           rehypePlugins: [rehypeKatex],
           editUrl:
-            'https://github.com/BenjaminHoegh/TestRepository/tree/docs/',
+            'https://github.com/BenjaminHoegh/ParsedownExtended/tree/docs/',
         },
         theme: {
           customCss: './src/css/custom.css',
@@ -66,7 +66,7 @@ const config: Config = {
           dropdownActiveClassDisabled: true,
         },
         {
-          href: 'https://github.com/BenjaminHoegh/TestRepository',
+          href: 'https://github.com/BenjaminHoegh/ParsedownExtended',
           label: 'GitHub',
           position: 'right',
         },
