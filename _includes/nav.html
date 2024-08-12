@@ -1,9 +1,0 @@
-<ul class="nav-list">
-  {%- for page in include.pages -%}
-      {%- unless page.nav_exclude -%}
-          <li class="nav-list-item{% if page.url == page.url %} active{% endif %}">
-              <a href="{{ page.url | absolute_url }}" class="nav-list-link">{{ page.title }}</a>
-          </li>
-      {%- endunless -%}
-  {%- endfor -%}
-</ul>
