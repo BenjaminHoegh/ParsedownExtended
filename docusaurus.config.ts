@@ -57,7 +57,7 @@ const config: Config = {
       title: 'ParsedownExtended',
       logo: {
         alt: 'ParsedownExtended Logo',
-        src: 'https://github.com/BenjaminHoegh/ParsedownExtended/raw/gh-pages/img/parsedownExtended.png',
+        src: 'https://github.com/BenjaminHoegh/ParsedownExtended/raw/docs/parsedownExtended.png',
       },
       items: [
         {
