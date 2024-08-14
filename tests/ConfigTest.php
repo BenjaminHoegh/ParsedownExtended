@@ -3,7 +3,7 @@
 use BenjaminHoegh\ParsedownExtended\ParsedownExtended;
 use PHPUnit\Framework\TestCase;
 
-class ParsedownExtendedConfigTest extends TestCase
+class ConfigTest extends TestCase
 {
     /**
      * Test default configuration initialization

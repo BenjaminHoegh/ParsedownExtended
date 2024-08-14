@@ -1,11 +1,13 @@
 <?php
 
+// NOTE: Add special attributes test to HeadingsTest.php
+
 use BenjaminHoegh\ParsedownExtended\ParsedownExtended;
 use PHPUnit\Framework\TestCase;
 
 class HeadingsTest extends TestCase
 {
-    protected $parsedownExtended;
+    protected ParsedownExtended $parsedownExtended;
 
     protected function setUp(): void
     {

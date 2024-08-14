@@ -5,7 +5,7 @@ use PHPUnit\Framework\TestCase;
 
 class AlertsTest extends TestCase
 {
-    protected $parsedownExtended;
+    protected ParsedownExtended $parsedownExtended;
 
     protected function setUp(): void
     {

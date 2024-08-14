@@ -5,7 +5,7 @@ use PHPUnit\Framework\TestCase;
 
 class TocTest extends TestCase
 {
-    protected $parsedownExtended;
+    protected ParsedownExtended $parsedownExtended;
 
     protected function setUp(): void
     {
@@ -90,7 +90,7 @@ class TocTest extends TestCase
     public function testTocWithCustomHeadingLevels()
     {
         $this->parsedownExtended->config()->set('headings.auto_anchors', true);
-        $this->parsedownExtended->config()->set('toc.headings', ['h1', 'h2'], true);
+        $this->parsedownExtended->config()->set('toc.levels', ['h1', 'h2']);
 
         $markdown = <<<MARKDOWN
         # Heading 1

@@ -10,6 +10,7 @@ class LinksTest extends TestCase
     protected function setUp(): void
     {
         $this->parsedownExtended = new ParsedownExtended();
+        $this->parsedownExtended->setSafeMode(true); // As we always want to support safe mode
         $_SERVER['HTTP_HOST'] = 'www.example.com';  // Set the current domain for testing
     }
 
