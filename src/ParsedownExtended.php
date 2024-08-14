@@ -8,7 +8,7 @@ namespace BenjaminHoegh\ParsedownExtended;
  */
 class_alias(class_exists('ParsedownExtra') ? 'ParsedownExtra' : 'Parsedown', 'ParsedownExtendedParentAlias');
 
-
+// @psalm-suppress UndefinedClass
 class ParsedownExtended extends \ParsedownExtendedParentAlias
 {
     public const VERSION = '1.3.0';
