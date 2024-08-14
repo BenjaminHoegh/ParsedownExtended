@@ -2,6 +2,7 @@
 vendor/
 lab/
 tools/
+build/
 
 # PHP-CS-Fixer
 .php_cs.cache
@@ -23,3 +24,6 @@ Thumbs.db
 
 # IDE
 .vscode/
+.idea/
+qodana.yaml
+

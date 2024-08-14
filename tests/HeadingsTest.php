@@ -1,10 +1,13 @@
 <?php
 
+// NOTE: Add special attributes test to HeadingsTest.php
+
+use BenjaminHoegh\ParsedownExtended\ParsedownExtended;
 use PHPUnit\Framework\TestCase;
 
 class HeadingsTest extends TestCase
 {
-    protected $parsedownExtended;
+    protected ParsedownExtended $parsedownExtended;
 
     protected function setUp(): void
     {
@@ -22,7 +25,7 @@ class HeadingsTest extends TestCase
      */
     public function testHeadingWithoutAnchor()
     {
-        $this->parsedownExtended->setSetting('headings.auto_anchors', false);
+        $this->parsedownExtended->config()->set('headings.auto_anchors', false);
 
         $markdown = '# Heading 1';
         $expected = '<h1>Heading 1</h1>';
@@ -35,7 +38,7 @@ class HeadingsTest extends TestCase
      */
     public function testHeadingWithAnchor()
     {
-        $this->parsedownExtended->setSetting('headings.auto_anchors', true);
+        $this->parsedownExtended->config()->set('headings.auto_anchors', true);
 
         $markdown = '# Heading 1';
         $expected = '<h1 id="heading-1">Heading 1</h1>';
@@ -48,7 +51,7 @@ class HeadingsTest extends TestCase
      */
     public function testHeadingWithMultipleOccurrences()
     {
-        $this->parsedownExtended->setSetting('headings.auto_anchors', true);
+        $this->parsedownExtended->config()->set('headings.auto_anchors', true);
 
         $markdown = <<<MARKDOWN
         # Heading 1
@@ -70,7 +73,7 @@ class HeadingsTest extends TestCase
      */
     public function testHeadingWithCustomAnchor()
     {
-        $this->parsedownExtended->setSetting('headings.auto_anchors', true);
+        $this->parsedownExtended->config()->set('headings.auto_anchors', true);
 
         $markdown = '# Heading 1 {#custom-anchor}';
         $expected = '<h1 id="custom-anchor">Heading 1</h1>';
@@ -83,8 +86,8 @@ class HeadingsTest extends TestCase
      */
     public function testHeadingWithBlacklistedHeaderIds()
     {
-        $this->parsedownExtended->setSetting('headings.auto_anchors', true);
-        $this->parsedownExtended->setSetting('headings.auto_anchors.blacklist', ['heading-1']);
+        $this->parsedownExtended->config()->set('headings.auto_anchors', true);
+        $this->parsedownExtended->config()->set('headings.auto_anchors.blacklist', ['heading-1']);
 
         $markdown = '# Heading 1';
         $expected = '<h1 id="heading-1-1">Heading 1</h1>';
@@ -97,8 +100,8 @@ class HeadingsTest extends TestCase
      */
     public function testHeadingBlacklistWithMultipleOccurrences()
     {
-        $this->parsedownExtended->setSetting('headings.auto_anchors', true);
-        $this->parsedownExtended->setSetting('headings.auto_anchors.blacklist', ['heading-1', 'heading-4']);
+        $this->parsedownExtended->config()->set('headings.auto_anchors', true);
+        $this->parsedownExtended->config()->set('headings.auto_anchors.blacklist', ['heading-1', 'heading-4']);
 
         $markdown = <<<MARKDOWN
         # Heading
@@ -122,8 +125,8 @@ class HeadingsTest extends TestCase
      */
     public function testHeadingWithCustomAnchorAndBlacklistedHeaderIds()
     {
-        $this->parsedownExtended->setSetting('headings.auto_anchors', true);
-        $this->parsedownExtended->setSetting('headings.auto_anchors.blacklist', ['custom-anchor']);
+        $this->parsedownExtended->config()->set('headings.auto_anchors', true);
+        $this->parsedownExtended->config()->set('headings.auto_anchors.blacklist', ['custom-anchor']);
 
         $markdown = '# Heading 1 {#custom-anchor}';
         $expected = '<h1 id="custom-anchor-1">Heading 1</h1>';
@@ -137,8 +140,8 @@ class HeadingsTest extends TestCase
      */
     public function testHeadingWithLimitedAllowedLevels()
     {
-        $this->parsedownExtended->setSetting('headings.auto_anchors', false);
-        $this->parsedownExtended->setSetting('headings.allowed', ['h1', 'h2'], true);
+        $this->parsedownExtended->config()->set('headings.auto_anchors', false);
+        $this->parsedownExtended->config()->set('headings.allowed', ['h1', 'h2'], true);
 
         $markdown = <<<MARKDOWN
         # Heading 1
@@ -166,8 +169,8 @@ class HeadingsTest extends TestCase
      */
     public function testHeadingWithLowercase()
     {
-        $this->parsedownExtended->setSetting('headings.auto_anchors', true);
-        $this->parsedownExtended->setSetting('headings.auto_anchors.lowercase', true);
+        $this->parsedownExtended->config()->set('headings.auto_anchors', true);
+        $this->parsedownExtended->config()->set('headings.auto_anchors.lowercase', true);
 
         $markdown = '# Heading 1';
         $expected = '<h1 id="heading-1">Heading 1</h1>';
@@ -175,7 +178,7 @@ class HeadingsTest extends TestCase
         $this->assertEquals($expected, $actual);
 
 
-        $this->parsedownExtended->setSetting('headings.auto_anchors.lowercase', false);
+        $this->parsedownExtended->config()->set('headings.auto_anchors.lowercase', false);
 
         $markdown = '# Heading 1';
         $expected = '<h1 id="Heading-1">Heading 1</h1>';
@@ -188,8 +191,8 @@ class HeadingsTest extends TestCase
      */
     public function testHeadingWithDelimiter()
     {
-        $this->parsedownExtended->setSetting('headings.auto_anchors', true);
-        $this->parsedownExtended->setSetting('headings.auto_anchors.delimiter', '_');
+        $this->parsedownExtended->config()->set('headings.auto_anchors', true);
+        $this->parsedownExtended->config()->set('headings.auto_anchors.delimiter', '_');
 
         $markdown = '# Heading 1';
         $expected = '<h1 id="heading_1">Heading 1</h1>';
@@ -202,8 +205,8 @@ class HeadingsTest extends TestCase
      */
     public function testHeadingWithReplacement()
     {
-        $this->parsedownExtended->setSetting('headings.auto_anchors', true);
-        $this->parsedownExtended->setSetting('headings.auto_anchors.replacements', [
+        $this->parsedownExtended->config()->set('headings.auto_anchors', true);
+        $this->parsedownExtended->config()->set('headings.auto_anchors.replacements', [
             '/h/' => 'd',
         ]);
 
@@ -218,7 +221,7 @@ class HeadingsTest extends TestCase
      */
     public function testHeadingUsingCallback()
     {
-        $this->parsedownExtended->setSetting('headings.auto_anchors', true);
+        $this->parsedownExtended->config()->set('headings.auto_anchors', true);
         $this->parsedownExtended->setCreateAnchorIDCallback(function ($text) {
             return 'custom-anchor';
         });
