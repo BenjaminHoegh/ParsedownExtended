@@ -927,7 +927,7 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
 
     protected function parseAttributeData($attributeString)
     {
-        if($this->config()->get('special_attributes')) {
+        if($this->config()->get('headings.special_attributes')) {
             return parent::parseAttributeData($attributeString);
         }
 
@@ -1362,7 +1362,7 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
             $Block['element']['attributes'] = ['id' => $id];
 
             // Check if heading level is in the selectors
-            if (!in_array($level, $this->config()->get('toc.headings'))) {
+            if (!in_array($level, $this->config()->get('toc.levels'))) {
                 return $Block;
             }
 
@@ -1396,7 +1396,7 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
             $Block['element']['attributes'] = ['id' => $id];
 
             // Check if heading level is in the selectors
-            if (!in_array($level, $this->config()->get('toc.headings'))) {
+            if (!in_array($level, $this->config()->get('toc.levels'))) {
                 return $Block;
             }
 
@@ -1410,9 +1410,6 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
     protected function blockAbbreviation($Line)
     {
         if ($this->config()->get('abbreviations')) {
-            foreach ($this->config()->get('abbreviations.predefined') as $abbreviations => $description) {
-                $this->DefinitionData['Abbreviation'][$abbreviations] = $description;
-            }
 
             if ($this->config()->get('abbreviations.allow_custom')) {
                 return parent::blockAbbreviation($Line);
@@ -1423,10 +1420,9 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
     }
 
     /**
-         * (Override)
-         * Tablespan
-         * Modifyed version of Tablespan by @KENNYSOFT
-         */
+     * Tablespan
+     * Modifyed version of Tablespan by @KENNYSOFT
+     */
     protected function blockTableComplete(array $block): array
     {
         if (!$this->config()->get('tables.tablespan')) {
@@ -1921,6 +1917,18 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
     }
 
 
+    protected function unmarkedText($text)
+    {
+        foreach ($this->config()->get('abbreviations.predefined') as $abbreviations => $description) {
+            $this->DefinitionData['Abbreviation'][$abbreviations] = $description;
+        }
+
+        $text = parent::unmarkedText($text);
+
+        return $text;
+    }
+
+
     // Settings
     // -------------------------------------------------------------------------
 
@@ -2092,7 +2100,10 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
                 'predefined' => [
                     'type' => 'array',
                     'default' => [],
-                    'item_schema' => ['type' => 'array', 'keys' => ['abbr' => 'string', 'expansion' => 'string']],
+                    'item_schema' => [
+                        'key_type' => 'string',
+                        'value_type' => 'string',
+                    ],
                 ],
             ],
             'code' => [
@@ -2131,6 +2142,7 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
                     'transliterate' => ['type' => 'boolean', 'default' => false],
                     'blacklist' => ['type' => 'array', 'default' => []],
                 ],
+                'special_attributes' => ['type' => 'boolean', 'default' => true],
             ],
             'images' => ['type' => 'boolean', 'default' => true],
             'links' => [
@@ -2201,7 +2213,6 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
                     'right_single_quote' => ['type' => 'string', 'default' => '&rsquo;'],
                 ],
             ],
-            'special_attributes' => ['type' => 'boolean', 'default' => true],
             'tables' => [
                 'enabled' => ['type' => 'boolean', 'default' => true],
                 'tablespan' => ['type' => 'boolean', 'default' => true],
@@ -2209,7 +2220,11 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
             'thematic_breaks' => ['type' => 'boolean', 'default' => true],
             'toc' => [
                 'enabled' => ['type' => 'boolean', 'default' => true],
-                'headings' => ['type' => 'array', 'default' => ['h1', 'h2', 'h3', 'h4', 'h5', 'h6']],
+                'levels' => [
+                    'type' => 'array',
+                    'default' => ['h1', 'h2', 'h3', 'h4', 'h5', 'h6'],
+                    'item_schema' => ['type' => 'string'],
+                ],
                 'tag' => ['type' => 'string', 'default' => '[toc]'],
                 'id' => ['type' => 'string', 'default' => 'toc'],
             ],
@@ -2254,6 +2269,8 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
                     'smarty.substitutions.right-single-quote' => 'smarty.substitutions.right_single_quote',
                     'toc.toc_tag' => 'toc.tag',
                     'markup' => 'allow_raw_html',
+                    'special_attributes' => 'headings.special_attributes',
+                    'toc.headings' => 'toc.levels',
                 ];
 
                 // If the key path is deprecated we should alert the user
@@ -2384,22 +2401,37 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
 
                 if ($expectedType === 'array' && $type === 'array') {
                     if (isset($schema['item_schema'])) {
-                        foreach ($value as $item) {
-                            if (isset($schema['item_schema']['keys'])) {
+                        if (isset($schema['item_schema']['key_type']) && isset($schema['item_schema']['value_type'])) {
+                            // Validate key-value pairs in the array
+                            $keyType = $schema['item_schema']['key_type'];
+                            $valueType = $schema['item_schema']['value_type'];
+
+                            foreach ($value as $key => $item) {
+                                if (gettype($key) !== $keyType || gettype($item) !== $valueType) {
+                                    $backtrace = debug_backtrace();
+                                    $caller = $backtrace[1] ?? $backtrace[0];
+                                    $errorMessage = "Array keys must be of type '$keyType' and values of type '$valueType'. Called in " . ($caller['file'] ?? 'unknown') . " on line " . ($caller['line'] ?? 'unknown');
+                                    throw new \InvalidArgumentException($errorMessage);
+                                }
+                            }
+                            return;
+                        } elseif (isset($schema['item_schema']['keys'])) {
+                            // Validate arrays of associative arrays with specific keys
+                            foreach ($value as $item) {
                                 foreach ($schema['item_schema']['keys'] as $key => $itemType) {
                                     if (!isset($item[$key]) || gettype($item[$key]) !== $itemType) {
-                                        // Include debug information in the exception
                                         $backtrace = debug_backtrace();
                                         $caller = $backtrace[1] ?? $backtrace[0];
                                         $errorMessage = "Array items must have '$key' of type '$itemType'. Called in " . ($caller['file'] ?? 'unknown') . " on line " . ($caller['line'] ?? 'unknown');
                                         throw new \InvalidArgumentException($errorMessage);
                                     }
                                 }
-                            } else {
-                                // If no keys are specified, validate the type of the entire item
-                                $itemType = $schema['item_schema']['type'];
+                            }
+                        } else {
+                            // Validate arrays of simple types
+                            $itemType = $schema['item_schema']['type'];
+                            foreach ($value as $item) {
                                 if (gettype($item) !== $itemType) {
-                                    // Include debug information in the exception
                                     $backtrace = debug_backtrace();
                                     $caller = $backtrace[1] ?? $backtrace[0];
                                     $errorMessage = "Array items must be of type '$itemType'. Called in " . ($caller['file'] ?? 'unknown') . " on line " . ($caller['line'] ?? 'unknown');
@@ -2408,7 +2440,6 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
                             }
                         }
                     }
-                    // Early return as the type is already confirmed
                     return;
                 }
 
