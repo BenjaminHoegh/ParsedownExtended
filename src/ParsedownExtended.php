@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace BenjaminHoegh\ParsedownExtended;
 
 /**
@@ -2232,6 +2234,11 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
         ];
     }
 
+    /**
+     * Retrieves the configuration schema.
+     *
+     * @return array The configuration schema.
+     */
     public function getConfigSchema(): array
     {
         return $this->configSchema;
@@ -2253,7 +2260,11 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
                 $this->config = &$config;
             }
 
-
+            /**
+             * Translates deprecated key paths to their new equivalents.
+             * @param string $keyPath
+             * @return string
+             */
             private function translateDeprecatedKeyPath(string $keyPath): string
             {
                 static $deprecatedMapping = [
