@@ -529,19 +529,17 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
             '/\+-/i' => html_entity_decode('&plusmn;'),
             '/\!\.{3,}/i' => '!..',
             '/\?\.{3,}/i' => '?..',
-            '/\.{4,}/i' => $ellipses,
-            '/(?<![\.!?])(\.{2})(?!\.)/i' => $ellipses,
-
+            '/\.{2,}/i' => $ellipses,
         ];
 
-        $result = preg_replace_callback(array_keys($substitutions), function ($matches) use ($substitutions) {
-            return preg_replace(array_keys($substitutions), array_values($substitutions), $matches[0]);
-        }, $Excerpt['text'], -1, $count);
+        $result = preg_replace(array_keys($substitutions), array_values($substitutions), $Excerpt['text'], -1, $count);
 
         if ($count > 0) {
             return [
-                'extent' => strlen($result),
-                'element' => ['text' => $result],
+                'extent' => strlen($Excerpt['text']),
+                'element' => [
+                    'text' => $result
+                ],
             ];
         }
 
@@ -2497,7 +2495,7 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
 
         // $Excerpt is based on the first occurrence of a marker
 
-        while ($Excerpt = strpbrk($text, $this->inlineMarkerList)) {
+        while ($Excerpt = strpbrk((string)$text, $this->inlineMarkerList)) {
             $marker = $Excerpt[0];
 
             $markerPosition = strpos($text, $marker);
@@ -2510,7 +2508,6 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
                 'context' => $text,
                 'before' => $before,
                 'parent' => $this,
-                // 'inlineTypes' => isset($this->InlineTypes[$marker]) ? $this->InlineTypes[$marker] : [] // Not apresent in original Parsedown
             ];
 
             foreach ($this->InlineTypes[$marker] as $inlineType) {
