@@ -21,7 +21,7 @@ class EmojiTest extends TestCase
     public function testEnableEmoji()
     {
         $this->parsedownExtended->config()->set('emojis', true);
-        
+
         $markdown = ":smile:";
         $expectedHtml = '<p>😄</p>';
 
@@ -33,7 +33,7 @@ class EmojiTest extends TestCase
     public function testDisableEmoji()
     {
         $this->parsedownExtended->config()->set('emojis', false);
-        
+
         $markdown = ":smile:";
         $expectedHtml = '<p>:smile:</p>';
 

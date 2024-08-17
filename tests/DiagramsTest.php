@@ -33,7 +33,7 @@ class DiagramsTest extends TestCase
     public function testDisableDiagram()
     {
         $this->parsedownExtended->config()->set('diagrams', false);
-        
+
         $markdown = "```mermaid\ngraph TD;\n    A-->B;\n```";
         $expectedHtml = "<pre><code class=\"language-mermaid\">graph TD;\n    A--&gt;B;</code></pre>";
 

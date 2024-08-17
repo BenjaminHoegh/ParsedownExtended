@@ -21,24 +21,24 @@ class CodeTest extends TestCase
     public function testEnableCode()
     {
         $this->parsedownExtended->config()->set('code', true); // Code blocks are not turned into paragraphs
-        
+
         $markdown = "```php\n<?php echo \"Hello, World!\";\n```";
         $expectedHtml = "<pre><code class=\"language-php\">&lt;?php echo \"Hello, World!\";</code></pre>";
-        
+
         $result = $this->parsedownExtended->text($markdown);
-        
+
         $this->assertEquals($expectedHtml, trim($result));
     }
 
     public function testDisableCode()
     {
         $this->parsedownExtended->config()->set('code', false); // Code blocks are turned into paragraphs
-        
+
         $markdown = "```php\n<?php echo \"Hello, World!\";\n```";
         $expectedHtml = "<p>```php\n&lt;?php echo &quot;Hello, World!&quot;;\n```</p>";
-        
+
         $result = $this->parsedownExtended->text($markdown);
-        
+
         $this->assertEquals($expectedHtml, trim($result));
     }
 
@@ -46,7 +46,7 @@ class CodeTest extends TestCase
     {
         $markdown = "```php\n<?php echo \"Hello, World!\";\n```";
         $expectedHtml = "<pre><code class=\"language-php\">&lt;?php echo \"Hello, World!\";</code></pre>";
-        
+
         $result = $this->parsedownExtended->text($markdown);
 
         $this->assertEquals($expectedHtml, trim($result));
