@@ -517,7 +517,7 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
         }
 
         // Check if smartypants and smart ellipses settings are enabled
-        $ellipses = $this->config()->get('smarty') && $this->config()->get('smarty.smart_ellipses') ? html_entity_decode($this->config()->get('smarty.substitutions.ellipses')) : '...';
+        $ellipses = $this->config()->get('smartypants') && $this->config()->get('smartypants.smart_ellipses') ? html_entity_decode($this->config()->get('smartypants.substitutions.ellipses')) : '...';
 
         $substitutions = [
             '/\(c\)/i' => html_entity_decode('&copy;'),
@@ -553,21 +553,21 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
      */
     protected function inlineSmartypants($Excerpt)
     {
-        if (!$this->config()->get('smarty')) {
+        if (!$this->config()->get('smartypants')) {
             return null;
         }
 
         // Substitutions
         $substitutions = [
-            'left-double-quote' => html_entity_decode($this->config()->get('smarty.substitutions.left-double-quote')),
-            'right-double-quote' => html_entity_decode($this->config()->get('smarty.substitutions.right-double-quote')),
-            'left-single-quote' => html_entity_decode($this->config()->get('smarty.substitutions.left-single-quote')),
-            'right-single-quote' => html_entity_decode($this->config()->get('smarty.substitutions.right-single-quote')),
-            'left-angle-quote' => html_entity_decode($this->config()->get('smarty.substitutions.left-angle-quote')),
-            'right-angle-quote' => html_entity_decode($this->config()->get('smarty.substitutions.right-angle-quote')),
-            'mdash' => html_entity_decode($this->config()->get('smarty.substitutions.mdash')),
-            'ndash' => html_entity_decode($this->config()->get('smarty.substitutions.ndash')),
-            'ellipses' => html_entity_decode($this->config()->get('smarty.substitutions.ellipses')),
+            'left-double-quote' => html_entity_decode($this->config()->get('smartypants.substitutions.left-double-quote')),
+            'right-double-quote' => html_entity_decode($this->config()->get('smartypants.substitutions.right-double-quote')),
+            'left-single-quote' => html_entity_decode($this->config()->get('smartypants.substitutions.left-single-quote')),
+            'right-single-quote' => html_entity_decode($this->config()->get('smartypants.substitutions.right-single-quote')),
+            'left-angle-quote' => html_entity_decode($this->config()->get('smartypants.substitutions.left-angle-quote')),
+            'right-angle-quote' => html_entity_decode($this->config()->get('smartypants.substitutions.right-angle-quote')),
+            'mdash' => html_entity_decode($this->config()->get('smartypants.substitutions.mdash')),
+            'ndash' => html_entity_decode($this->config()->get('smartypants.substitutions.ndash')),
+            'ellipses' => html_entity_decode($this->config()->get('smartypants.substitutions.ellipses')),
         ];
 
         // Patterns
@@ -665,7 +665,7 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
         ];
 
         foreach ($patterns as $key => $value) {
-            if ($this->isEnabled('smarty.'.$key) && preg_match($value['pattern'], $Excerpt['text'], $matches)) {
+            if ($this->isEnabled('smartypants.'.$key) && preg_match($value['pattern'], $Excerpt['text'], $matches)) {
                 $matches = array_values(array_filter($matches));
                 return $value['callback']($matches);
             }
@@ -2192,7 +2192,7 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
             ],
             'quotes' => ['type' => 'boolean', 'default' => true],
             'references' => ['type' => 'boolean', 'default' => true],
-            'smarty' => [
+            'smartypants' => [
                 'enabled' => ['type' => 'boolean', 'default' => false],
                 'smart_angled_quotes' => ['type' => 'boolean', 'default' => true],
                 'smart_backticks' => ['type' => 'boolean', 'default' => true],
@@ -2268,12 +2268,13 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
                     'abbreviations.predefine' => 'abbreviations.predefined',
                     'emphasis.marking' => 'emphasis.mark',
                     'headings.allowed' => 'headings.allowed_levels',
-                    'smarty.substitutions.left-angle-quote' => 'smarty.substitutions.left_angle_quote',
-                    'smarty.substitutions.left-double-quote' => 'smarty.substitutions.left_double_quote',
-                    'smarty.substitutions.left-single-quote' => 'smarty.substitutions.left_single_quote',
-                    'smarty.substitutions.right-angle-quote' => 'smarty.substitutions.right_angle_quote',
-                    'smarty.substitutions.right-double-quote' => 'smarty.substitutions.right_double_quote',
-                    'smarty.substitutions.right-single-quote' => 'smarty.substitutions.right_single_quote',
+                    'smarty' => 'smartypants',
+                    'smarty.substitutions.left-angle-quote' => 'smartypants.substitutions.left_angle_quote',
+                    'smarty.substitutions.left-double-quote' => 'smartypants.substitutions.left_double_quote',
+                    'smarty.substitutions.left-single-quote' => 'smartypants.substitutions.left_single_quote',
+                    'smarty.substitutions.right-angle-quote' => 'smartypants.substitutions.right_angle_quote',
+                    'smarty.substitutions.right-double-quote' => 'smartypants.substitutions.right_double_quote',
+                    'smarty.substitutions.right-single-quote' => 'smartypants.substitutions.right_single_quote',
                     'toc.toc_tag' => 'toc.tag',
                     'markup' => 'allow_raw_html',
                     'special_attributes' => 'headings.special_attributes',
