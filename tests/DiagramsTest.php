@@ -42,5 +42,3 @@ class DiagramsTest extends TestCase
         $this->assertEquals($expectedHtml, $result);
     }
 }
-
-
