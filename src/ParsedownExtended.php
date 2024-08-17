@@ -369,7 +369,6 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
                 'element' => [
                     'name' => 'sup',
                     'text' => $matches[1],
-                    'function' => 'lineElements',
                 ],
             ];
         }
@@ -397,7 +396,6 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
                 'element' => [
                     'name' => 'sub',
                     'text' => $matches[1],
-                    'function' => 'lineElements',
                 ],
             ];
         }
