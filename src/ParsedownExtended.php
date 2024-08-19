@@ -559,12 +559,12 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
 
         // Substitutions
         $substitutions = [
-            'left-double-quote' => html_entity_decode($this->config()->get('smartypants.substitutions.left-double-quote')),
-            'right-double-quote' => html_entity_decode($this->config()->get('smartypants.substitutions.right-double-quote')),
-            'left-single-quote' => html_entity_decode($this->config()->get('smartypants.substitutions.left-single-quote')),
-            'right-single-quote' => html_entity_decode($this->config()->get('smartypants.substitutions.right-single-quote')),
-            'left-angle-quote' => html_entity_decode($this->config()->get('smartypants.substitutions.left-angle-quote')),
-            'right-angle-quote' => html_entity_decode($this->config()->get('smartypants.substitutions.right-angle-quote')),
+            'left_double_quote' => html_entity_decode($this->config()->get('smartypants.substitutions.left_double_quote')),
+            'right_double_quote' => html_entity_decode($this->config()->get('smartypants.substitutions.right_double_quote')),
+            'left_single_quote' => html_entity_decode($this->config()->get('smartypants.substitutions.left_single_quote')),
+            'right_single_quote' => html_entity_decode($this->config()->get('smartypants.substitutions.right_single_quote')),
+            'left_angle_quote' => html_entity_decode($this->config()->get('smartypants.substitutions.left_angle_quote')),
+            'right_angle_quote' => html_entity_decode($this->config()->get('smartypants.substitutions.right_angle_quote')),
             'mdash' => html_entity_decode($this->config()->get('smartypants.substitutions.mdash')),
             'ndash' => html_entity_decode($this->config()->get('smartypants.substitutions.ndash')),
             'ellipses' => html_entity_decode($this->config()->get('smartypants.substitutions.ellipses')),
@@ -582,7 +582,7 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
                     return [
                         'extent' => strlen($matches[0]),
                         'element' => [
-                            'text' => $substitutions['left-double-quote'] . $matches[2] . $substitutions['right-double-quote'],
+                            'text' => $substitutions['left_double_quote'] . $matches[2] . $substitutions['right_double_quote'],
                         ],
                     ];
                 },
@@ -598,7 +598,7 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
                         return [
                             'extent' => strlen($matches[0]),
                             'element' => [
-                                'text' => $substitutions['left-single-quote'] . $matches[2] . $substitutions['right-single-quote'],
+                                'text' => $substitutions['left_single_quote'] . $matches[2] . $substitutions['right_single_quote'],
                             ],
                         ];
                     }
@@ -607,7 +607,7 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
                         return [
                             'extent' => strlen($matches[0]),
                             'element' => [
-                                'text' => $substitutions['left-double-quote'] . $matches[2] . $substitutions['right-double-quote'],
+                                'text' => $substitutions['left_double_quote'] . $matches[2] . $substitutions['right_double_quote'],
                             ],
                         ];
                     }
@@ -623,7 +623,7 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
                     return [
                         'extent' => strlen($matches[0]),
                         'element' => [
-                            'text' => $substitutions['left-angle-quote'] . $matches[2] . $substitutions['right-angle-quote'],
+                            'text' => $substitutions['left_angle_quote'] . $matches[2] . $substitutions['right_angle_quote'],
                         ],
                     ];
                 },
@@ -665,7 +665,7 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
         ];
 
         foreach ($patterns as $key => $value) {
-            if ($this->isEnabled('smartypants.'.$key) && preg_match($value['pattern'], $Excerpt['text'], $matches)) {
+            if ($this->config()->get('smartypants.'.$key) && preg_match($value['pattern'], $Excerpt['text'], $matches)) {
                 $matches = array_values(array_filter($matches));
                 return $value['callback']($matches);
             }
