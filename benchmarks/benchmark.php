@@ -31,7 +31,7 @@
         }
 
         td {
-            width: 25%;
+            width: 20%;
         }
 
         table th:first-child, table td:first-child {
@@ -67,6 +67,12 @@
             font-size: 16px;
             font-weight: 400;
         }
+
+        .error {
+            color: #dd7777;
+            padding: 20px;
+            font-size: 18px;
+        }
     </style>
 </head>
 <body>
@@ -74,30 +80,35 @@
 <h1>Performance Benchmarks</h1>
 
 <?php
+# Load the autoloader first
+require_once '../vendor/autoload.php';
+
 # Check if xdebug is enabled
 if (extension_loaded('xdebug')) {
     echo "<div class='xdebug-warning'>Warning: Xdebug is enabled. This may result in incorrect benchmark results.</div>";
 }
+
+// Ensure ParsedownExtra and ParsedownExtended are available
+if (!class_exists('ParsedownExtra') || !class_exists('BenjaminHoegh\ParsedownExtended\ParsedownExtended')) {
+    echo "<div class='error'>Error: ParsedownExtra and ParsedownExtended are required but not found. Please make sure these packages are installed.</div>";
+    exit; // Stop further execution
+}
+
 ?>
 
 <table>
     <thead>
         <tr>
             <th><strong>Source</strong></th>
-            <th><strong>Parsedown</strong> | the lightning fast parser </th>
+            <th><strong>ParsedownExtra</strong> | base speed </th>
             <th><strong>ParsedownExtended</strong> | our extension </th>
             <th><strong>Markdown PHP</strong> | the original parser </th>
+            <th><strong>League</strong> | commonmark parser</th>
         </tr>
     </thead>
 
     <tbody id="benchmark-results">
 <?php
-
-use BenjaminHoegh\ParsedownExtended\ParsedownExtended;
-use Michelf\MarkdownExtra;
-
-// Autoload
-require_once '../vendor/autoload.php';
 
 // Define a function to measure execution time
 function benchmark($parser, $markdown)
@@ -106,6 +117,8 @@ function benchmark($parser, $markdown)
 
     if ($parser instanceof Michelf\Markdown) {
         $parser->defaultTransform($markdown);
+    } elseif ($parser instanceof League\CommonMark\CommonMarkConverter) {
+        $parser->convert($markdown);
     } else {
         $parser->text($markdown);
     }
@@ -126,69 +139,72 @@ $markdown_files = [
 ];
 
 // Initialize parsers
-$parsedown = new ParsedownExtra();
-$parsedownExtended = new ParsedownExtended();
-$michelfMarkdown = new MarkdownExtra();
+$parsers = [];
+$parsers['ParsedownExtra'] = new ParsedownExtra();
+$parsers['ParsedownExtended'] = new \BenjaminHoegh\ParsedownExtended\ParsedownExtended();
+
+if (class_exists('Michelf\MarkdownExtra')) {
+    $parsers['Markdown PHP'] = new \Michelf\MarkdownExtra();
+}
+if (class_exists('League\CommonMark\CommonMarkConverter')) {
+    $parsers['League'] = new \League\CommonMark\CommonMarkConverter();
+}
 
 // Initialize variables to calculate averages
-$total_original_time = 0;
-$total_extended_time = 0;
-$total_michelf_time = 0;
+$totals = [];
+$averages = [];
 $file_count = count($markdown_files);
 
 // Run the benchmarks
 foreach ($markdown_files as $name => $markdown) {
-    $original_time = benchmark($parsedown, $markdown);
-    $extended_time = benchmark($parsedownExtended, $markdown);
-    $michelf_time = benchmark($michelfMarkdown, $markdown);
-
-    $total_original_time += $original_time;
-    $total_extended_time += $extended_time;
-    $total_michelf_time += $michelf_time;
-
-    $speed_diff_extended = $extended_time / $original_time;
-    $speed_diff_michelf = $michelf_time / $original_time;
-
-    $original_time_ms = round($original_time * 1000, 1); // Convert to milliseconds
-    $extended_time_ms = round($extended_time * 1000, 1); // Convert to milliseconds
-    $michelf_time_ms = round($michelf_time * 1000, 1); // Convert to milliseconds
-
-    $speed_text_extended = $speed_diff_extended < 1 ? 'faster' : 'slower';
-    $times_diff_extended = round($speed_diff_extended < 1 ? 1 / $speed_diff_extended : $speed_diff_extended, 1);
-
-    $speed_text_michelf = $speed_diff_michelf < 1 ? 'faster' : 'slower';
-    $times_diff_michelf = round($speed_diff_michelf < 1 ? 1 / $speed_diff_michelf : $speed_diff_michelf, 1);
-
     echo "<tr>";
     echo "<td><strong>$name</strong></td>";
-    echo "<td>~ <strong>{$original_time_ms} ms</strong></td>";
-    echo "<td>~ <strong>{$extended_time_ms} ms</strong> or <span class='{$speed_text_extended}'>{$times_diff_extended} times</span> {$speed_text_extended}</td>";
-    echo "<td>~ <strong>{$michelf_time_ms} ms</strong> or <span class='{$speed_text_michelf}'>{$times_diff_michelf} times</span> {$speed_text_michelf}</td>";
+
+    // Benchmark ParsedownExtra first to establish the base speed
+    $parsedown_extra_time = benchmark($parsers['ParsedownExtra'], $markdown);
+    $parsedown_extra_time_ms = round($parsedown_extra_time * 1000, 1); // Convert to milliseconds
+    $totals['ParsedownExtra'] = ($totals['ParsedownExtra'] ?? 0) + $parsedown_extra_time;
+
+    echo "<td>~ <strong>{$parsedown_extra_time_ms} ms</strong></td>";
+
+    // Benchmark other parsers and compare to ParsedownExtra
+    foreach ($parsers as $parser_name => $parser) {
+        if ($parser_name !== 'ParsedownExtra') {
+            $time = benchmark($parser, $markdown);
+            $time_ms = round($time * 1000, 1); // Convert to milliseconds
+            $totals[$parser_name] = ($totals[$parser_name] ?? 0) + $time;
+
+            $speed_diff = $time / $parsedown_extra_time;
+            $speed_text = $speed_diff < 1 ? 'faster' : 'slower';
+            $times_diff = round($speed_diff < 1 ? 1 / $speed_diff : $speed_diff, 1);
+
+            echo "<td>~ <strong>{$time_ms} ms</strong> or <span class='{$speed_text}'>{$times_diff} times</span> {$speed_text}</td>";
+        }
+    }
+
     echo "</tr>";
 }
 
 // Calculate the averages
-
-# Parsedown
-$average_original_time = round(($total_original_time / $file_count) * 1000, 1);
-
-# Extended
-$average_extended_time = round(($total_extended_time / $file_count) * 1000, 1);
-$average_speed_diff_extended = $average_extended_time / $average_original_time;
-$average_speed_text_extended = $average_speed_diff_extended < 1 ? 'faster' : 'slower';
-$average_times_diff_extended = round($average_speed_diff_extended < 1 ? 1 / $average_speed_diff_extended : $average_speed_diff_extended, 1);
-
-# Michelf
-$average_michelf_time = round(($total_michelf_time / $file_count) * 1000, 1);
-$average_speed_diff_michelf = $average_michelf_time / $average_original_time;
-$average_speed_text_michelf = $average_speed_diff_michelf < 1 ? 'faster' : 'slower';
-$average_times_diff_michelf = round($average_speed_diff_michelf < 1 ? 1 / $average_speed_diff_michelf : $average_speed_diff_michelf, 1);
-
 echo "<tr class='average'>";
 echo "<td><strong>Averages</strong></td>";
-echo "<td>~ <strong>{$average_original_time} ms</strong></td>";
-echo "<td>~ <strong>{$average_extended_time} ms</strong> or <span class='{$average_speed_text_extended}'>{$average_times_diff_extended} times</span> {$average_speed_text_extended}</td>";
-echo "<td>~ <strong>{$average_michelf_time} ms</strong> or <span class='{$average_speed_text_michelf}'>{$average_times_diff_michelf} times</span> {$average_speed_text_michelf}</td>";
+
+// Average for ParsedownExtra
+$average_parsedown_extra_time = round(($totals['ParsedownExtra'] / $file_count) * 1000, 1);
+echo "<td>~ <strong>{$average_parsedown_extra_time} ms</strong></td>";
+
+// Averages for other parsers relative to ParsedownExtra
+foreach ($parsers as $parser_name => $parser) {
+    if ($parser_name !== 'ParsedownExtra') {
+        $average_time = round(($totals[$parser_name] / $file_count) * 1000, 1);
+        $average_speed_diff = $average_time / $average_parsedown_extra_time;
+        $average_speed_text = $average_speed_diff < 1 ? 'faster' : 'slower';
+        $average_times_diff = round($average_speed_diff < 1 ? 1 / $average_speed_diff : $average_speed_diff, 1);
+
+        echo "<td>~ <strong>{$average_time} ms</strong> or <span class='{$average_speed_text}'>{$average_times_diff} times</span> {$average_speed_text}</td>";
+    }
+}
+
 echo "</tr>";
 ?>
     </tbody>

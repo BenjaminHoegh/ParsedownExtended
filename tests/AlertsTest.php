@@ -18,6 +18,48 @@ class AlertsTest extends TestCase
         unset($this->parsedownExtended);
     }
 
+    public function testEnableAlerts()
+    {
+        $this->parsedownExtended->config()->set('alerts', true);
+
+        $markdown = <<<MARKDOWN
+        > [!NOTE]
+        > This is a note.
+        MARKDOWN;
+
+        $expectedHtml = <<<HTML
+        <div class="markdown-alert markdown-alert-note">
+        <p class="markdown-alert-title">Note</p>
+        <p>This is a note.</p>
+        </div>
+        HTML;
+
+        $result = $this->parsedownExtended->text($markdown);
+
+        $this->assertEquals(trim($expectedHtml), trim($result));
+    }
+
+    public function testDisableAlerts()
+    {
+        $this->parsedownExtended->config()->set('alerts', false);
+
+        $markdown = <<<MARKDOWN
+        > [!NOTE]
+        > This is a note.
+        MARKDOWN;
+
+        $expectedHtml = <<<HTML
+        <blockquote>
+        <p>[!NOTE]
+        This is a note.</p>
+        </blockquote>
+        HTML;
+
+        $result = $this->parsedownExtended->text($markdown);
+
+        $this->assertEquals(trim($expectedHtml), trim($result));
+    }
+
     public function testNoteAlert()
     {
         $markdown = <<<MARKDOWN

@@ -18,12 +18,25 @@ class DiagramsTest extends TestCase
         unset($this->parsedownExtended);
     }
 
-    public function testBlockDiagram()
+    public function testEnableDiagram()
     {
+        $this->parsedownExtended->config()->set('diagrams', true);
+
         $markdown = "```mermaid\ngraph TD;\n    A-->B;\n```";
         $expectedHtml = "<div class=\"mermaid\">graph TD;\n    A-->B;</div>";
 
-        $this->parsedownExtended->config()->set('diagrams', true);
+        $result = $this->parsedownExtended->text($markdown);
+
+        $this->assertEquals($expectedHtml, $result);
+    }
+
+    public function testDisableDiagram()
+    {
+        $this->parsedownExtended->config()->set('diagrams', false);
+
+        $markdown = "```mermaid\ngraph TD;\n    A-->B;\n```";
+        $expectedHtml = "<pre><code class=\"language-mermaid\">graph TD;\n    A--&gt;B;</code></pre>";
+
         $result = $this->parsedownExtended->text($markdown);
 
         $this->assertEquals($expectedHtml, $result);
