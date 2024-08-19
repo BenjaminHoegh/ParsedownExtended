@@ -17,4 +17,34 @@ class SmartypantsTest extends TestCase
     {
         unset($this->parsedownExtended);
     }
+
+    public function testEnableSmartypants()
+    {
+        $this->parsedownExtended->config()->set('smartypants', true);
+
+        $markdown = <<<MARKDOWN
+        "Hello," he said.
+        MARKDOWN;
+
+        $expected = <<<HTML
+        <p>“Hello,” he said.</p>
+        HTML;
+
+        $this->assertEquals($expected, $this->parsedownExtended->text($markdown));
+    }
+
+    public function testDisableSmartypants()
+    {
+        $this->parsedownExtended->config()->set('smartypants', false);
+
+        $markdown = <<<MARKDOWN
+        "Hello," he said.
+        MARKDOWN;
+
+        $expected = <<<HTML
+        <p>&quot;Hello,&quot; he said.</p>
+        HTML;
+
+        $this->assertEquals($expected, $this->parsedownExtended->text($markdown));
+    }
 }
