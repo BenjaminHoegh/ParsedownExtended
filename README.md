@@ -40,6 +40,10 @@ Table of contents
 
 ParsedownExtended is an extention for Parsedown, offering additional features and functionalities. It is designed to provide an easy-to-use Markdown parsing solution while extending the capabilities of the base Parsedown library.
 
+Stand alone versions of the extended features are also available as separate libraries:
+- [Parsedown Toc](https://github.com/BenjaminHoegh/ParsedownToc)
+- [Parsedown Math](https://github.com/BenjaminHoegh/ParsedownMath)
+
 ## Features
 
 ParsedownExtended includes a variety of features to enhance your Markdown parsing experience:
