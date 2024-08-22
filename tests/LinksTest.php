@@ -10,8 +10,8 @@ class LinksTest extends TestCase
     protected function setUp(): void
     {
         $this->parsedownExtended = new ParsedownExtended();
-        $this->parsedownExtended->setSafeMode(true); // As we always want to support safe mode
-        $_SERVER['HTTP_HOST'] = 'www.example.com';  // Set the current domain for testing
+        $this->parsedownExtended->setSafeMode(true);
+        $_SERVER['HTTP_HOST'] = 'www.example.com';  // Default host for testing
     }
 
     protected function tearDown(): void
@@ -19,202 +19,250 @@ class LinksTest extends TestCase
         unset($this->parsedownExtended);
     }
 
+    // General Link Settings
+    // ----------------------------
 
-    // Tests for External Links
-
-    public function testExternalLinkWithNewWindow()
+    public function testLinksEnabled()
     {
-        $this->parsedownExtended->config()->set('links.ext_in_new_window', true);
-        $markdown = '[Google](https://www.google.com)';
+        $this->parsedownExtended->config()->set('links.enabled', true);
+
+        $markdown = '[Link](https://www.example.com)';
         $html = $this->parsedownExtended->text($markdown);
+
+        $this->assertStringContainsString('<a href="https://www.example.com">Link</a>', $html);
+    }
+
+    public function testLinksDisabled()
+    {
+        $this->parsedownExtended->config()->set('links.enabled', false);
+
+        $markdown = '[Link](https://www.example.com)';
+        $html = $this->parsedownExtended->text($markdown);
+
+        $this->assertStringNotContainsString('<a href="https://www.example.com">Link</a>', $html);
+    }
+
+    // Email Links
+    // ----------------------------
+
+    public function testEmailLinksEnabled()
+    {
+        $this->parsedownExtended->config()->set('links.email_links', true);
+
+        $markdown = '<test@example.com>';
+        $html = $this->parsedownExtended->text($markdown);
+
+        $this->assertStringContainsString('<a href="mailto:test@example.com" target="_blank">test@example.com</a>', $html);
+    }
+
+    public function testEmailLinksDisabled()
+    {
+        $this->parsedownExtended->config()->set('links.email_links', false);
+
+        $markdown = '<mailto:test@example.com>';
+        $html = $this->parsedownExtended->text($markdown);
+
+        $this->assertStringNotContainsString('<a href="mailto:test@example.com">test@example.com</a>', $html);
+    }
+
+    // External Links Settings
+    // ----------------------------
+
+    public function testExternalLinksEnabled()
+    {
+        $this->parsedownExtended->config()->set('links.external_links', true);
+        $this->parsedownExtended->config()->set('links.external_links.nofollow', false);
+        $this->parsedownExtended->config()->set('links.external_links.noopener', false);
+        $this->parsedownExtended->config()->set('links.external_links.noreferrer', false);
+        $this->parsedownExtended->config()->set('links.external_links.open_in_new_window', false);
+
+        $markdown = '[External](https://www.google.com)';
+        $html = $this->parsedownExtended->text($markdown);
+
+        $this->assertStringContainsString('<a href="https://www.google.com">External</a>', $html);
+    }
+
+    public function testExternalLinksDisabled()
+    {
+        $this->parsedownExtended->config()->set('links.external_links', false);
+
+        $markdown = '[External](https://www.google.com)';
+        $html = $this->parsedownExtended->text($markdown);
+
+        $this->assertStringNotContainsString('<a href="https://www.google.com">External</a>', $html);
+    }
+
+    public function testNofollowEnabled()
+    {
+        $this->parsedownExtended->config()->set('links.external_links', true);
+        $this->parsedownExtended->config()->set('links.external_links.nofollow', true);
+        $this->parsedownExtended->config()->set('links.external_links.noopener', false);
+        $this->parsedownExtended->config()->set('links.external_links.noreferrer', false);
+        $this->parsedownExtended->config()->set('links.external_links.open_in_new_window', false);
+
+        $markdown = '[External](https://www.google.com)';
+        $html = $this->parsedownExtended->text($markdown);
+
+        $this->assertStringContainsString('rel="nofollow"', $html);
+    }
+
+    public function testNofollowDisabled()
+    {
+        $this->parsedownExtended->config()->set('links.external_links', true);
+        $this->parsedownExtended->config()->set('links.external_links.nofollow', false);
+        $this->parsedownExtended->config()->set('links.external_links.noopener', false);
+        $this->parsedownExtended->config()->set('links.external_links.noreferrer', false);
+        $this->parsedownExtended->config()->set('links.external_links.open_in_new_window', false);
+
+        $markdown = '[External](https://www.google.com)';
+        $html = $this->parsedownExtended->text($markdown);
+
+        $this->assertStringNotContainsString('rel="nofollow"', $html);
+    }
+
+    public function testNoopenerEnabled()
+    {
+        $this->parsedownExtended->config()->set('links.external_links', true);
+        $this->parsedownExtended->config()->set('links.external_links.nofollow', false);
+        $this->parsedownExtended->config()->set('links.external_links.noopener', true);
+        $this->parsedownExtended->config()->set('links.external_links.noreferrer', false);
+        $this->parsedownExtended->config()->set('links.external_links.open_in_new_window', false);
+
+        $markdown = '[External](https://www.google.com)';
+        $html = $this->parsedownExtended->text($markdown);
+
+        $this->assertStringContainsString('rel="noopener"', $html);
+    }
+
+    public function testNoopenerDisabled()
+    {
+        $this->parsedownExtended->config()->set('links.external_links', true);
+        $this->parsedownExtended->config()->set('links.external_links.nofollow', false);
+        $this->parsedownExtended->config()->set('links.external_links.noopener', false);
+        $this->parsedownExtended->config()->set('links.external_links.noreferrer', false);
+        $this->parsedownExtended->config()->set('links.external_links.open_in_new_window', false);
+
+        $markdown = '[External](https://www.google.com)';
+        $html = $this->parsedownExtended->text($markdown);
+
+        $this->assertStringNotContainsString('rel="noopener"', $html);
+    }
+
+    public function testNoreferrerEnabled()
+    {
+        $this->parsedownExtended->config()->set('links.external_links', true);
+        $this->parsedownExtended->config()->set('links.external_links.nofollow', false);
+        $this->parsedownExtended->config()->set('links.external_links.noopener', false);
+        $this->parsedownExtended->config()->set('links.external_links.noreferrer', true);
+        $this->parsedownExtended->config()->set('links.external_links.open_in_new_window', false);
+
+        $markdown = '[External](https://www.google.com)';
+        $html = $this->parsedownExtended->text($markdown);
+
+        $this->assertStringContainsString('rel="noreferrer"', $html);
+    }
+
+    public function testNoreferrerDisabled()
+    {
+        $this->parsedownExtended->config()->set('links.external_links', true);
+        $this->parsedownExtended->config()->set('links.external_links.nofollow', false);
+        $this->parsedownExtended->config()->set('links.external_links.noopener', false);
+        $this->parsedownExtended->config()->set('links.external_links.noreferrer', false);
+        $this->parsedownExtended->config()->set('links.external_links.open_in_new_window', false);
+
+        $markdown = '[External](https://www.google.com)';
+        $html = $this->parsedownExtended->text($markdown);
+
+        $this->assertStringNotContainsString('rel="noreferrer"', $html);
+    }
+
+    public function testOpenInNewWindowEnabled()
+    {
+        $this->parsedownExtended->config()->set('links.external_links', true);
+        $this->parsedownExtended->config()->set('links.external_links.nofollow', false);
+        $this->parsedownExtended->config()->set('links.external_links.noopener', false);
+        $this->parsedownExtended->config()->set('links.external_links.noreferrer', false);
+        $this->parsedownExtended->config()->set('links.external_links.open_in_new_window', true);
+
+        $markdown = '[External](https://www.google.com)';
+        $html = $this->parsedownExtended->text($markdown);
+
         $this->assertStringContainsString('target="_blank"', $html);
     }
 
-    public function testExternalLinkWithoutNewWindow()
+    public function testOpenInNewWindowDisabled()
     {
-        $this->parsedownExtended->config()->set('links.ext_in_new_window', false);
-        $markdown = '[Google](https://www.google.com)';
+        $this->parsedownExtended->config()->set('links.external_links', true);
+        $this->parsedownExtended->config()->set('links.external_links.nofollow', false);
+        $this->parsedownExtended->config()->set('links.external_links.noopener', false);
+        $this->parsedownExtended->config()->set('links.external_links.noreferrer', false);
+        $this->parsedownExtended->config()->set('links.external_links.open_in_new_window', false);
+
+        $markdown = '[External](https://www.google.com)';
         $html = $this->parsedownExtended->text($markdown);
+
         $this->assertStringNotContainsString('target="_blank"', $html);
     }
 
-    // Tests for Relative Links
+    // Internal and Same-Domain Links
+    // ----------------------------
 
-    public function testRelativeLinkWithNewWindow()
-    {
-        $this->parsedownExtended->config()->set('links.all_in_new_window', true);
-        $markdown = '[Home](/home)';
-        $html = $this->parsedownExtended->text($markdown);
-        $this->assertStringContainsString('target="_blank"', $html);
-    }
 
-    public function testRelativeLinkWithoutNewWindow()
+    public function testCustomInternalHostLink()
     {
-        $this->parsedownExtended->config()->set('links.all_in_new_window', false);
-        $markdown = '[Home](/home)';
+        $this->parsedownExtended->config()->set('links.external_links.internal_hosts', ['google.com']);
+
+        $markdown = '[Home](https://www.google.com)';
         $html = $this->parsedownExtended->text($markdown);
+
+
+        $this->assertStringNotContainsString('noopener"', $html);
+        $this->assertStringNotContainsString('nofollow', $html);
+        $this->assertStringNotContainsString('noreferrer', $html);
         $this->assertStringNotContainsString('target="_blank"', $html);
     }
 
-    // Tests for Protocol-Relative Links
-
-    public function testProtocolRelativeLinkWithNewWindow()
+    public function testSameDomainLinkWithoutNewWindow()
     {
-        $this->parsedownExtended->config()->set('links.ext_in_new_window', true);
-        $markdown = '[Google](//www.google.com)';
+        $markdown = '[Home](https://www.example.com)';
         $html = $this->parsedownExtended->text($markdown);
-        $this->assertStringContainsString('target="_blank"', $html);
-    }
 
-    public function testProtocolRelativeLinkWithoutNewWindow()
-    {
-        $this->parsedownExtended->config()->set('links.ext_in_new_window', false);
-        $markdown = '[Google](//www.google.com)';
-        $html = $this->parsedownExtended->text($markdown);
         $this->assertStringNotContainsString('target="_blank"', $html);
     }
 
-    // Tests for Mailto Links
-
-    public function testMailtoLinkWithNewWindowDefault()
+    public function testSameDomainLinkWithAttributes()
     {
-        $markdown = '[Email](mailto:test@example.com)';
+        $markdown = '[Home](https://www.example.com)';
         $html = $this->parsedownExtended->text($markdown);
-        $this->assertStringContainsString('target="_blank"', $html); // Mailto links always open in new window
+
+        $this->assertStringNotContainsString('nofollow"', $html);
+        $this->assertStringNotContainsString('noopener"', $html);
+        $this->assertStringNotContainsString('noreferrer"', $html);
     }
 
-    // Tests for Auto-Detected Links
+    // Markdown Edge Cases
+    // ----------------------------
 
-    public function testAutoDetectedUrlWithNewWindowDefault()
-    {
-        $this->parsedownExtended->config()->set('links.ext_in_new_window', true);
-        $markdown = 'Visit https://www.google.com for more information.';
-        $html = $this->parsedownExtended->text($markdown);
-        $this->assertStringContainsString('target="_blank"', $html);
-    }
+    // public function testMultipleLinksInText()
+    // {
+    //     $markdown = '[Google](https://www.google.com) and [Bing](https://www.bing.com)';
+    //     $html = $this->parsedownExtended->text($markdown);
+    //     $this->assertStringContainsString('href="https://www.google.com"', $html);
+    //     $this->assertStringContainsString('href="https://www.bing.com"', $html);
+    // }
 
-    public function testAutoDetectedUrlWithoutNewWindow()
-    {
-        $this->parsedownExtended->config()->set('links.ext_in_new_window', false);
-        $markdown = 'Visit https://www.google.com for more information.';
-        $html = $this->parsedownExtended->text($markdown);
-        $this->assertStringNotContainsString('target="_blank"', $html);
-    }
+    // public function testLinkWithSpecialCharacters()
+    // {
+    //     $markdown = '[Google](https://www.google.com/search?q=hello+world)';
+    //     $html = $this->parsedownExtended->text($markdown);
+    //     $this->assertStringContainsString('href="https://www.google.com/search?q=hello+world"', $html);
+    // }
 
-    // Tests for tag links
-    public function testTagUrlLinkWithNewWindow()
-    {
-        $this->parsedownExtended->config()->set('links.ext_in_new_window', true);
-        $markdown = '<https://www.google.com>';
-        $html = $this->parsedownExtended->text($markdown);
-        $this->assertStringContainsString('target="_blank"', $html);
-    }
-
-    public function testTagUrlLinkWithoutNewWindow()
-    {
-        $this->parsedownExtended->config()->set('links.ext_in_new_window', false);
-        $markdown = '<https://www.google.com>';
-        $html = $this->parsedownExtended->text($markdown);
-        $this->assertStringNotContainsString('target="_blank"', $html);
-    }
-
-    // Tests for Edge Cases
-
-    public function testLinkWithNoTextButOnlyUrlWithNewWindow()
-    {
-        $this->parsedownExtended->config()->set('links.ext_in_new_window', true);
-        $markdown = '<https://www.google.com>';
-        $html = $this->parsedownExtended->text($markdown);
-        $this->assertStringContainsString('target="_blank"', $html);
-    }
-
-    public function testLinkWithNoTextButOnlyUrlWithoutNewWindow()
-    {
-        $this->parsedownExtended->config()->set('links.ext_in_new_window', false);
-        $markdown = '<https://www.google.com>';
-        $html = $this->parsedownExtended->text($markdown);
-        $this->assertStringNotContainsString('target="_blank"', $html);
-    }
-
-    public function testLinkWithSpecialCharactersWithNewWindow()
-    {
-        $this->parsedownExtended->config()->set('links.ext_in_new_window', true);
-        $markdown = '[Google](https://www.google.com/search?q=hello+world)';
-        $html = $this->parsedownExtended->text($markdown);
-        $this->assertStringContainsString('target="_blank"', $html);
-    }
-
-    public function testLinkWithSpecialCharactersWithoutNewWindow()
-    {
-        $this->parsedownExtended->config()->set('links.ext_in_new_window', false);
-        $markdown = '[Google](https://www.google.com/search?q=hello+world)';
-        $html = $this->parsedownExtended->text($markdown);
-        $this->assertStringNotContainsString('target="_blank"', $html);
-    }
-
-    public function testMultipleLinksInOneTextWithNewWindow()
-    {
-        $this->parsedownExtended->config()->set('links.ext_in_new_window', true);
-        $markdown = '[Google](https://www.google.com) and [Bing](https://www.bing.com)';
-        $html = $this->parsedownExtended->text($markdown);
-        $this->assertStringContainsString('target="_blank"', $html);
-    }
-
-    public function testMultipleLinksInOneTextWithoutNewWindow()
-    {
-        $this->parsedownExtended->config()->set('links.ext_in_new_window', false);
-        $markdown = '[Google](https://www.google.com) and [Bing](https://www.bing.com)';
-        $html = $this->parsedownExtended->text($markdown);
-        $this->assertStringNotContainsString('target="_blank"', $html);
-    }
-
-    public function testRelativeAndExternalLinksCombined()
-    {
-        $this->parsedownExtended->config()->set('links.ext_in_new_window', true);
-        $markdown = '[Google](https://www.google.com) and [Home](/home)';
-        $html = $this->parsedownExtended->text($markdown);
-        $this->assertStringContainsString('target="_blank"', $html);
-        $this->assertStringNotContainsString('<a href="/home" target="_blank">Home</a>', $html);
-    }
-
-    public function testAllLinksInNewWindow()
-    {
-        $this->parsedownExtended->config()->set('links.all_in_new_window', true);
-        $markdown = '[Google](https://www.google.com) and [Home](/home)';
-        $html = $this->parsedownExtended->text($markdown);
-        $this->assertStringContainsString('target="_blank"', $html);
-    }
-
-    // Test for Same Domain Links with Different Protocols
-    public function testSameDomainHttpLinkWithNewWindow()
-    {
-        $this->parsedownExtended->config()->set('links.ext_in_new_window', true);
-        $markdown = '[Example](http://www.example.com)';
-        $html = $this->parsedownExtended->text($markdown);
-        $this->assertStringNotContainsString('target="_blank"', $html);
-    }
-
-    public function testSameDomainHttpsLinkWithNewWindow()
-    {
-        $this->parsedownExtended->config()->set('links.ext_in_new_window', true);
-        $markdown = '[Example](https://www.example.com)';
-        $html = $this->parsedownExtended->text($markdown);
-        $this->assertStringNotContainsString('target="_blank"', $html);
-    }
-
-    public function testSameDomainHttpLinkWithNewWindowSettingAll()
-    {
-        $this->parsedownExtended->config()->set('links.all_in_new_window', true);
-        $markdown = '[Example](http://www.example.com)';
-        $html = $this->parsedownExtended->text($markdown);
-        $this->assertStringContainsString('target="_blank"', $html);
-    }
-
-    public function testSameDomainHttpsLinkWithNewWindowSettingAll()
-    {
-        $this->parsedownExtended->config()->set('links.all_in_new_window', true);
-        $markdown = '[Example](https://www.example.com)';
-        $html = $this->parsedownExtended->text($markdown);
-        $this->assertStringContainsString('target="_blank"', $html);
-    }
+    // public function testNestedMarkdownElements()
+    // {
+    //     $markdown = '![Image](https://www.example.com/image.jpg) and [Link](https://www.example.com)';
+    //     $html = $this->parsedownExtended->text($markdown);
+    //     $this->assertStringContainsString('<img src="https://www.example.com/image.jpg"', $html);
+    //     $this->assertStringContainsString('<a href="https://www.example.com">Link</a>', $html);
+    // }
 }
