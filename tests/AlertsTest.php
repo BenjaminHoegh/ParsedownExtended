@@ -23,16 +23,16 @@ class AlertsTest extends TestCase
         $this->parsedownExtended->config()->set('alerts', true);
 
         $markdown = <<<MARKDOWN
-        > [!NOTE]
-        > This is a note.
-        MARKDOWN;
+            > [!NOTE]
+            > This is a note.
+            MARKDOWN;
 
         $expectedHtml = <<<HTML
-        <div class="markdown-alert markdown-alert-note">
-        <p class="markdown-alert-title">Note</p>
-        <p>This is a note.</p>
-        </div>
-        HTML;
+            <div class="markdown-alert markdown-alert-note">
+            <p class="markdown-alert-title">Note</p>
+            <p>This is a note.</p>
+            </div>
+            HTML;
 
         $result = $this->parsedownExtended->text($markdown);
 
@@ -44,16 +44,16 @@ class AlertsTest extends TestCase
         $this->parsedownExtended->config()->set('alerts', false);
 
         $markdown = <<<MARKDOWN
-        > [!NOTE]
-        > This is a note.
-        MARKDOWN;
+            > [!NOTE]
+            > This is a note.
+            MARKDOWN;
 
         $expectedHtml = <<<HTML
-        <blockquote>
-        <p>[!NOTE]
-        This is a note.</p>
-        </blockquote>
-        HTML;
+            <blockquote>
+            <p>[!NOTE]
+            This is a note.</p>
+            </blockquote>
+            HTML;
 
         $result = $this->parsedownExtended->text($markdown);
 
@@ -63,16 +63,16 @@ class AlertsTest extends TestCase
     public function testNoteAlert()
     {
         $markdown = <<<MARKDOWN
-        > [!NOTE]
-        > This is a note.
-        MARKDOWN;
+            > [!NOTE]
+            > This is a note.
+            MARKDOWN;
 
         $expectedHtml = <<<HTML
-        <div class="markdown-alert markdown-alert-note">
-        <p class="markdown-alert-title">Note</p>
-        <p>This is a note.</p>
-        </div>
-        HTML;
+            <div class="markdown-alert markdown-alert-note">
+            <p class="markdown-alert-title">Note</p>
+            <p>This is a note.</p>
+            </div>
+            HTML;
 
         $result = $this->parsedownExtended->text($markdown);
 
@@ -82,16 +82,16 @@ class AlertsTest extends TestCase
     public function testTipAlert()
     {
         $markdown = <<<MARKDOWN
-        > [!TIP]
-        > This is a tip.
-        MARKDOWN;
+            > [!TIP]
+            > This is a tip.
+            MARKDOWN;
 
         $expectedHtml = <<<HTML
-        <div class="markdown-alert markdown-alert-tip">
-        <p class="markdown-alert-title">Tip</p>
-        <p>This is a tip.</p>
-        </div>
-        HTML;
+            <div class="markdown-alert markdown-alert-tip">
+            <p class="markdown-alert-title">Tip</p>
+            <p>This is a tip.</p>
+            </div>
+            HTML;
 
         $result = $this->parsedownExtended->text($markdown);
 
@@ -101,16 +101,16 @@ class AlertsTest extends TestCase
     public function testImportantAlert()
     {
         $markdown = <<<MARKDOWN
-        > [!IMPORTANT]
-        > This is important.
-        MARKDOWN;
+            > [!IMPORTANT]
+            > This is important.
+            MARKDOWN;
 
         $expectedHtml = <<<HTML
-        <div class="markdown-alert markdown-alert-important">
-        <p class="markdown-alert-title">Important</p>
-        <p>This is important.</p>
-        </div>
-        HTML;
+            <div class="markdown-alert markdown-alert-important">
+            <p class="markdown-alert-title">Important</p>
+            <p>This is important.</p>
+            </div>
+            HTML;
 
         $result = $this->parsedownExtended->text($markdown);
 
@@ -120,16 +120,16 @@ class AlertsTest extends TestCase
     public function testWarningAlert()
     {
         $markdown = <<<MARKDOWN
-        > [!WARNING]
-        > This is a warning.
-        MARKDOWN;
+            > [!WARNING]
+            > This is a warning.
+            MARKDOWN;
 
         $expectedHtml = <<<HTML
-        <div class="markdown-alert markdown-alert-warning">
-        <p class="markdown-alert-title">Warning</p>
-        <p>This is a warning.</p>
-        </div>
-        HTML;
+            <div class="markdown-alert markdown-alert-warning">
+            <p class="markdown-alert-title">Warning</p>
+            <p>This is a warning.</p>
+            </div>
+            HTML;
 
         $result = $this->parsedownExtended->text($markdown);
 
@@ -139,16 +139,16 @@ class AlertsTest extends TestCase
     public function testCautionAlert()
     {
         $markdown = <<<MARKDOWN
-        > [!CAUTION]
-        > This is a caution.
-        MARKDOWN;
+            > [!CAUTION]
+            > This is a caution.
+            MARKDOWN;
 
         $expectedHtml = <<<HTML
-        <div class="markdown-alert markdown-alert-caution">
-        <p class="markdown-alert-title">Caution</p>
-        <p>This is a caution.</p>
-        </div>
-        HTML;
+            <div class="markdown-alert markdown-alert-caution">
+            <p class="markdown-alert-title">Caution</p>
+            <p>This is a caution.</p>
+            </div>
+            HTML;
 
         $result = $this->parsedownExtended->text($markdown);
 
@@ -160,16 +160,16 @@ class AlertsTest extends TestCase
         $this->parsedownExtended->config()->set('alerts.types', ['custom']);
 
         $markdown = <<<MARKDOWN
-        > [!CUSTOM]
-        > This is a custom alert.
-        MARKDOWN;
+            > [!CUSTOM]
+            > This is a custom alert.
+            MARKDOWN;
 
         $expectedHtml = <<<HTML
-        <div class="markdown-alert markdown-alert-custom">
-        <p class="markdown-alert-title">Custom</p>
-        <p>This is a custom alert.</p>
-        </div>
-        HTML;
+            <div class="markdown-alert markdown-alert-custom">
+            <p class="markdown-alert-title">Custom</p>
+            <p>This is a custom alert.</p>
+            </div>
+            HTML;
 
         $result = $this->parsedownExtended->text($markdown);
 

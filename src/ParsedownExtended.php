@@ -546,7 +546,7 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
             return [
                 'extent' => strlen($Excerpt['text']),
                 'element' => [
-                    'text' => $result
+                    'text' => $result,
                 ],
             ];
         }
@@ -1088,7 +1088,7 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
 
             $Block['element']['text'][] = [
                 'name' => 'p',
-                'text' => $matches[1]
+                'text' => $matches[1],
             ];
 
             return $Block;
@@ -1097,7 +1097,7 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
         if (!isset($Block['interrupted'])) {
             $Block['element']['text'][] = [
                 'name' => 'p',
-                'text' => $Line['text']
+                'text' => $Line['text'],
             ];
 
             return $Block;
@@ -2168,7 +2168,7 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
                     'open_in_new_window' => ['type' => 'boolean', 'default' => true],
                     'internal_hosts' => [
                         'type' => 'array', 'default' => [],
-                        'item_schema' => ['type' => 'string']
+                        'item_schema' => ['type' => 'string'],
                     ],
                 ],
             ],

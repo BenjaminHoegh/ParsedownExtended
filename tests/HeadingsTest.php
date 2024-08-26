@@ -54,16 +54,16 @@ class HeadingsTest extends TestCase
         $this->parsedownExtended->config()->set('headings.auto_anchors', true);
 
         $markdown = <<<MARKDOWN
-        # Heading 1
-        # Heading 1
-        # Heading 1
-        MARKDOWN;
+            # Heading 1
+            # Heading 1
+            # Heading 1
+            MARKDOWN;
 
         $expected = <<<HTML
-        <h1 id="heading-1">Heading 1</h1>
-        <h1 id="heading-1-1">Heading 1</h1>
-        <h1 id="heading-1-2">Heading 1</h1>
-        HTML;
+            <h1 id="heading-1">Heading 1</h1>
+            <h1 id="heading-1-1">Heading 1</h1>
+            <h1 id="heading-1-2">Heading 1</h1>
+            HTML;
         $actual = $this->parsedownExtended->text($markdown);
         $this->assertEquals($expected, $actual);
     }
@@ -104,18 +104,18 @@ class HeadingsTest extends TestCase
         $this->parsedownExtended->config()->set('headings.auto_anchors.blacklist', ['heading-1', 'heading-4']);
 
         $markdown = <<<MARKDOWN
-        # Heading
-        # Heading
-        # Heading
-        # Heading
-        MARKDOWN;
+            # Heading
+            # Heading
+            # Heading
+            # Heading
+            MARKDOWN;
 
         $expected = <<<HTML
-        <h1 id="heading">Heading</h1>
-        <h1 id="heading-2">Heading</h1>
-        <h1 id="heading-3">Heading</h1>
-        <h1 id="heading-5">Heading</h1>
-        HTML;
+            <h1 id="heading">Heading</h1>
+            <h1 id="heading-2">Heading</h1>
+            <h1 id="heading-3">Heading</h1>
+            <h1 id="heading-5">Heading</h1>
+            HTML;
         $actual = $this->parsedownExtended->text($markdown);
         $this->assertEquals($expected, $actual);
     }
@@ -144,22 +144,22 @@ class HeadingsTest extends TestCase
         $this->parsedownExtended->config()->set('headings.allowed', ['h1', 'h2'], true);
 
         $markdown = <<<MARKDOWN
-        # Heading 1
-        ## Heading 2
-        ### Heading 3
-        #### Heading 4
-        ##### Heading 5
-        ###### Heading 6
-        MARKDOWN;
+            # Heading 1
+            ## Heading 2
+            ### Heading 3
+            #### Heading 4
+            ##### Heading 5
+            ###### Heading 6
+            MARKDOWN;
 
         $expected = <<<HTML
-        <h1>Heading 1</h1>
-        <h2>Heading 2</h2>
-        <p>### Heading 3
-        #### Heading 4
-        ##### Heading 5
-        ###### Heading 6</p>
-        HTML;
+            <h1>Heading 1</h1>
+            <h2>Heading 2</h2>
+            <p>### Heading 3
+            #### Heading 4
+            ##### Heading 5
+            ###### Heading 6</p>
+            HTML;
         $actual = $this->parsedownExtended->text($markdown);
         $this->assertEquals($expected, $actual);
     }
