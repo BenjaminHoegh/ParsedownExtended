@@ -75,7 +75,7 @@ const config: Config = {
     prism: {
       additionalLanguages: ['php', 'bash'],
       theme: prismThemes.github,
-      darkTheme: prismThemes.dracula,
+      darkTheme: prismThemes.vsDark,
     },
   } satisfies Preset.ThemeConfig,
 };
