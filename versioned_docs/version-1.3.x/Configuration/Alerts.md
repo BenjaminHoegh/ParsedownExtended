@@ -20,7 +20,6 @@ This setting can be a simple boolean to enable or disable all alerts, or an arra
 
 ## Parameters
 
-- **enabled** (boolean): Determines whether alerts are enabled in your Markdown documents. Enabled by default.
 - **types** (array): Specifies the types of alerts available. The default types are `note`, `tip`, `important`, `warning`, and `caution`.
 
 ## Examples
