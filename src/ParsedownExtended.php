@@ -132,88 +132,91 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
         }
     }
 
+    // This function processes Markdown links in the format [text](url "title").
     protected function inlineLink($Excerpt)
     {
-        if ($this->config()->get('links')) {
-            $Excerpt = parent::inlineLink($Excerpt);
-
-            if ($Excerpt && isset($Excerpt['element']['attributes']['href'])) {
-                $href = $Excerpt['element']['attributes']['href'];
-                $isExternal = $this->isExternalLink($href);
-
-                // Check if all links should open in a new window
-                if ($this->config()->get('links.all_in_new_window')) {
-                    $Excerpt['element']['attributes']['target'] = '_blank';
-                }
-
-                // Check if only external links should open in a new window
-                elseif ($isExternal && $this->config()->get('links.ext_in_new_window')) {
-                    $Excerpt['element']['attributes']['target'] = '_blank';
-                }
-
-                // Check if it is a mailto link
-                if (preg_match('/^mailto:/i', $href) && $this->config()->get('links.email_links')) {
-                    $Excerpt['element']['attributes']['target'] = '_blank';
-                }
-            }
-
-            return $Excerpt;
-        }
+        return $this->processLinkElement(parent::inlineLink($Excerpt));
     }
 
+    // This function automatically converts URLs starting with http:// or https:// into clickable links.
     protected function inlineUrl($Excerpt)
     {
-        if ($this->config()->get('links')) {
-            $Excerpt = parent::inlineUrl($Excerpt);
-
-            if ($Excerpt && isset($Excerpt['element']['attributes']['href'])) {
-                $href = $Excerpt['element']['attributes']['href'];
-                $isExternal = $this->isExternalLink($href);
-
-                // Check if all links should open in a new window
-                if ($this->config()->get('links.all_in_new_window')) {
-                    $Excerpt['element']['attributes']['target'] = '_blank';
-                }
-
-                // Check if only external links should open in a new window
-                elseif ($isExternal && $this->config()->get('links.ext_in_new_window')) {
-                    $Excerpt['element']['attributes']['target'] = '_blank';
-                }
-            }
-
-            return $Excerpt;
-        }
+        return $this->processLinkElement(parent::inlineUrl($Excerpt));
     }
 
+    // This function handles URLs wrapped in angle brackets <http://example.com>.
     protected function inlineUrlTag($Excerpt)
     {
-        if ($this->config()->get('links')) {
-            $Excerpt = parent::inlineUrlTag($Excerpt);
+        return $this->processLinkElement(parent::inlineUrlTag($Excerpt));
+    }
 
-            if ($Excerpt && isset($Excerpt['element']['attributes']['href'])) {
-                $href = $Excerpt['element']['attributes']['href'];
-                $isExternal = $this->isExternalLink($href);
+    // This function processes email addresses enclosed in angle brackets <email@example.com>.
+    protected function inlineEmailTag($Excerpt)
+    {
+        if (!$this->config()->get('links') || !$this->config()->get('links.email_links')) {
+            return null;
+        }
 
-                // Check if all links should open in a new window
-                if ($this->config()->get('links.all_in_new_window')) {
+        $Excerpt = parent::inlineEmailTag($Excerpt);
+
+        if(isset($Excerpt['element']['attributes']['href'])) {
+            $Excerpt['element']['attributes']['target'] = '_blank';
+        }
+
+        return $Excerpt;
+    }
+
+    protected function processLinkElement($Excerpt)
+    {
+        if (!$this->config()->get('links') || !$Excerpt || !isset($Excerpt['element']['attributes']['href'])) {
+            return null;
+        }
+
+        if(isset($Excerpt['element']['attributes']['href'])) {
+            // Get the href attribute
+            $href = $Excerpt['element']['attributes']['href'];
+
+            // Check if link is an external link
+            $isExternal = $this->isExternalLink($href);
+
+            if ($isExternal === true) {
+                // Check if external links are disabled
+                if (!$this->config()->get('links.external_links')) {
+                    return null;
+                }
+
+                $rel = [];
+
+                // Add noreferrer attribute
+                if ($this->config()->get('links.external_links.nofollow')) {
+                    $rel[] = 'nofollow';
+                }
+
+                // Add noopener attribute
+                if ($this->config()->get('links.external_links.noopener')) {
+                    $rel[] = 'noopener';
+                }
+
+                // Add noreferrer attribute
+                if ($this->config()->get('links.external_links.noreferrer')) {
+                    $rel[] = 'noreferrer';
+                }
+
+                // Add rel attribute with values from the $rel array
+                if (!empty($rel)) {
+                    $Excerpt['element']['attributes']['rel'] = implode(' ', $rel);
+                }
+
+                // Add target="_blank" attribute
+                if ($this->config()->get('links.external_links.open_in_new_window')) {
                     $Excerpt['element']['attributes']['target'] = '_blank';
                 }
             }
         }
+
+        return $Excerpt;
     }
 
-    protected function inlineEmailTag($Excerpt)
-    {
-        if ($this->config()->get('links') && $this->config()->get('links.email_links')) {
-            $Excerpt = parent::inlineEmailTag($Excerpt);
-
-            if ($Excerpt && isset($Excerpt['element']['attributes']['href'])) {
-                $Excerpt['element']['attributes']['target'] = '_blank';
-            }
-
-            return $Excerpt;
-        }
-    }
 
     /**
      * Determines if a link is external based on its href.
@@ -231,13 +234,21 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
 
             // Check if the domain matches the current domain
             if ($host && $host !== $_SERVER['HTTP_HOST']) {
+
+                // Get domain name from the host
+                $domain = preg_replace('/^www\./', '', $host);
+
+                $internalHosts = $this->config()->get('links.external_links.internal_hosts');
+                if (in_array($domain, $internalHosts)) {
+                    return false;
+                }
+
                 return true;
             }
         }
 
         return false;
     }
-
 
     /**
      * Parses inline emphasis in the text.
@@ -433,7 +444,6 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
             $leftMarker = preg_quote($config['left'], '/');
             $rightMarker = preg_quote($config['right'], '/');
 
-            // Construct the regular expression pattern
             if ($config['left'][0] === '\\' || strlen($config['left']) > 1) {
                 $regex = '/^(?<!\S)' . $leftMarker . '(?![\r\n])((?:\\\\' . $rightMarker . '|\\\\' . $leftMarker . '|[^\r\n])+?)' . $rightMarker . '(?![^\s,.])/s';
             } else {
@@ -1159,6 +1169,10 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
         }
 
         if (isset($Block['interrupted'])) {
+
+            // convert $Block['interrupted'] to int
+            $Block['interrupted'] = (int) $Block['interrupted'];
+
             $Block['element']['text'] .= str_repeat("\n", $Block['interrupted']);
             unset($Block['interrupted']);
         }
@@ -2146,8 +2160,17 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
             'links' => [
                 'enabled' => ['type' => 'boolean', 'default' => true],
                 'email_links' => ['type' => 'boolean', 'default' => true],
-                'ext_in_new_window' => ['type' => 'boolean', 'default' => true],
-                'all_in_new_window' => ['type' => 'boolean', 'default' => false],
+                'external_links' => [
+                    'enabled' => ['type' => 'boolean', 'default' => true],
+                    'nofollow' => ['type' => 'boolean', 'default' => true],
+                    'noopener' => ['type' => 'boolean', 'default' => true],
+                    'noreferrer' => ['type' => 'boolean', 'default' => true],
+                    'open_in_new_window' => ['type' => 'boolean', 'default' => true],
+                    'internal_hosts' => [
+                        'type' => 'array', 'default' => [],
+                        'item_schema' => ['type' => 'string']
+                    ],
+                ],
             ],
             'lists' => [
                 'enabled' => ['type' => 'boolean', 'default' => true],
@@ -2169,7 +2192,7 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
                     'enabled' => ['type' => 'boolean', 'default' => true],
                     'delimiters' => [
                         'type' => 'array',
-                        'default' => [['left' => '\\(', 'right' => '\\)']],
+                        'default' => [['left' => '$', 'right' => '$']],
                         'item_schema' => ['type' => 'array', 'keys' => ['left' => 'string', 'right' => 'string']],
                     ],
                 ],
@@ -2179,12 +2202,6 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
                         'type' => 'array',
                         'default' => [
                             ['left' => '$$', 'right' => '$$'],
-                            ['left' => '\\begin{equation}', 'right' => '\\end{equation}'],
-                            ['left' => '\\begin{align}', 'right' => '\\end{align}'],
-                            ['left' => '\\begin{alignat}', 'right' => '\\end{alignat}'],
-                            ['left' => '\\begin{gather}', 'right' => '\\end{gather}'],
-                            ['left' => '\\begin{CD}', 'right' => '\\end{CD}'],
-                            ['left' => '\\[', 'right' => '\\]'],
                         ],
                         'item_schema' => ['type' => 'array', 'keys' => ['left' => 'string', 'right' => 'string']],
                     ],
@@ -2223,7 +2240,7 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
                     'default' => ['h1', 'h2', 'h3', 'h4', 'h5', 'h6'],
                     'item_schema' => ['type' => 'string'],
                 ],
-                'tag' => ['type' => 'string', 'default' => '[toc]'],
+                'tag' => ['type' => 'string', 'default' => '[TOC]'],
                 'id' => ['type' => 'string', 'default' => 'toc'],
             ],
             'typographer' => ['type' => 'boolean', 'default' => true],
