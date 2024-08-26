@@ -2192,7 +2192,7 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
                     'enabled' => ['type' => 'boolean', 'default' => true],
                     'delimiters' => [
                         'type' => 'array',
-                        'default' => [['left' => '\\(', 'right' => '\\)']],
+                        'default' => [['left' => '$', 'right' => '$']],
                         'item_schema' => ['type' => 'array', 'keys' => ['left' => 'string', 'right' => 'string']],
                     ],
                 ],
@@ -2202,12 +2202,6 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
                         'type' => 'array',
                         'default' => [
                             ['left' => '$$', 'right' => '$$'],
-                            ['left' => '\\begin{equation}', 'right' => '\\end{equation}'],
-                            ['left' => '\\begin{align}', 'right' => '\\end{align}'],
-                            ['left' => '\\begin{alignat}', 'right' => '\\end{alignat}'],
-                            ['left' => '\\begin{gather}', 'right' => '\\end{gather}'],
-                            ['left' => '\\begin{CD}', 'right' => '\\end{CD}'],
-                            ['left' => '\\[', 'right' => '\\]'],
                         ],
                         'item_schema' => ['type' => 'array', 'keys' => ['left' => 'string', 'right' => 'string']],
                     ],
