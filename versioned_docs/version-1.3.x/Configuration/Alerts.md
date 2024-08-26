@@ -24,7 +24,7 @@ This setting can be a simple boolean to enable or disable all alerts, or an arra
 
 ## Examples
 
-### Enable GFM Alerts
+### Disable GFM Alerts
 
 To disable all alert processing in your Markdown:
 
