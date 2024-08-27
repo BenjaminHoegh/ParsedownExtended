@@ -75,6 +75,8 @@ require 'Parsedown.php';
 require 'ParsedownExtra.php'; // optional
 require 'ParsedownExtended.php';
 
+use BenjaminHoegh\ParsedownExtended\ParsedownExtended;
+
 $ParsedownExtended = new ParsedownExtended();
 
 echo $ParsedownExtended->text('Hello _Parsedown_!'); # prints: <p>Hello <em>Parsedown</em>!</p>
@@ -91,6 +93,8 @@ composer require benjaminhoegh/parsedown-extended
 Then require the auto-loader file:
 ```php
 require 'vendor/autoload.php';
+
+use BenjaminHoegh\ParsedownExtended\ParsedownExtended;
 
 $ParsedownExtended = new ParsedownExtended();
 
