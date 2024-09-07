@@ -59,7 +59,7 @@ ParsedownExtended includes a variety of features to enhance your Markdown parsin
 - **Diagrams Syntax Support:** Recognizes diagram syntax for integration with libraries like mermaid.js and chart.js.
 - **LaTeX Syntax Support:** Detects LaTeX syntax, suitable for mathematical expressions, to be rendered with libraries like KaTeX.js.
 - **Predefined Abbreviations:** Define and use abbreviations easily.
-- **GFM Alerts:** Create alerts using GitHub Flavored Markdown Alert syntax there can be customized into your own language.
+- **GFM Alerts:** Create alerts using GitHub Flavored Markdown Alert syntax there can be customized into your own language, or even create your own.
 - **Customizable Options:** Extensive options for customizing each Markdown element.
 - **Additional Features:** ParsedownExtended continuously evolves, adding more features over time.
 
