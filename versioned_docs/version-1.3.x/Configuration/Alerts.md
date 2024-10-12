@@ -37,7 +37,7 @@ $ParsedownExtended->config()->set('alerts', false);
 To customize the types of alerts available in your Markdown:
 
 ```php
-$ParsedownExtended->config()->set('alerts', [
+$ParsedownExtended->config()->set('alerts.types', [
     'types' => ['note', 'warning', 'custom-type']
 ]);
 ```
