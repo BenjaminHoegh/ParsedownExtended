@@ -57,8 +57,8 @@ class ConfigTest extends TestCase
         $parsedownExtended = new ParsedownExtended();
 
         // Set and retrieve a deprecated path
-        $parsedownExtended->config()->set('smarty.substitutions.left-double-quote', '“');
-        $this->assertEquals('“', $parsedownExtended->config()->get('smarty.substitutions.left-double-quote'), 'Left double quote substitution should be set correctly');
+        $parsedownExtended->config()->set('smartypants.substitutions.left_double_quote', '“');
+        $this->assertEquals('“', $parsedownExtended->config()->get('smartypants.substitutions.left_double_quote'), 'Left double quote substitution should be set correctly');
     }
 
     /**
