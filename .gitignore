@@ -3,6 +3,7 @@ vendor/
 lab/
 tools/
 build/
+docs/
 
 # PHP-CS-Fixer
 .php_cs.cache
@@ -15,6 +16,8 @@ build/
 composer.lock
 composer.phar
 
+# phpDocumentor
+.phpdoc/
 
 # Windows
 Thumbs.db
