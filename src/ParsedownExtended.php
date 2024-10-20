@@ -4,12 +4,15 @@ declare(strict_types=1);
 
 namespace BenjaminHoegh\ParsedownExtended;
 
-/**
- * This code checks if the class 'ParsedownExtra' exists. If it does, it creates an alias for it called 'ParsedownExtendedParentAlias'.
- * If the class 'ParsedownExtra' does not exist, it creates an alias for the class 'Parsedown' called 'ParsedownExtendedParentAlias'.
- */
 class_alias(class_exists('ParsedownExtra') ? 'ParsedownExtra' : 'Parsedown', 'ParsedownExtendedParentAlias');
 
+/**
+ * Class ParsedownExtended
+ *
+ * Extended version of Parsedown for customized Markdown parsing.
+ * Provides extended parsing capabilities, version checking, and custom configuration options.
+ *
+ */
 // @psalm-suppress UndefinedClass
 class ParsedownExtended extends \ParsedownExtendedParentAlias
 {
@@ -18,22 +21,45 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
     public const VERSION_PARSEDOWN_EXTRA_REQUIRED = '0.8.1';
     public const MIN_PHP_VERSION = '7.4';
 
+    /** @var array $anchorRegister Registry for anchors generated during parsing */
     private array $anchorRegister = [];
+
+    /** @var array $contentsListArray List of contents generated during parsing */
     private array $contentsListArray = [];
+
+    /** @var int $firstHeadLevel The level of the first header parsed */
     private int $firstHeadLevel = 0;
+
+    /** @var string $contentsListString String representation of the table of contents */
     private string $contentsListString = '';
+
+    /** @var callable|null $createAnchorIDCallback Callback function for anchor creation */
     private $createAnchorIDCallback = null;
+
+    /** @var array $config Configuration options */
     private array $config;
+
+    /** @var array $configSchema Schema for validating configuration options */
     private array $configSchema;
+
+    /** @var bool $legacyMode Flag indicating if legacy compatibility mode is enabled */
     private bool $legacyMode = false;
 
+    /**
+     * Constructor for ParsedownExtended.
+     *
+     * Initializes the class and performs version checks for PHP and Parsedown dependencies.
+     */
     public function __construct()
     {
-
+        // Check if the current PHP version meets the minimum requirement
         $this->checkVersion('PHP', PHP_VERSION, self::MIN_PHP_VERSION);
+
+        // Check if the installed Parsedown version meets the minimum requirement
         $this->checkVersion('Parsedown', \Parsedown::version, self::VERSION_PARSEDOWN_REQUIRED);
 
         if (class_exists('ParsedownExtra')) {
+            // Ensure ParsedownExtra meets the version requirement
             $this->checkVersion('ParsedownExtra', \ParsedownExtra::version, self::VERSION_PARSEDOWN_EXTRA_REQUIRED);
             parent::__construct();
         }
@@ -44,7 +70,7 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
         $this->configSchema = $this->defineConfigSchema();
         $this->config = $this->initializeConfig($this->configSchema);
 
-        // Add inline types
+        // Add support for inline types (e.g., special formatting)
         $this->addInlineType('=', 'Marking');
         $this->addInlineType('+', 'Insertions');
         $this->addInlineType('[', 'Keystrokes');
@@ -53,18 +79,13 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
         $this->addInlineType('~', 'Subscript');
         $this->addInlineType(':', 'Emojis');
         $this->addInlineType(['<', '>', '-', '.', "'", '"', '`'], 'Smartypants');
-        $this->addInlineType(['(','.','+','!','?'], 'Typographer');
+        $this->addInlineType(['(', '.', '+', '!', '?'], 'Typographer');
 
-        // Add block types
+        // Add support for block types (e.g., blocks of content)
         $this->addBlockType(['\\','$'], 'MathNotation');
         $this->addBlockType('>', 'Alert');
 
-        /**
-         * Move 'SpecialCharacter' to the end of the list if it exists.
-         * to the end of the list if it exists. This ensures that 'SpecialCharacter' is always processed last
-         * when parsing the markdown content. This is necessary to prevent the parser from interfering with
-         * other types.
-         */
+        // Reorganize 'SpecialCharacter' to ensure it is processed last in InlineTypes and BlockTypes
         foreach ($this->InlineTypes as &$list) {
             if (($key = array_search('SpecialCharacter', $list)) !== false) {
                 unset($list[$key]);
@@ -80,21 +101,50 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
         }
     }
 
+    /**
+     * Check version compatibility for a specific component.
+     *
+     * Verifies if the current version of a component (e.g., PHP or Parsedown) meets the required version.
+     * Throws an exception if the version is not sufficient.
+     *
+     * @since 1.3.0
+     *
+     * @param string $component The name of the component being checked (e.g., 'PHP', 'Parsedown')
+     * @param string $currentVersion The current version of the component installed
+     * @param string $requiredVersion The minimum required version of the component
+     *
+     * @throws \Exception If the current version is lower than the required version
+     */
     private function checkVersion(string $component, string $currentVersion, string $requiredVersion): void
     {
+        // Compare the current version with the required version
         if (version_compare($currentVersion, $requiredVersion) < 0) {
+            // Prepare an error message indicating version incompatibility
             $msg_error  = 'Version Error.' . PHP_EOL;
             $msg_error .= "  ParsedownExtended requires a later version of $component." . PHP_EOL;
             $msg_error .= "  - Current version : $currentVersion" . PHP_EOL;
             $msg_error .= "  - Required version: $requiredVersion and later" . PHP_EOL;
+
+            // Throw an exception with the version error message
             throw new \Exception($msg_error);
         }
     }
 
+
+    /**
+     * Method setLegacyMode
+     *
+     * Sets the legacy mode based on the version of Parsedown.
+     *
+     * @since 1.3.0
+     *
+     * @return void
+     */
     private function setLegacyMode(): void
     {
         $parsedownVersion = preg_replace('/-.*$/', '', \Parsedown::version);
 
+        // Enable legacy mode if Parsedown version is between 1.7.4 and below 1.8.0
         if (version_compare($parsedownVersion, '1.8.0') < 0 && version_compare($parsedownVersion, '1.7.4') >= 0) {
             $this->legacyMode = true;
         }
@@ -103,6 +153,16 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
     // Inline types
     // -------------------------------------------------------------------------
 
+    /**
+     * Processes inline code elements.
+     *
+     * Handles inline code if it is enabled in the configuration settings.
+     *
+     * @since 0.1.0
+     *
+     * @param array $Excerpt The portion of text being parsed
+     * @return mixed|null The parsed element or null if not processed
+     */
     protected function inlineCode($Excerpt)
     {
         if ($this->config()->get('code') && $this->config()->get('code.inline')) {
@@ -110,6 +170,16 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
         }
     }
 
+    /**
+     * Processes inline images.
+     *
+     * Handles inline images if the feature is enabled in the configuration.
+     *
+     * @since 0.1.0
+     *
+     * @param array $Excerpt The portion of text being parsed
+     * @return mixed|null The parsed image element or null if not processed
+     */
     protected function inlineImage($Excerpt)
     {
         if ($this->config()->get('images')) {
@@ -117,7 +187,16 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
         }
     }
 
-
+    /**
+     * Processes inline HTML markup.
+     *
+     * Parses inline HTML if raw HTML is allowed in the configuration.
+     *
+     * @since 0.1.0
+     *
+     * @param array $Excerpt The portion of text being parsed
+     * @return mixed|null The parsed HTML markup or null if not allowed
+     */
     protected function inlineMarkup($Excerpt)
     {
         if ($this->config()->get('allow_raw_html')) {
@@ -125,6 +204,16 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
         }
     }
 
+    /**
+     * Processes inline strikethrough elements.
+     *
+     * Handles inline strikethrough text if the emphasis is enabled in the configuration.
+     *
+     * @since 0.1.0
+     *
+     * @param array $Excerpt The portion of text being parsed
+     * @return mixed|null The parsed strikethrough or null if not processed
+     */
     protected function inlineStrikethrough($Excerpt)
     {
         if ($this->config()->get('emphasis.strikethroughs') && $this->config()->get('emphasis')) {
@@ -132,25 +221,63 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
         }
     }
 
-    // This function processes Markdown links in the format [text](url "title").
+    /**
+     * Processes inline links.
+     *
+     * Extends link processing to handle custom link behaviors.
+     *
+     * @since 0.1.0
+     *
+     * @param array $Excerpt The portion of text being parsed
+     * @return array|null The processed link element or null if not processed
+     */
     protected function inlineLink($Excerpt)
     {
         return $this->processLinkElement(parent::inlineLink($Excerpt));
     }
 
-    // This function automatically converts URLs starting with http:// or https:// into clickable links.
+    /**
+     * Processes inline URLs.
+     *
+     * Extends the URL processing to include additional custom behavior, such as modifying the parsed URL element.
+     *
+     * @since 0.1.0
+     *
+     * @param array $Excerpt The portion of text being parsed
+     * @return array|null The processed URL element or null if not processed
+     */
     protected function inlineUrl($Excerpt)
     {
         return $this->processLinkElement(parent::inlineUrl($Excerpt));
     }
 
-    // This function handles URLs wrapped in angle brackets <http://example.com>.
+    /**
+     * Processes inline URL tags.
+     *
+     * Handles parsing of inline URL tags, adding any custom behavior if needed.
+     *
+     * @since 0.1.0
+     *
+     * @param array $Excerpt The portion of text being parsed
+     * @return array|null The processed URL tag or null if not processed
+     */
     protected function inlineUrlTag($Excerpt)
     {
         return $this->processLinkElement(parent::inlineUrlTag($Excerpt));
     }
 
-    // This function processes email addresses enclosed in angle brackets <email@example.com>.
+
+
+    /**
+     * Processes inline email tags.
+     *
+     * Handles email links if the feature is enabled in the configuration.
+     *
+     * @since 0.1.0
+     *
+     * @param array $Excerpt The portion of text being parsed
+     * @return mixed|null The parsed email tag or null if links are disabled
+     */
     protected function inlineEmailTag($Excerpt)
     {
         if (!$this->config()->get('links') || !$this->config()->get('links.email_links')) {
@@ -159,20 +286,33 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
 
         $Excerpt = parent::inlineEmailTag($Excerpt);
 
-        if(isset($Excerpt['element']['attributes']['href'])) {
+        if (isset($Excerpt['element']['attributes']['href'])) {
             $Excerpt['element']['attributes']['target'] = '_blank';
         }
 
         return $Excerpt;
     }
 
+
+    /**
+     * Processes link elements to add behavior control attributes.
+     *
+     * Extends parsed Markdown link elements to include attributes such as `nofollow`, `noopener`, and `noreferrer`
+     * based on the configuration settings, particularly for external links. This helps control search engine indexing,
+     * external page behavior, and referrer privacy.
+     *
+     * @since 1.3.0
+     *
+     * @param array $Excerpt The portion of text representing the link element.
+     * @return array|null Modified link element with added attributes or null if the link is disallowed.
+     */
     protected function processLinkElement($Excerpt)
     {
         if (!$this->config()->get('links') || !$Excerpt || !isset($Excerpt['element']['attributes']['href'])) {
             return null;
         }
 
-        if(isset($Excerpt['element']['attributes']['href'])) {
+        if (isset($Excerpt['element']['attributes']['href'])) {
             // Get the href attribute
             $href = $Excerpt['element']['attributes']['href'];
 
@@ -187,29 +327,29 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
 
                 $rel = [];
 
-                // Add noreferrer attribute
+                // Add nofollow attribute if specified in the configuration
                 if ($this->config()->get('links.external_links.nofollow')) {
                     $rel[] = 'nofollow';
                 }
 
-                // Add noopener attribute
+                // Add noopener attribute if specified in the configuration
                 if ($this->config()->get('links.external_links.noopener')) {
                     $rel[] = 'noopener';
                 }
 
-                // Add noreferrer attribute
+                // Add noreferrer attribute if specified in the configuration
                 if ($this->config()->get('links.external_links.noreferrer')) {
                     $rel[] = 'noreferrer';
+                }
+
+                // Add target attribute with '_blank' value
+                if ($this->config()->get('links.external_links.open_in_new_window')) {
+                    $Excerpt['element']['attributes']['target'] = '_blank';
                 }
 
                 // Add rel attribute with values from the $rel array
                 if (!empty($rel)) {
                     $Excerpt['element']['attributes']['rel'] = implode(' ', $rel);
-                }
-
-                // Add target="_blank" attribute
-                if ($this->config()->get('links.external_links.open_in_new_window')) {
-                    $Excerpt['element']['attributes']['target'] = '_blank';
                 }
             }
         }
@@ -217,33 +357,43 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
         return $Excerpt;
     }
 
-
     /**
-     * Determines if a link is external based on its href.
+     * Determines if a given link is an external link.
      *
-     * @param string $href
-     * @return bool
+     * Checks if the link is either protocol-relative (starts with `//`) or absolute (`http://` or `https://`)
+     * and if the host differs from the current server's host. It also checks against a list of internal hosts to identify external links.
+     *
+     * @since 1.3.0
+     *
+     * @param string $href The URL to check.
+     * @return bool Returns true if the link is external, false otherwise.
      */
     private function isExternalLink($href)
     {
+        // Check if the URL is protocol-relative (e.g., starts with `//`)
         $isProtocolRelative = preg_match('/^\/\//', $href);
+
+        // Check if the URL is an absolute URL (starts with http:// or https://)
         $isAbsolute = preg_match('/^https?:\/\//i', $href);
 
         if ($isProtocolRelative || $isAbsolute) {
+            // Extract the host part of the URL
             $host = parse_url($href, PHP_URL_HOST);
 
             // Check if the domain matches the current domain
             if ($host && $host !== $_SERVER['HTTP_HOST']) {
 
-                // Get domain name from the host
-                $domain = preg_replace('/^www\./', '', $host);
+                // Remove 'www.' from the host to get the base domain name
+                $domain = preg_replace('/^www\\./', '', $host);
 
+                // Get the list of internal hosts from the configuration
                 $internalHosts = $this->config()->get('links.external_links.internal_hosts');
+
+                // Return false if the link is considered internal based on the configuration
                 if (in_array($domain, $internalHosts)) {
                     return false;
                 }
-
-                return true;
+                return true; // If the link is not internal, it is external
             }
         }
 
@@ -251,199 +401,249 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
     }
 
     /**
-     * Parses inline emphasis in the text.
+     * Processes inline emphasis elements.
      *
-     * @param array $Excerpt The excerpt containing the text to be parsed.
-     * @return array|null The parsed emphasis element or null if no emphasis is found.
+     * Handles inline emphasis (like bold or italics) if enabled in the configuration.
+     *
+     * @since 0.1.0
+     *
+     * @param array $Excerpt The portion of text being parsed
+     * @return array|null The parsed emphasis or null if not processed
      */
     protected function inlineEmphasis($Excerpt)
     {
         if (!$this->config()->get('emphasis') || !isset($Excerpt['text'][1])) {
-            return null;
+            return null; // If emphasis is disabled or the excerpt is too short, return null
         }
 
-        $marker = $Excerpt['text'][0];
+        $marker = $Excerpt['text'][0]; // Extract the marker character ('*', '_', etc.)
 
-        // Check if the emphasis bold is enabled
-        if ($this->config()->get('emphasis.bold') and preg_match($this->StrongRegex[$marker], $Excerpt['text'], $matches)) {
-            $emphasis = 'strong';
-        } elseif ($this->config()->get('emphasis.italic') and preg_match($this->EmRegex[$marker], $Excerpt['text'], $matches)) {
-            $emphasis = 'em';
+        // Check if the text matches bold emphasis using the marker
+        if ($this->config()->get('emphasis.bold') && preg_match($this->StrongRegex[$marker], $Excerpt['text'], $matches)) {
+            $emphasis = 'strong'; // Use 'strong' for bold text
+        }
+        // Check if the text matches italic emphasis using the marker
+        elseif ($this->config()->get('emphasis.italic') && preg_match($this->EmRegex[$marker], $Excerpt['text'], $matches)) {
+            $emphasis = 'em'; // Use 'em' for italic text
         } else {
-            return null;
+            return null; // No valid emphasis match found
         }
 
+        // Return the parsed emphasis element
         return [
-            'extent' => strlen($matches[0]),
+            'extent' => strlen($matches[0]), // Length of the matched emphasis text
             'element' => [
-                'name' => $emphasis,
-                'handler' => 'line',
-                'text' => $matches[1],
+                'name' => $emphasis, // 'strong' for bold or 'em' for italics
+                'handler' => 'line', // Handler for further inline processing
+                'text' => $matches[1], // The emphasized content
             ],
         ];
     }
 
-
     /**
-     * Marks inline text with the 'mark' HTML element if emphasis marking is enabled.
+     * Processes inline marking elements.
      *
-     * @param array $Excerpt The excerpt array containing the text to be marked.
-     * @return array|null The marked text as an array or null if marking is not enabled.
+     * Handles inline marking by using double equal signs (`==text==`). This will convert the marked text
+     * into an HTML `<mark>` tag if the feature is enabled in the configuration.
+     *
+     * @since 1.2.0
+     *
+     * @param array $Excerpt The portion of text being parsed to identify marking.
+     * @return array|null The parsed marking element or null if marking is disabled or not applicable.
      */
     protected function inlineMarking(array $Excerpt): ?array
     {
+        // Check if marking is enabled in the configuration settings
         if (!$this->config()->get('emphasis.mark') || !$this->config()->get('emphasis')) {
-            return null;
+            return null; // Return null if marking or emphasis is disabled
         }
 
+        // Match the double equal signs for marking (`==text==`) using regex
         if (preg_match('/^==((?:\\\\\=|[^=]|=[^=]*=)+?)==(?!=)/s', $Excerpt['text'], $matches)) {
+            // Return the parsed marking element
             return [
-                'extent' => strlen($matches[0]),
+                'extent' => strlen($matches[0]), // The length of the matched marking text
                 'element' => [
-                    'name' => 'mark',
-                    'text' => $matches[1],
+                    'name' => 'mark', // The HTML tag used for marking
+                    'text' => $matches[1], // The content inside the marking
                 ],
             ];
         }
 
-        return null;
+        return null; // If no match is found, return null
     }
 
-
     /**
-     * Checks for inline insertions in the given excerpt.
+     * Processes inline insertion elements.
      *
-     * @param array $Excerpt The excerpt to check.
-     * @return array|null Returns an array with the extent and element of the insertion if found, otherwise null.
+     * Handles inline insertions denoted by double plus signs (`++text++`). If enabled in the configuration,
+     * this will convert the marked text into an HTML `<ins>` tag, which is commonly used to indicate additions.
+     *
+     * @since 1.2.0
+     *
+     * @param array $Excerpt The portion of text being parsed to identify insertions.
+     * @return array|null The parsed insertion element or null if insertions are disabled or not applicable.
      */
     protected function inlineInsertions(array $Excerpt): ?array
     {
+        // Check if insertions are enabled in the configuration settings
         if (!$this->config()->get('emphasis.insertions') || !$this->config()->get('emphasis')) {
-            return null;
+            return null; // Return null if insertions or general emphasis is disabled
         }
 
+        // Match the double plus signs for insertions (`++text++`) using regex
         if (preg_match('/^\+\+((?:\\\\\+|[^\+]|\+[^\+]*\+)+?)\+\+(?!\+)/s', $Excerpt['text'], $matches)) {
+            // Return the parsed insertion element
             return [
-                'extent' => strlen($matches[0]),
+                'extent' => strlen($matches[0]), // The length of the matched insertion text
                 'element' => [
-                    'name' => 'ins',
-                    'text' => $matches[1],
+                    'name' => 'ins', // The HTML tag used for insertions
+                    'text' => $matches[1], // The content inside the insertion
                 ],
             ];
         }
 
-        return null;
+        return null; // If no match is found, return null
     }
 
     /**
-     * Parses inline keystrokes in the text and returns an array containing the extent and element information.
+     * Processes inline keystroke elements.
      *
-     * @param array $Excerpt The excerpt array containing the text to be parsed.
-     * @return array|null Returns an array with 'extent' and 'element' information if inline keystrokes are found, otherwise returns null.
+     * Handles inline keystrokes denoted by double square brackets (`[[text]]`). If enabled in the configuration,
+     * this will convert the enclosed text into an HTML `<kbd>` tag, which is typically used to represent user input or keystrokes.
+     *
+     * @since 1.0.0
+     *
+     * @param array $Excerpt The portion of text being parsed to identify keystrokes.
+     * @return array|null The parsed keystroke element or null if keystrokes are disabled or not applicable.
      */
     protected function inlineKeystrokes(array $Excerpt): ?array
     {
+        // Check if keystrokes are enabled in the configuration settings
         if (!$this->config()->get('emphasis.keystrokes') || !$this->config()->get('emphasis')) {
-            return null;
+            return null; // Return null if keystrokes or general emphasis is disabled
         }
 
+        // Match the double square brackets for keystrokes (`[[text]]`) using regex
         if (preg_match('/^(?<!\[)(?:\[\[([^\[\]]*|[\[\]])\]\])(?!\])/s', $Excerpt['text'], $matches)) {
+            // Return the parsed keystroke element
             return [
-                'extent' => strlen($matches[0]),
+                'extent' => strlen($matches[0]), // The length of the matched keystroke text
                 'element' => [
-                    'name' => 'kbd',
-                    'text' => $matches[1],
+                    'name' => 'kbd', // The HTML tag used for keystrokes
+                    'text' => $matches[1], // The content inside the keystroke brackets
                 ],
             ];
         }
 
-        return null;
+        return null; // If no match is found, return null
     }
 
 
-
     /**
-     * Parses inline superscript elements in the text.
+     * Processes inline superscript elements.
      *
-     * @param array $Excerpt The excerpt containing the text to parse.
-     * @return array|null Returns an array with the extent and element of the superscript, or null if not found.
+     * Handles inline superscript denoted by a caret symbol (`^text^`). If enabled in the configuration,
+     * this will convert the marked text into an HTML `<sup>` tag, which is typically used for superscripts in text.
+     *
+     * @since 1.0.0
+     *
+     * @param array $Excerpt The portion of text being parsed to identify superscript.
+     * @return array|null The parsed superscript element or null if superscript is disabled or not applicable.
      */
     protected function inlineSuperscript(array $Excerpt): ?array
     {
+        // Check if superscript is enabled in the configuration settings
         if (!$this->config()->get('emphasis.superscript') || !$this->config()->get('emphasis')) {
-            return null;
+            return null; // Return null if superscript or general emphasis is disabled
         }
 
+        // Match the caret symbols for superscript (`^text^`) using regex
         if (preg_match('/^\^((?:\\\\\\^|[^\^]|\^[^\^]+?\^\^)+?)\^(?!\^)/s', $Excerpt['text'], $matches)) {
+            // Return the parsed superscript element
             return [
-                'extent' => strlen($matches[0]),
+                'extent' => strlen($matches[0]), // The length of the matched superscript text
                 'element' => [
-                    'name' => 'sup',
-                    'text' => $matches[1],
+                    'name' => 'sup', // The HTML tag used for superscript
+                    'text' => $matches[1], // The content inside the superscript markers
                 ],
             ];
         }
 
-        return null;
+        return null; // If no match is found, return null
     }
 
 
-
     /**
-     * Parses inline subscript elements in the text.
+     * Processes inline subscript elements.
      *
-     * @param array $Excerpt The excerpt containing the text to parse.
-     * @return array|null Returns an array with the extent and element if a subscript element is found, otherwise null.
+     * Handles inline subscript denoted by a tilde (`~text~`). If enabled in the configuration,
+     * this will convert the marked text into an HTML `<sub>` tag, which is typically used for subscripts in text.
+     *
+     * @since 1.0.0
+     *
+     * @param array $Excerpt The portion of text being parsed to identify subscript.
+     * @return array|null The parsed subscript element or null if subscript is disabled or not applicable.
      */
     protected function inlineSubscript(array $Excerpt): ?array
     {
+        // Check if subscript is enabled in the configuration settings
         if (!$this->config()->get('emphasis.subscript') || !$this->config()->get('emphasis')) {
-            return null;
+            return null; // Return null if subscript or general emphasis is disabled
         }
 
+        // Match the tilde symbols for subscript (`~text~`) using regex
         if (preg_match('/^~((?:\\\\~|[^~]|~~[^~]*~~)+?)~(?!~)/s', $Excerpt['text'], $matches)) {
+            // Return the parsed subscript element
             return [
-                'extent' => strlen($matches[0]),
+                'extent' => strlen($matches[0]), // The length of the matched subscript text
                 'element' => [
-                    'name' => 'sub',
-                    'text' => $matches[1],
+                    'name' => 'sub', // The HTML tag used for subscript
+                    'text' => $matches[1], // The content inside the subscript markers
                 ],
             ];
         }
 
-        return null;
+        return null; // If no match is found, return null
     }
 
 
 
+
     /**
-     * Parses inline math notation in the given excerpt.
+     * Processes inline math notation elements.
      *
-     * @param array $Excerpt The excerpt to parse.
-     * @return array|null The parsed math notation or null if parsing is disabled.
+     * Handles inline math notation using specific delimiters (e.g., `$...$`, `\\(...\\)`). If enabled in the configuration,
+     * this function matches math notation within the specified delimiters and processes it accordingly.
+     *
+     * @since 1.1.2
+     *
+     * @param array $Excerpt The portion of text being parsed to identify math notation.
+     * @return array|null The parsed math notation element or null if math parsing is disabled or not applicable.
      */
     protected function inlineMathNotation($Excerpt)
     {
-        // Check if parsing of math notation is enabled
+        // Check if parsing of math notation is enabled in the configuration settings
         if (!$this->config()->get('math') || !$this->config()->get('math.inline')) {
-            return null;
+            return null; // Return null if math or inline math is disabled
         }
 
-        // Check if the excerpt has enough characters
+        // Check if the excerpt has enough characters to proceed
         if (!isset($Excerpt['text'][1])) {
-            return null;
+            return null; // Return null if there is insufficient text for math notation
         }
 
-        // Check if there is whitespace before the excerpt
+        // Check if there is whitespace before the excerpt (ensures math is not in the middle of a word)
         if ($Excerpt['before'] !== '' && preg_match('/\s/', $Excerpt['before']) === 0) {
-            return null;
+            return null; // Return null if the math notation is not preceded by whitespace
         }
 
-        // Iterate through the inline math delimiters
+        // Iterate through the inline math delimiters (e.g., `$...$`, `\\(...\\)`)
         foreach ($this->config()->get('math.inline.delimiters') as $config) {
-            $leftMarker = preg_quote($config['left'], '/');
-            $rightMarker = preg_quote($config['right'], '/');
+            $leftMarker = preg_quote($config['left'], '/');  // Escape the left delimiter for use in regex
+            $rightMarker = preg_quote($config['right'], '/'); // Escape the right delimiter for use in regex
 
+            // Create the regex pattern for matching math notation
             if ($config['left'][0] === '\\' || strlen($config['left']) > 1) {
                 $regex = '/^(?<!\S)' . $leftMarker . '(?![\r\n])((?:\\\\' . $rightMarker . '|\\\\' . $leftMarker . '|[^\r\n])+?)' . $rightMarker . '(?![^\s,.])/s';
             } else {
@@ -452,122 +652,141 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
 
             // Match the regular expression pattern against the excerpt
             if (preg_match($regex, $Excerpt['text'], $matches)) {
+                // Return the parsed math element
                 return [
-                    'extent' => strlen($matches[0]),
+                    'extent' => strlen($matches[0]), // The length of the matched math notation
                     'element' => [
-                        'text' => $matches[0],
+                        'text' => $matches[0], // The matched math content
                     ],
                 ];
             }
         }
 
-        return null;
+        return null; // If no match is found, return null
     }
 
 
-
     /**
-     * Escapes inline escape sequences in the given Excerpt.
+     * Processes inline escape sequences.
      *
-     * This method checks if the 'math' feature is enabled and if so, it iterates through the configured inline delimiters for math expressions.
-     * It constructs a regular expression pattern based on the left and right markers of each delimiter and checks if the pattern matches the Excerpt's text.
-     * If a match is found, the method returns early.
+     * Handles escape sequences to allow special characters to be rendered as literals instead of being interpreted.
+     * Specifically, if a character is preceded by a backslash, it is treated as an escaped character.
+     * Additionally, it ensures that math delimiters are not mistakenly escaped.
      *
-     * If the 'math' feature is not enabled or no match is found, the method checks if the second character of the Excerpt's text is a special character.
-     * If it is, the method returns an array with the special character as the 'markup' value and an extent of 2.
+     * @since 0.1.0
      *
-     * @param array $Excerpt The Excerpt containing the text to be processed.
-     * @return array|null Returns an array with the 'markup' and 'extent' values if a special character is found, otherwise returns null.
+     * @param array $Excerpt The portion of text being parsed to identify escape sequences.
+     * @return array|null The parsed escape sequence element or null if no valid escape sequence is found.
      */
     protected function inlineEscapeSequence($Excerpt)
     {
+        // If math is enabled, check for any inline math delimiters that might need special handling
         if ($this->config()->get('math')) {
             foreach ($this->config()->get('math.inline.delimiters') as $config) {
+                $leftMarker = preg_quote($config['left'], '/');  // Escape the left delimiter for use in regex
+                $rightMarker = preg_quote($config['right'], '/'); // Escape the right delimiter for use in regex
 
-                $leftMarker = preg_quote($config['left'], '/');
-                $rightMarker = preg_quote($config['right'], '/');
-
+                // Create the regex pattern for matching math notation
                 if ($config['left'][0] === '\\' || strlen($config['left']) > 1) {
                     $regex = '/^(?<!\S)' . $leftMarker . '(?![\r\n])((?:\\\\' . $rightMarker . '|\\\\' . $leftMarker . '|[^\r\n])+?)' . $rightMarker . '(?![^\s,.])/s';
                 } else {
                     $regex = '/^(?<!\S)' . $leftMarker . '(?![\r\n])((?:\\\\' . $rightMarker . '|\\\\' . $leftMarker . '|[^' . $rightMarker . '\r\n])+?)' . $rightMarker . '(?![^\s,.])/s';
                 }
 
+                // If a math notation match is found, return null as it's not an escape sequence
                 if (preg_match($regex, $Excerpt['text'])) {
                     return null;
                 }
             }
         }
 
+        // Check if the character following the backslash is a special character that should be escaped
         if (isset($Excerpt['text'][1]) && in_array($Excerpt['text'][1], $this->specialCharacters)) {
+            // Return the escaped character
             return [
-                'markup' => $Excerpt['text'][1],
-                'extent' => 2,
-            ];
-        }
-    }
-
-
-
-    /**
-     * Applies typographic substitutions to the inline text.
-     *
-     * This method checks if the typographer feature is enabled. If not, it returns null.
-     * If enabled, it applies various typographic substitutions to the text, such as replacing
-     * "(c)" with the copyright symbol, "(r)" with the registered trademark symbol, etc.
-     * It also handles smart ellipses and replaces consecutive dots with ellipses.
-     *
-     * @param array $Excerpt The excerpt array containing the inline text.
-     * @return array|null The modified excerpt array with typographic substitutions applied, or null if typographer is disabled.
-     */
-    protected function inlineTypographer(array $Excerpt): ?array
-    {
-        if (!$this->config()->get('typographer')) {
-            return null;
-        }
-
-        // Check if smartypants and smart ellipses settings are enabled
-        $ellipses = $this->config()->get('smartypants') && $this->config()->get('smartypants.smart_ellipses') ? html_entity_decode($this->config()->get('smartypants.substitutions.ellipses')) : '...';
-
-        $substitutions = [
-            '/\(c\)/i' => html_entity_decode('&copy;'),
-            '/\(r\)/i' => html_entity_decode('&reg;'),
-            '/\(tm\)/i' => html_entity_decode('&trade;'),
-            '/\(p\)/i' => html_entity_decode('&para;'),
-            '/\+-/i' => html_entity_decode('&plusmn;'),
-            '/\!\.{3,}/i' => '!..',
-            '/\?\.{3,}/i' => '?..',
-            '/\.{2,}/i' => $ellipses,
-        ];
-
-        $result = preg_replace(array_keys($substitutions), array_values($substitutions), $Excerpt['text'], -1, $count);
-
-        if ($count > 0) {
-            return [
-                'extent' => strlen($Excerpt['text']),
-                'element' => [
-                    'text' => $result,
-                ],
+                'markup' => $Excerpt['text'][1], // The character to be escaped
+                'extent' => 2, // The length of the escape sequence (backslash + character)
             ];
         }
 
+        // If no valid escape sequence is found, return null
         return null;
     }
 
 
     /**
-     * Applies SmartyPants substitutions to the inline text.
+     * Processes inline typographic substitutions.
      *
-     * @param array $Excerpt The excerpt containing the inline text.
-     * @return array|null The modified excerpt with SmartyPants substitutions applied, or null if SmartyPants is not enabled.
+     * This function handles typographic improvements, such as replacing plain text with their typographic equivalents.
+     * It processes symbols like (c) to ©, (r) to ®, and smart ellipses based on the user's configuration.
+     * This is particularly useful for enhancing readability by applying typographer rules.
+     *
+     * @since 1.0.1
+     *
+     * @param array $Excerpt The portion of text being parsed for typographic substitutions.
+     * @return array|null The parsed typographic substitutions or null if the typographer feature is disabled.
+     */
+    protected function inlineTypographer(array $Excerpt): ?array
+    {
+        // Check if typographer is enabled in the configuration settings
+        if (!$this->config()->get('typographer')) {
+            return null; // Return null if the typographer is disabled
+        }
+
+        // Check if smartypants and smart ellipses settings are enabled
+        $ellipses = $this->config()->get('smartypants') && $this->config()->get('smartypants.smart_ellipses')
+            ? html_entity_decode($this->config()->get('smartypants.substitutions.ellipses'))
+            : '...'; // Use smart ellipses if enabled, otherwise use '...'
+
+        // Define substitutions for various typographic symbols
+        $substitutions = [
+            '/\(c\)/i' => html_entity_decode('&copy;'), // Replace (c) with © symbol
+            '/\(r\)/i' => html_entity_decode('&reg;'), // Replace (r) with ® symbol
+            '/\(tm\)/i' => html_entity_decode('&trade;'), // Replace (tm) with ™ symbol
+            '/\(p\)/i' => html_entity_decode('&para;'), // Replace (p) with ¶ symbol (paragraph)
+            '/\+-/i' => html_entity_decode('&plusmn;'), // Replace +- with ± symbol
+            '/\!\.{3,}/i' => '!..', // Replace more than three exclamation points with '!..'
+            '/\?\.{3,}/i' => '?..', // Replace more than three question marks with '?..'
+            '/\.{2,}/i' => $ellipses, // Replace ellipses with either smart ellipses or '...'
+        ];
+
+        // Apply substitutions using regular expressions
+        $result = preg_replace(array_keys($substitutions), array_values($substitutions), $Excerpt['text'], -1, $count);
+
+        // If substitutions were made, return the modified text
+        if ($count > 0) {
+            return [
+                'extent' => strlen($Excerpt['text']), // The length of the original excerpt text
+                'element' => [
+                    'text' => $result, // The modified text after applying typographic substitutions
+                ],
+            ];
+        }
+
+        return null; // If no substitutions were made, return null
+    }
+
+
+    /**
+     * Processes inline Smartypants substitutions.
+     *
+     * This function handles typographic improvements to the text, such as converting straight quotes to curly quotes,
+     * converting double angle quotes, converting dashes into em or en dashes, and ellipses into the proper character.
+     * These changes enhance readability and align text formatting with common typographic standards.
+     *
+     * @since 1.0.0
+     *
+     * @param array $Excerpt The portion of text being parsed for Smartypants substitutions.
+     * @return array|null The parsed Smartypants substitution or null if Smartypants is disabled.
      */
     protected function inlineSmartypants($Excerpt)
     {
+        // Check if Smartypants is enabled in the configuration settings
         if (!$this->config()->get('smartypants')) {
-            return null;
+            return null; // Return null if Smartypants is disabled
         }
 
-        // Substitutions
+        // Substitutions: Load the characters to use for the specific Smartypants transformations
         $substitutions = [
             'left_double_quote' => html_entity_decode($this->config()->get('smartypants.substitutions.left_double_quote')),
             'right_double_quote' => html_entity_decode($this->config()->get('smartypants.substitutions.right_double_quote')),
@@ -580,15 +799,16 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
             'ellipses' => html_entity_decode($this->config()->get('smartypants.substitutions.ellipses')),
         ];
 
-        // Patterns
+        // Define patterns for various Smartypants substitutions
         $patterns = [
             'smart_backticks' => [
                 'pattern' => '/^(``)(?!\s)([^"\'`]{1,})(\'\')/i',
                 'callback' => function ($matches) use ($substitutions, $Excerpt) {
                     if (strlen(trim($Excerpt['before'])) > 0) {
-                        return null;
+                        return null; // Skip if the backticks do not start at the beginning
                     }
 
+                    // Return transformed text with left and right double quotes
                     return [
                         'extent' => strlen($matches[0]),
                         'element' => [
@@ -601,9 +821,10 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
                 'pattern' => '/^(")(?!\s)([^"]+)(")|^(?<!\w)(\')(?!\s)([^\']+)(\')/i',
                 'callback' => function ($matches) use ($substitutions, $Excerpt) {
                     if (strlen(trim($Excerpt['before'])) > 0) {
-                        return null;
+                        return null; // Skip if quotes are in the middle of a word
                     }
 
+                    // Check if the match is for single or double quotes and return transformed text
                     if ("'" === $matches[1]) {
                         return [
                             'extent' => strlen($matches[0]),
@@ -627,9 +848,10 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
                 'pattern' => '/^(<{2})(?!\s)([^<>]+)(>{2})/i',
                 'callback' => function ($matches) use ($substitutions, $Excerpt) {
                     if (strlen(trim($Excerpt['before'])) > 0) {
-                        return null;
+                        return null; // Skip if angled quotes do not start at the beginning
                     }
 
+                    // Return transformed text with left and right angle quotes
                     return [
                         'extent' => strlen($matches[0]),
                         'element' => [
@@ -640,8 +862,8 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
             ],
             'smart_dashes' => [
                 'pattern' => '/^(-{2,3})/i',
-                'callback' => function ($matches) use ($substitutions, $Excerpt) {
-
+                'callback' => function ($matches) use ($substitutions) {
+                    // Replace double dashes with ndash or triple dashes with mdash
                     if ('---' === $matches[1]) {
                         return [
                             'extent' => strlen($matches[0]),
@@ -663,7 +885,8 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
             ],
             'smart_ellipses' => [
                 'pattern' => '/^(?<!\.)(\.{3})(?!\.)/i',
-                'callback' => function ($matches) use ($substitutions, $Excerpt) {
+                'callback' => function ($matches) use ($substitutions) {
+                    // Replace three dots with an ellipsis
                     return [
                         'extent' => strlen($matches[0]),
                         'element' => [
@@ -674,27 +897,38 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
             ],
         ];
 
+        // Iterate over each pattern and apply the corresponding callback if a match is found
         foreach ($patterns as $key => $value) {
-            if ($this->config()->get('smartypants.'.$key) && preg_match($value['pattern'], $Excerpt['text'], $matches)) {
-                $matches = array_values(array_filter($matches));
-                return $value['callback']($matches);
+            if ($this->config()->get('smartypants.' . $key) && preg_match($value['pattern'], $Excerpt['text'], $matches)) {
+                $matches = array_values(array_filter($matches)); // Filter out empty matches
+                return $value['callback']($matches); // Return the transformed text using the callback
             }
         }
+
+        // If no substitutions were made, return null
+        return null;
     }
 
 
     /**
-     * Replaces emoji codes with corresponding emoji characters.
+     * Processes inline emoji replacements.
      *
-     * @param array $Excerpt The excerpt containing the emoji codes.
-     * @return array|null The excerpt with emoji codes replaced or null if emojis are disabled.
+     * This function handles the conversion of text-based emoji shortcuts (e.g., `:smile:`) to their corresponding emoji characters (e.g., 😄).
+     * Emojis are replaced based on a predefined emoji map if the emoji feature is enabled in the configuration.
+     *
+     * @since 1.0.0
+     *
+     * @param array $Excerpt The portion of text being parsed to identify emoji codes.
+     * @return array|null The parsed emoji element or null if emojis are disabled or no match is found.
      */
     protected function inlineEmojis(array $Excerpt): ?array
     {
+        // Check if emoji processing is enabled in the configuration settings
         if (!$this->config()->get('emojis')) {
-            return null;
+            return null; // Return null if emoji replacement is disabled
         }
 
+        // Define a mapping of emoji codes to their corresponding Unicode characters
         $emojiMap = [
             ':smile:' => '😄', ':laughing:' => '😆', ':blush:' => '😊', ':smiley:' => '😃',
             ':relaxed:' => '☺️', ':smirk:' => '😏', ':heart_eyes:' => '😍', ':kissing_heart:' => '😘',
@@ -913,414 +1147,599 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
             ':white_large_square:' => '⬜',
         ];
 
-        // Check there is no character before the emoji marker
+        // Check if there is no character before the emoji marker (ensure emoji is not embedded in a word)
         if (!preg_match('/^(\s|)$/', $Excerpt['before'])) {
-            return null;
+            return null; // Return null if the emoji code is not preceded by whitespace or is embedded in a word
         }
 
+        // Match the emoji code pattern (e.g., `:smile:`)
         if (preg_match('/^(:)([a-zA-Z0-9_]+)(:)/', $Excerpt['text'], $matches)) {
+            // Replace the matched emoji code with the corresponding emoji character from the map
             return [
-                'extent' => strlen($matches[0]),
+                'extent' => strlen($matches[0]), // Length of the matched emoji code
                 'element' => [
-                    'text' => str_replace(array_keys($emojiMap), $emojiMap, $matches[0]),
+                    'text' => str_replace(array_keys($emojiMap), $emojiMap, $matches[0]), // Replace emoji code with corresponding emoji
                 ],
             ];
         }
 
+        // If no emoji code matches, return null
         return null;
     }
+
 
     // Block types
     // -------------------------------------------------------------------------
 
+    /**
+     * Parses attribute data for headings.
+     *
+     * Handles parsing of attribute data for headings if the feature is enabled.
+     *
+     * @since 0.1.0
+     *
+     * @param string $attributeString The attribute string to be parsed.
+     * @return array The parsed attributes or an empty array if not applicable.
+     */
     protected function parseAttributeData($attributeString)
     {
-        if($this->config()->get('headings.special_attributes')) {
-            return parent::parseAttributeData($attributeString);
+        // Check if special attributes for headings are enabled
+        if ($this->config()->get('headings.special_attributes')) {
+            return parent::parseAttributeData($attributeString); // Delegate to parent class
         }
 
-        return [];
+        return []; // Return an empty array if the feature is disabled
     }
 
+    /**
+     * Handles the parsing of footnote blocks.
+     *
+     * @since 0.1.0
+     *
+     * @param array $Line The line to be processed as a footnote.
+     * @return mixed The parsed footnote block if enabled, otherwise nothing.
+     */
     protected function blockFootnote($Line)
     {
+        // Check if footnotes are enabled
         if ($this->config()->get('footnotes')) {
-            return parent::blockFootnote($Line);
-        }
-    }
-
-    protected function blockDefinitionList($Line, $Block)
-    {
-        if ($this->config()->get('definition_lists')) {
-            return parent::blockDefinitionList($Line, $Block);
-        }
-    }
-
-    protected function blockCode($Line, $Block = null)
-    {
-        if ($this->config()->get('code') && $this->config()->get('code.blocks')) {
-            return parent::blockCode($Line, $Block);
-        }
-    }
-
-    protected function blockComment($Line)
-    {
-        if ($this->config()->get('comments')) {
-            return parent::blockComment($Line);
-        }
-    }
-
-    protected function blockList($Line, array $CurrentBlock = null)
-    {
-        if ($this->config()->get('lists')) {
-            return parent::blockList($Line, $CurrentBlock);
-        }
-    }
-
-    protected function blockQuote($Line)
-    {
-        if ($this->config()->get('quotes')) {
-            return parent::blockQuote($Line);
-        }
-    }
-
-    protected function blockRule($Line)
-    {
-        if ($this->config()->get('thematic_breaks')) {
-            return parent::blockRule($Line);
-        }
-    }
-
-    protected function blockMarkup($Line)
-    {
-        if ($this->config()->get('allow_raw_html')) {
-            return parent::blockMarkup($Line);
-        }
-    }
-
-    protected function blockReference($Line)
-    {
-        if ($this->config()->get('references')) {
-            return parent::blockReference($Line);
-        }
-    }
-
-    protected function blockTable($Line, $Block = null)
-    {
-        if ($this->config()->get('tables')) {
-            return parent::blockTable($Line, $Block);
+            return parent::blockFootnote($Line); // Delegate to parent class
         }
     }
 
     /**
-     * Handle the GFM Alert block.
+     * Handles the parsing of definition list blocks.
+     *
+     * @since 0.1.0
+     *
+     * @param array $Line The current line to be processed.
+     * @param array $Block The current block context.
+     * @return mixed The parsed definition list block if enabled, otherwise nothing.
+     */
+    protected function blockDefinitionList($Line, $Block)
+    {
+        // Check if definition lists are enabled
+        if ($this->config()->get('definition_lists')) {
+            return parent::blockDefinitionList($Line, $Block); // Delegate to parent class
+        }
+    }
+
+    /**
+     * Handles the parsing of code blocks.
+     *
+     * @since 0.1.0
+     *
+     * @param array $Line The current line to be processed.
+     * @param array|null $Block The current block context.
+     * @return mixed The parsed code block if enabled, otherwise nothing.
+     */
+    protected function blockCode($Line, $Block = null)
+    {
+        // Check if code blocks are enabled
+        if ($this->config()->get('code') && $this->config()->get('code.blocks')) {
+            return parent::blockCode($Line, $Block); // Delegate to parent class
+        }
+    }
+
+    /**
+     * Handles the parsing of HTML comment blocks.
+     *
+     * @since 0.1.0
+     *
+     * @param array $Line The current line to be processed as a comment.
+     * @return mixed The parsed comment block if enabled, otherwise nothing.
+     */
+    protected function blockComment($Line)
+    {
+        // Check if HTML comments are enabled
+        if ($this->config()->get('comments')) {
+            return parent::blockComment($Line); // Delegate to parent class
+        }
+    }
+
+    /**
+     * Handles the parsing of list blocks.
+     *
+     * @since 0.1.0
+     *
+     * @param array $Line The current line to be processed.
+     * @param array|null $CurrentBlock The current block context.
+     * @return mixed The parsed list block if enabled, otherwise nothing.
+     */
+    protected function blockList($Line, array $CurrentBlock = null)
+    {
+        // Check if lists are enabled
+        if ($this->config()->get('lists')) {
+            return parent::blockList($Line, $CurrentBlock); // Delegate to parent class
+        }
+    }
+
+    /**
+     * Handles the parsing of block quote elements.
+     *
+     * @since 0.1.0
+     *
+     * @param array $Line The current line to be processed as a block quote.
+     * @return mixed The parsed block quote if enabled, otherwise nothing.
+     */
+    protected function blockQuote($Line)
+    {
+        // Check if block quotes are enabled
+        if ($this->config()->get('quotes')) {
+            return parent::blockQuote($Line); // Delegate to parent class
+        }
+    }
+
+    /**
+     * Handles the parsing of horizontal rule blocks.
+     *
+     * @since 0.1.0
+     *
+     * @param array $Line The current line to be processed.
+     * @return mixed The parsed horizontal rule if enabled, otherwise nothing.
+     */
+    protected function blockRule($Line)
+    {
+        // Check if thematic breaks (horizontal rules) are enabled
+        if ($this->config()->get('thematic_breaks')) {
+            return parent::blockRule($Line); // Delegate to parent class
+        }
+    }
+
+    /**
+     * Handles the parsing of raw HTML markup blocks.
+     *
+     * @since 0.1.0
+     *
+     * @param array $Line The current line to be processed as raw HTML.
+     * @return mixed The parsed HTML block if allowed, otherwise nothing.
+     */
+    protected function blockMarkup($Line)
+    {
+        // Check if raw HTML is allowed
+        if ($this->config()->get('allow_raw_html')) {
+            return parent::blockMarkup($Line); // Delegate to parent class
+        }
+    }
+
+    /**
+     * Handles the parsing of reference blocks.
+     *
+     * @since 0.1.0
+     *
+     * @param array $Line The current line to be processed as a reference.
+     * @return mixed The parsed reference block if enabled, otherwise nothing.
+     */
+    protected function blockReference($Line)
+    {
+        // Check if references are enabled
+        if ($this->config()->get('references')) {
+            return parent::blockReference($Line); // Delegate to parent class
+        }
+    }
+
+    /**
+     * Handles the parsing of table blocks.
+     *
+     * @since 0.1.0
+     *
+     * @param array $Line The current line to be processed.
+     * @param array|null $Block The current block context.
+     * @return mixed The parsed table block if enabled, otherwise nothing.
+     */
+    protected function blockTable($Line, $Block = null)
+    {
+        // Check if tables are enabled
+        if ($this->config()->get('tables')) {
+            return parent::blockTable($Line, $Block); // Delegate to parent class
+        }
+    }
+
+
+    /**
+     * Processes alert blocks within the parsed Markdown text.
+     *
+     * This function identifies and processes blocks starting with a specific alert syntax, such as `> [!NOTE]`.
+     * Alerts are styled based on their type (e.g., Note, Warning, etc.) and formatted as HTML div elements with appropriate classes.
+     *
+     * @since 1.3.0
+     *
+     * @param array $Line The line being processed for an alert block.
+     * @return array|null The parsed alert block if matched, otherwise null.
      */
     protected function blockAlert($Line): ?array
     {
+        // Check if alerts are enabled in the configuration settings
         if (!$this->config()->get('alerts.enabled')) {
-            return null;
+            return null; // Return null if alert blocks are disabled
         }
 
-        // Retrieve the alert types from the config
+        // Retrieve the alert types from the config (e.g., 'NOTE', 'WARNING')
         $alertTypes = $this->config()->get('alerts.types');
 
         // Build the regex pattern dynamically based on the alert types
         $alertTypesPattern = implode('|', array_map('strtoupper', $alertTypes));
 
-        // Create the full regex pattern
+        // Create the full regex pattern for matching alert block syntax
         $pattern = '/^> \[!(' . $alertTypesPattern . ')\]/';
 
-
+        // Check if the line matches the alert pattern
         if (preg_match($pattern, $Line['text'], $matches)) {
-            $type = strtolower($matches[1]);
-            $title = ucfirst($type);
+            $type = strtolower($matches[1]); // Extract the alert type and convert to lowercase
+            $title = ucfirst($type); // Capitalize the first letter for the alert title
 
-            // Get class and prefix from config
+            // Get class name for alerts from the configuration
             $class = $this->config()->get('alerts.class');
 
+            // Build the alert block with appropriate HTML attributes and content
             $Block = [
                 'element' => [
                     'name' => 'div',
                     'attributes' => [
-                        'class' => "{$class} {$class}-{$type}",
+                        'class' => "{$class} {$class}-{$type}", // Add alert type as a class (e.g., 'alert alert-note')
                     ],
-                    'handler' => 'elements', // We use 'elements' because we'll add more elements later
+                    'handler' => 'elements', // Use 'elements' because we'll be adding more content elements later
                     'text' => [
                         [
                             'name' => 'p',
                             'attributes' => [
-                                'class' => "{$class}-title",
+                                'class' => "{$class}-title", // Assign title-specific class for the alert
                             ],
-                            'text' => $title,
+                            'text' => $title, // Set the alert title (e.g., "Note")
                         ],
                     ],
                 ],
             ];
 
-            return $Block;
+            return $Block; // Return the parsed alert block
         }
 
-        return null;
+        return null; // Return null if the line does not match the alert pattern
     }
 
-
+    /**
+     * Continues processing alert blocks by adding subsequent lines to the current alert block.
+     *
+     * @since 1.3.0
+     *
+     * @param array $Line The current line being processed.
+     * @param array $Block The current block being extended.
+     * @return array|null The updated alert block or null if the continuation is not applicable.
+     */
     protected function blockAlertContinue($Line, array $Block)
     {
-
-        // Retrieve the alert types from the config
+        // Retrieve the alert types from the config (e.g., 'NOTE', 'WARNING')
         $alertTypes = $this->config()->get('alerts.types');
 
         // Build the regex pattern dynamically based on the alert types
         $alertTypesPattern = implode('|', array_map('strtoupper', $alertTypes));
 
-        // Create the full regex pattern
+        // Create the full regex pattern for identifying new alert blocks
         $pattern = '/^> \[!(' . $alertTypesPattern . ')\]/';
 
+        // If the line matches a new alert block, terminate the current one
         if (preg_match($pattern, $Line['text'])) {
-            return null; // Terminate the current block if a new alert block starts
+            return null; // Return null to terminate the current alert block
         }
 
+        // Check if the line continues the current alert block with '>' followed by content
         if ($Line['text'][0] === '>' && preg_match('/^> ?(.*)/', $Line['text'], $matches)) {
+            // If the block was interrupted, add an empty paragraph for spacing
             if (isset($Block['interrupted'])) {
                 $Block['element']['text'][] = ['text' => ''];
-                unset($Block['interrupted']);
+                unset($Block['interrupted']); // Reset the interrupted status
             }
 
+            // Append the new line content to the current block
             $Block['element']['text'][] = [
                 'name' => 'p',
-                'text' => $matches[1],
+                'text' => $matches[1], // Add the text following the '>'
             ];
 
-            return $Block;
+            return $Block; // Return the updated block
         }
 
+        // If the line does not start with '>' and the block is not interrupted, append it
         if (!isset($Block['interrupted'])) {
             $Block['element']['text'][] = [
                 'name' => 'p',
-                'text' => $Line['text'],
+                'text' => $Line['text'], // Add the text directly to the alert block
             ];
 
-            return $Block;
+            return $Block; // Return the updated block
         }
 
-        return null;
+        return null; // Return null if the continuation conditions are not met
     }
 
-
+    /**
+     * Completes the alert block.
+     *
+     * @since 1.3.0
+     *
+     * @param array $Block The current block being finalized.
+     * @return array The completed alert block.
+     */
     protected function blockAlertComplete($Block)
     {
-        return $Block;
+        return $Block; // Finalize and return the alert block
     }
-
-
 
 
     /**
-     * Parses a line of text to check for block math notation.
+     * Processes block-level math notation.
      *
-     * This method checks if the configuration allows for block math notation and if the line contains any block math delimiters.
-     * It iterates through the block math delimiters defined in the configuration and uses regular expressions to match the delimiters in the line.
-     * If a match is found, it returns an array containing the matched text, start marker, and end marker.
-     * If no match is found, it returns null.
+     * This function identifies and processes blocks of text surrounded by specific math delimiters (e.g., `$$` or `\\[ ... \\]`)
+     * to be formatted as math elements.
      *
-     * @param array $Line The line of text to parse.
-     * @return array|null An array containing the matched text, start marker, and end marker, or null if no match is found.
+     * @since 1.1.2
+     *
+     * @param array $Line The line being processed for a math block.
+     * @return array|null The parsed math block if matched, otherwise null.
      */
     protected function blockMathNotation($Line)
     {
+        // Check if math notation block-level parsing is enabled in the configuration settings
         if (!$this->config()->get('math') || !$this->config()->get('math.block')) {
-            return null;
+            return null; // Return null if math block parsing is disabled
         }
 
+        // Iterate over each configured math block delimiter (e.g., `$$`, `\\[`)
         foreach ($this->config()->get('math.block.delimiters') as $config) {
 
+            // Escape the math delimiters for regex usage
             $leftMarker = preg_quote($config['left'], '/');
             $rightMarker = preg_quote($config['right'], '/');
+
+            // Build the regex pattern to match the opening delimiter, content, and optional closing delimiter
             $regex = '/^(?<!\\\\)('. $leftMarker . ')(.*?)(?:(' . $rightMarker . ')|$)/';
 
+            // Check if the line matches the math block pattern
             if (preg_match($regex, $Line['text'], $matches)) {
                 return [
                     'element' => [
-                        'text' => $matches[2],
+                        'text' => $matches[2], // Extract and store the math content between the delimiters
                     ],
-                    'start' => $config['left'], // Store the start marker
-                    'end' => $config['right'], // Store the end marker
+                    'start' => $config['left'], // Store the start marker (e.g., `$$`)
+                    'end' => $config['right'], // Store the end marker (e.g., `$$`)
                 ];
             }
         }
 
-        return null;
+        return null; // Return null if the line does not match any configured math block pattern
     }
 
     /**
-     * Continues a block of math notation.
+     * Continues processing block-level math notation by adding subsequent lines.
      *
-     * This method is responsible for continuing a block of math notation when a new line is encountered.
+     * This function handles the continuation of a math block until the closing delimiter is found.
+     *
+     * @since 1.1.2
      *
      * @param array $Line The current line being processed.
-     * @param array $Block The current block of math notation being processed.
-     *
-     * @return array The updated block of math notation.
+     * @param array $Block The current math block being extended.
+     * @return array|null The updated math block or null if the continuation is not applicable.
      */
     protected function blockMathNotationContinue($Line, $Block)
     {
+        // If the math block is already complete, return null
         if (isset($Block['complete'])) {
             return null;
         }
 
+        // Handle interrupted lines in the math block by adding newlines
         if (isset($Block['interrupted'])) {
-
-            // convert $Block['interrupted'] to int
+            // Convert the 'interrupted' flag to an integer to determine the number of newlines
             $Block['interrupted'] = (int) $Block['interrupted'];
 
+            // Append the appropriate number of newlines to maintain line breaks
             $Block['element']['text'] .= str_repeat("\n", $Block['interrupted']);
-            unset($Block['interrupted']);
+            unset($Block['interrupted']); // Reset the interrupted flag
         }
 
-        // Double escape the backslashes for regex pattern
+        // Double escape the right marker to properly build the regex pattern for closing delimiter
         $rightMarker = preg_quote($Block['end'], '/');
         $regex = '/^(?<!\\\\)(' . $rightMarker . ')(.*)/';
 
+        // Check if the current line contains the closing delimiter
         if (preg_match($regex, $Line['text'], $matches)) {
-            $Block['complete'] = true;
-            $Block['math'] = true;
+            $Block['complete'] = true; // Mark the block as complete
+            $Block['math'] = true; // Indicate this is a math block
             $Block['element']['text'] = $Block['start'] . $Block['element']['text'] . $Block['end'] . $matches[2];
 
-
-            return $Block;
+            return $Block; // Return the completed block
         }
 
+        // Append the current line's text to the math block
         $Block['element']['text'] .= "\n" . $Line['body'];
 
+        return $Block; // Return the updated block
+    }
+
+    /**
+     * Completes the block-level math notation.
+     *
+     * This function is called when a math block is finalized.
+     *
+     * @since 1.1.2
+     *
+     * @param array $Block The current block being finalized.
+     * @return array The completed math block.
+     */
+    protected function blockMathNotationComplete($Block)
+    {
+        return $Block; // Finalize and return the completed math block
+    }
+
+
+    /**
+     * Processes fenced code blocks with special handling for extensions like Mermaid and Chart.js.
+     *
+     * This function extends the standard fenced code block parsing to handle additional languages that may
+     * require specific rendering, such as diagrams (e.g., Mermaid, Chart.js). The type of element rendered depends
+     * on the specified language, and different HTML elements may be used based on the context.
+     *
+     * @since 0.1.0
+     *
+     * @param array $Line The line being processed for a fenced code block.
+     * @return array|null The parsed code block or diagram block if applicable, otherwise null.
+     */
+    protected function blockFencedCode($Line)
+    {
+        // Check if code block parsing is enabled in the configuration settings
+        if (!$this->config()->get('code') || !$this->config()->get('code.blocks')) {
+            return null; // Return null if code block parsing is disabled
+        }
+
+        // Use the parent class to parse the fenced code block
+        $Block = parent::blockFencedCode($Line);
+        $marker = $Line['text'][0]; // Identify the marker character (e.g., backticks)
+        $openerLength = strspn($Line['text'], $marker); // Determine the length of the opening markers
+
+        // Extract the language identifier from the fenced code line
+        $parts = explode(' ', trim(substr($Line['text'], $openerLength)), 2);
+        $language = strtolower($parts[0]); // Convert the language identifier to lowercase
+
+        // Check if diagram support is enabled in the configuration
+        if (!$this->config()->get('diagrams')) {
+            return $Block; // Return the standard code block if diagrams are disabled
+        }
+
+        // Define custom handlers for specific code block extensions like Mermaid and Chart.js
+        $extensions = [
+            'mermaid' => ['div', 'mermaid'], // Mermaid diagrams rendered inside a <div> with class "mermaid"
+            'chart' => ['canvas', 'chartjs'], // Chart.js diagrams rendered inside a <canvas> with class "chartjs"
+            // Additional languages can be added here as needed
+        ];
+
+        // If the specified language matches one of the configured extensions, customize the element
+        if (isset($extensions[$language])) {
+            [$elementName, $class] = $extensions[$language]; // Extract the element name and class for the language
+
+            // Return different structures depending on the legacy mode setting
+            if (!$this->legacyMode) {
+                // Structure for version 1.8 or newer
+                return [
+                    'char' => $marker, // Store the marker character
+                    'openerLength' => $openerLength, // Store the length of the opener
+                    'element' => [
+                        'name' => $elementName, // Set the element name (e.g., 'div', 'canvas')
+                        'element' => [
+                            'text' => '', // Placeholder for content
+                        ],
+                        'attributes' => [
+                            'class' => $class, // Add the class for styling (e.g., 'mermaid', 'chartjs')
+                        ],
+                    ],
+                ];
+            } else {
+                // Structure for version 1.7 or older
+                return [
+                    'char' => $marker, // Store the marker character
+                    'openerLength' => $openerLength, // Store the length of the opener
+                    'element' => [
+                        'name' => $elementName, // Set the element name (e.g., 'div', 'canvas')
+                        'handler' => 'element', // Handler type for processing elements
+                        'text' => [
+                            'text' => '', // Placeholder for content
+                        ],
+                        'attributes' => [
+                            'class' => $class, // Add the class for styling (e.g., 'mermaid', 'chartjs')
+                        ],
+                    ],
+                ];
+            }
+        }
+
+        // Return the standard code block if no special handling is needed
         return $Block;
     }
 
 
     /**
-     * Block Math Notation Complete
+     * Processes list items, including handling task list syntax for checkboxes.
      *
-     * This method is responsible for handling a block of complete math notation.
-     * It receives a block as a parameter and returns the same block.
+     * This function processes list items in Markdown and handles special task list syntax (e.g., `- [x]` or `- [ ]`).
+     * It converts list items into appropriate HTML markup, rendering checkboxes when task lists are enabled.
+     * The function also maintains compatibility with older parsing modes.
      *
-     * @param mixed $Block The block to be processed.
-     * @return mixed The processed block.
+     * @since 0.1.0
+     *
+     * @param array $lines The lines that make up the list item being processed.
+     * @return mixed The parsed list item markup, either as a string for legacy mode or as an array of elements.
      */
-    protected function blockMathNotationComplete($Block)
-    {
-        return $Block;
-    }
-
-
-
-    protected function blockFencedCode($Line)
-    {
-        if (!$this->config()->get('code') or !$this->config()->get('code.blocks')) {
-            return null;
-        }
-
-        $Block = parent::blockFencedCode($Line);
-        $marker = $Line['text'][0];
-        $openerLength = strspn($Line['text'], $marker);
-
-        // Extract language from the line
-        $parts = explode(' ', trim(substr($Line['text'], $openerLength)), 2);
-        $language = strtolower($parts[0]);
-
-        // Check if diagrams are enabled
-        if (!$this->config()->get('diagrams')) {
-            return $Block;
-        }
-
-        $extensions = [
-            'mermaid' => ['div', 'mermaid'],
-            'chart' => ['canvas', 'chartjs'],
-            // Add more languages here as needed
-        ];
-
-        if (isset($extensions[$language])) {
-            [$elementName, $class] = $extensions[$language];
-
-            if(!$this->legacyMode) {
-                // 1.8
-                return [
-                    'char' => $marker,
-                    'openerLength' => $openerLength,
-                    'element' => [
-                        'name' => $elementName,
-                        'element' => [
-                            'text' => '',
-                        ],
-                        'attributes' => [
-                            'class' => $class,
-                        ],
-                    ],
-                ];
-            } else {
-                // 1.7
-                return [
-                    "char" => $marker,
-                    'openerLength' => $openerLength,
-                    "element" => [
-                        "name" => $elementName,
-                        "handler" => "element",
-                        "text" => [
-                            "text" => "",
-                        ],
-                        "attributes" => [
-                            "class" => $class,
-                        ],
-                    ],
-                ];
-            }
-        }
-
-        return $Block;
-    }
-
-
     protected function li($lines)
     {
+        // Check if task lists are enabled in the configuration settings
         if (!$this->config()->get('lists.tasks')) {
-            return parent::li($lines);
+            return parent::li($lines); // Return the default list item if task lists are not enabled
         }
 
+        // Handling for legacy mode (older versions of the parser)
         if ($this->legacyMode) {
+            // Generate markup for the list item lines
             $markup = $this->lines($lines);
 
-            // Get first 4 charhacters of the markup
+            // Get first 4 characters of the generated markup to check for a task checkbox
             $firstFourChars = substr($markup, 4, 4);
-            // if it is a checkbox
+
+            // Check if the list item starts with a checkbox (e.g., `[x]` or `[ ]`)
             if (preg_match('/^\[[x ]\]/i', $firstFourChars, $matches)) {
-                // check if it is checked
+                // Check if the checkbox is checked (`[x]`) or unchecked (`[ ]`)
                 if (strtolower($matches[0]) === '[x]') {
-                    // replace from the 4th character and 4 characters after with a checkbox
+                    // Replace the checkbox marker with an actual checked input element
                     $markup = substr_replace($markup, '<input type="checkbox" disabled="disabled" checked="checked" />', 4, 4);
                 } else {
-                    // replace from the 4th character and 4 characters after with a checkbox
+                    // Replace the checkbox marker with an unchecked input element
                     $markup = substr_replace($markup, '<input type="checkbox" disabled="disabled" />', 4, 4);
                 }
             }
 
+            // Trim the markup and handle paragraph tags to format correctly
             $trimmedMarkup = trim($markup);
-
-            if (! in_array('', $lines) and substr($trimmedMarkup, 0, 3) === '<p>') {
+            if (!in_array('', $lines) && substr($trimmedMarkup, 0, 3) === '<p>') {
                 $markup = $trimmedMarkup;
-                $markup = substr($markup, 3);
+                $markup = substr($markup, 3); // Remove opening paragraph tag
 
                 $position = strpos($markup, "</p>");
-
-                $markup = substr_replace($markup, '', $position, 4);
+                $markup = substr_replace($markup, '', $position, 4); // Remove closing paragraph tag
             }
 
-            return $markup;
+            return $markup; // Return the final markup for the list item
         } else {
-            /** @psalm-suppress UndefinedMethod */
+            // Handling for the newer version of the parser
             $Elements = $this->linesElements($lines);
 
+            // Extract the text of the first element to check for a task list checkbox
             $text = $Elements[0]['handler']['argument'];
             $firstFourChars = substr($text, 0, 4);
+
+            // Check if the list item starts with a checkbox (e.g., `[x]` or `[ ]`)
             if (preg_match('/^\[[x ]\]/i', $firstFourChars, $matches)) {
+                // Remove the checkbox marker from the beginning of the text
                 $Elements[0]['handler']['argument'] = substr_replace($text, '', 0, 4);
+
+                // Set the appropriate attributes based on whether the checkbox is checked or unchecked
                 if (strtolower($matches[0]) === '[x]') {
                     $Elements[0]['attributes'] = [
                         'checked' => 'checked',
@@ -1333,143 +1752,207 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
                         'disabled' => 'disabled',
                     ];
                 }
+
+                // Set the element type to 'input' for the checkbox
                 $Elements[0]['name'] = 'input';
             }
 
-
-            if (! in_array('', $lines)
-                and isset($Elements[0]) and isset($Elements[0]['name'])
-                and $Elements[0]['name'] === 'p'
+            // Remove unnecessary paragraph tags for the list item if not interrupted
+            if (!in_array('', $lines)
+                && isset($Elements[0]) && isset($Elements[0]['name'])
+                && $Elements[0]['name'] === 'p'
             ) {
-                unset($Elements[0]['name']);
+                unset($Elements[0]['name']); // Remove paragraph wrapper
             }
 
-            return $Elements;
+            return $Elements; // Return the final array of elements for the list item
         }
     }
 
 
-
+    /**
+     * Processes ATX-style headers (e.g., `# Header Text`).
+     *
+     * This function processes ATX-style headers, checks if the heading levels are allowed, generates an anchor ID for the
+     * header, and adds it to the Table of Contents (TOC) if applicable.
+     *
+     * @since 0.1.0
+     *
+     * @param array $Line The line being processed to determine if it is a header.
+     * @return array|null The parsed header block with added attributes or null if the header is not allowed.
+     */
     protected function blockHeader($Line)
     {
+        // Check if headings are enabled in the configuration settings
         if (!$this->config()->get('headings')) {
-            return null;
+            return null; // Return null if headings are disabled
         }
 
+        // Use the parent class to parse the header block
         $Block = parent::blockHeader($Line);
 
-        if (! empty($Block)) {
+        if (!empty($Block)) {
+            // Extract the text and level of the header
             $text = $Block['element']['text'] ?? $Block['element']['handler']['argument'] ?? '';
             $level = $Block['element']['name'];
 
-            // check if level is allowed
+            // Check if the header level is allowed (e.g., h1, h2, etc.)
             if (!in_array($level, $this->config()->get('headings.allowed_levels'))) {
-                return null;
+                return null; // Return null if the heading level is not allowed
             }
 
-            // Prepare value for id generation by checking if the id attribute is set else use the text
+            // Generate an anchor ID for the header element
+            // If an ID attribute is not set, use the text to create the ID
             $id = $Block['element']['attributes']['id'] ?? $text;
             $id = $this->createAnchorID($id);
 
+            // Set the 'id' attribute for the header element
             $Block['element']['attributes'] = ['id' => $id];
 
-            // Check if heading level is in the selectors
+            // Check if the heading level should be included in the Table of Contents (TOC)
             if (!in_array($level, $this->config()->get('toc.levels'))) {
-                return $Block;
+                return $Block; // Return the block if it should not be part of the TOC
             }
 
+            // Add the heading to the Table of Contents
             $this->setContentsList(['text' => $text, 'id' => $id, 'level' => $level]);
 
-            return $Block;
-        }
-    }
-
-    protected function blockSetextHeader($Line, $Block = null)
-    {
-        if (!$this->config()->get('headings')) {
-            return null;
-        }
-
-        $Block = parent::blockSetextHeader($Line, $Block);
-
-        if (! empty($Block)) {
-            $text = $Block['element']['text'] ?? $Block['element']['handler']['argument'] ?? '';
-            $level = $Block['element']['name'];
-
-            // check if level is allowed
-            if (!in_array($level, $this->config()->get('headings.allowed_levels'))) {
-                return null;
-            }
-
-            // Prepare value for id generation by checking if the id attribute is set else use the text
-            $id = $Block['element']['attributes']['id'] ?? $text;
-            $id = $this->createAnchorID($id);
-
-            $Block['element']['attributes'] = ['id' => $id];
-
-            // Check if heading level is in the selectors
-            if (!in_array($level, $this->config()->get('toc.levels'))) {
-                return $Block;
-            }
-
-            $this->setContentsList(['text' => $text, 'id' => $id, 'level' => $level]);
-
-            return $Block;
-        }
-    }
-
-
-    protected function blockAbbreviation($Line)
-    {
-        if ($this->config()->get('abbreviations')) {
-
-            if ($this->config()->get('abbreviations.allow_custom')) {
-                return parent::blockAbbreviation($Line);
-            }
-
-            return null;
+            return $Block; // Return the modified header block
         }
     }
 
     /**
-     * Tablespan
-     * Modifyed version of Tablespan by @KENNYSOFT
+     * Processes Setext-style headers (e.g., `Header Text` followed by `===` or `---`).
+     *
+     * This function processes Setext-style headers, checks if the heading levels are allowed, generates an anchor ID for the
+     * header, and adds it to the Table of Contents (TOC) if applicable.
+     *
+     * @since 0.1.0
+     *
+     * @param array $Line The line being processed for a Setext header.
+     * @param array|null $Block The existing block context (if any).
+     * @return array|null The parsed Setext header block with added attributes or null if the header is not allowed.
+     */
+    protected function blockSetextHeader($Line, $Block = null)
+    {
+        // Check if headings are enabled in the configuration settings
+        if (!$this->config()->get('headings')) {
+            return null; // Return null if headings are disabled
+        }
+
+        // Use the parent class to parse the Setext header block
+        $Block = parent::blockSetextHeader($Line, $Block);
+
+        if (!empty($Block)) {
+            // Extract the text and level of the header
+            $text = $Block['element']['text'] ?? $Block['element']['handler']['argument'] ?? '';
+            $level = $Block['element']['name'];
+
+            // Check if the header level is allowed (e.g., h1, h2, etc.)
+            if (!in_array($level, $this->config()->get('headings.allowed_levels'))) {
+                return null; // Return null if the heading level is not allowed
+            }
+
+            // Generate an anchor ID for the header element
+            // If an ID attribute is not set, use the text to create the ID
+            $id = $Block['element']['attributes']['id'] ?? $text;
+            $id = $this->createAnchorID($id);
+
+            // Set the 'id' attribute for the header element
+            $Block['element']['attributes'] = ['id' => $id];
+
+            // Check if the heading level should be included in the Table of Contents (TOC)
+            if (!in_array($level, $this->config()->get('toc.levels'))) {
+                return $Block; // Return the block if it should not be part of the TOC
+            }
+
+            // Add the heading to the Table of Contents
+            $this->setContentsList(['text' => $text, 'id' => $id, 'level' => $level]);
+
+            return $Block; // Return the modified Setext header block
+        }
+    }
+
+
+    /**
+     * Processes abbreviation blocks.
+     *
+     * This function handles the parsing of abbreviation definitions. It checks if abbreviations are enabled
+     * in the configuration and whether custom abbreviations are allowed. If custom abbreviations are allowed,
+     * it delegates the parsing to the parent class method.
+     *
+     * @since 0.1.0
+     *
+     * @param array $Line The line being processed to determine if it defines an abbreviation.
+     * @return array|null The parsed abbreviation block or null if abbreviations are disabled or custom abbreviations are not allowed.
+     */
+    protected function blockAbbreviation($Line)
+    {
+        // Check if abbreviation support is enabled in the configuration settings
+        if ($this->config()->get('abbreviations')) {
+
+            // If custom abbreviations are allowed, delegate to the parent class to handle parsing
+            if ($this->config()->get('abbreviations.allow_custom')) {
+                return parent::blockAbbreviation($Line); // Parse custom abbreviation using parent method
+            }
+
+            // If custom abbreviations are not allowed, return null to prevent processing
+            return null;
+        }
+
+        // Return null if abbreviations are completely disabled in the configuration
+        return null;
+    }
+
+
+    /**
+     * Completes the processing of table blocks.
+     *
+     * This function processes table blocks after the initial parsing to handle special features such as column spans
+     * and row spans. It processes each cell in the table, merging cells where indicated by specific characters
+     * (e.g., '>' for colspan and '^' for rowspan). The implementation handles both legacy and modern parsing modes.
+     *
+     * @since 1.0.1
+     *
+     * @param array $block The parsed table block to be processed further.
+     * @return array The completed and modified table block.
      */
     protected function blockTableComplete(array $block): array
     {
+        // Check if table spanning (colspan and rowspan) is enabled
         if (!$this->config()->get('tables.tablespan')) {
-            return $block;
+            return $block; // Return the original block if spanning is not enabled
         }
 
+        // Reference to header elements depending on legacy mode or newer version
         if ($this->legacyMode === true) {
-            // 1.7
-            $headerElements = & $block['element']['text'][0]['text'][0]['text'];
+            // Version 1.7
+            $headerElements = &$block['element']['text'][0]['text'][0]['text'];
         } else {
-            // 1.8
-            $headerElements = & $block['element']['elements'][0]['elements'][0]['elements'];
+            // Version 1.8
+            $headerElements = &$block['element']['elements'][0]['elements'][0]['elements'];
         }
 
+        // Process colspan in header elements
         for ($index = count($headerElements) - 1; $index >= 0; --$index) {
             $colspan = 1;
-            $headerElement = & $headerElements[$index];
+            $headerElement = &$headerElements[$index];
 
             if ($this->legacyMode === true) {
-                // 1.7
+                // Version 1.7
                 while ($index && $headerElements[$index - 1]['text'] === '>') {
                     $colspan++;
-                    /** @psalm-suppress UnsupportedReferenceUsage */
-                    $PreviousHeaderElement = & $headerElements[--$index];
+                    $PreviousHeaderElement = &$headerElements[--$index];
                     $PreviousHeaderElement['merged'] = true;
                     if (isset($PreviousHeaderElement['attributes'])) {
                         $headerElement['attributes'] = $PreviousHeaderElement['attributes'];
                     }
                 }
             } else {
-                // 1.8
+                // Version 1.8
                 while ($index && '>' === $headerElements[$index - 1]['handler']['argument']) {
                     $colspan++;
-                    /** @psalm-suppress UnsupportedReferenceUsage */
-                    $PreviousHeaderElement = & $headerElements[--$index];
+                    $PreviousHeaderElement = &$headerElements[--$index];
                     $PreviousHeaderElement['merged'] = true;
                     if (isset($PreviousHeaderElement['attributes'])) {
                         $headerElement['attributes'] = $PreviousHeaderElement['attributes'];
@@ -1477,58 +1960,59 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
                 }
             }
 
+            // Assign colspan attribute if colspan is greater than 1
             if ($colspan > 1) {
-                if (! isset($headerElement['attributes'])) {
+                if (!isset($headerElement['attributes'])) {
                     $headerElement['attributes'] = [];
                 }
                 $headerElement['attributes']['colspan'] = $colspan;
             }
         }
 
+        // Remove merged header elements
         for ($index = count($headerElements) - 1; $index >= 0; --$index) {
             if (isset($headerElements[$index]['merged'])) {
                 array_splice($headerElements, $index, 1);
             }
         }
 
+        // Reference to table rows based on legacy or modern mode
         if ($this->legacyMode === true) {
-            // 1.7
-            $rows = & $block['element']['text'][1]['text'];
+            // Version 1.7
+            $rows = &$block['element']['text'][1]['text'];
         } else {
-            // 1.8
-            $rows = & $block['element']['elements'][1]['elements'];
+            // Version 1.8
+            $rows = &$block['element']['elements'][1]['elements'];
         }
 
-        // Colspan
-        foreach ($rows as $rowNo => &$row) {
+        // Process colspan for rows
+        foreach ($rows as &$row) {
             if ($this->legacyMode === true) {
-                // 1.7
-                $elements = & $row['text'];
+                // Version 1.7
+                $elements = &$row['text'];
             } else {
-                // 1.8
-                $elements = & $row['elements'];
+                // Version 1.8
+                $elements = &$row['elements'];
             }
 
             for ($index = count($elements) - 1; $index >= 0; --$index) {
                 $colspan = 1;
-                $element = & $elements[$index];
+                $element = &$elements[$index];
 
                 if ($this->legacyMode === true) {
-                    // 1.7
+                    // Version 1.7
                     while ($index && $elements[$index - 1]['text'] === '>') {
                         $colspan++;
-                        /** @psalm-suppress UnsupportedReferenceUsage */
-                        $PreviousElement = & $elements[--$index];
+                        $PreviousElement = &$elements[--$index];
                         $PreviousElement['merged'] = true;
                         if (isset($PreviousElement['attributes'])) {
                             $element['attributes'] = $PreviousElement['attributes'];
                         }
                     }
                 } else {
-                    // 1.8
+                    // Version 1.8
                     while ($index && '>' === $elements[$index - 1]['handler']['argument']) {
                         ++$colspan;
-                        /** @psalm-suppress UnsupportedReferenceUsage */
                         $PreviousElement = &$elements[--$index];
                         $PreviousElement['merged'] = true;
                         if (isset($PreviousElement['attributes'])) {
@@ -1537,8 +2021,9 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
                     }
                 }
 
+                // Assign colspan attribute if colspan is greater than 1
                 if ($colspan > 1) {
-                    if (! isset($element['attributes'])) {
+                    if (!isset($element['attributes'])) {
                         $element['attributes'] = [];
                     }
                     $element['attributes']['colspan'] = $colspan;
@@ -1546,14 +2031,13 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
             }
         }
 
-        // Rowspan
+        // Process rowspan for rows
         foreach ($rows as $rowNo => &$row) {
-
             if ($this->legacyMode === true) {
-                // 1.7
-                $elements = & $row['text'];
+                // Version 1.7
+                $elements = &$row['text'];
             } else {
-                // 1.8
+                // Version 1.8
                 $elements = &$row['elements'];
             }
 
@@ -1561,25 +2045,36 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
                 $rowspan = 1;
 
                 if (isset($element['merged'])) {
-                    continue;
+                    continue; // Skip merged elements
                 }
 
                 if ($this->legacyMode === true) {
-                    // 1.7
-                    while ($rowNo + $rowspan < count($rows) && $index < count($rows[$rowNo + $rowspan]['text']) && $rows[$rowNo + $rowspan]['text'][$index]['text'] === '^' && (@$element['attributes']['colspan'] ?: null) === (@$rows[$rowNo + $rowspan]['text'][$index]['attributes']['colspan'] ?: null)) {
+                    // Version 1.7
+                    while (
+                        $rowNo + $rowspan < count($rows) &&
+                        $index < count($rows[$rowNo + $rowspan]['text']) &&
+                        $rows[$rowNo + $rowspan]['text'][$index]['text'] === '^' &&
+                        (@$element['attributes']['colspan'] ?: null) === (@$rows[$rowNo + $rowspan]['text'][$index]['attributes']['colspan'] ?: null)
+                    ) {
                         $rows[$rowNo + $rowspan]['text'][$index]['merged'] = true;
                         $rowspan++;
                     }
                 } else {
-                    // 1.8
-                    while ($rowNo + $rowspan < count($rows) && $index < count($rows[$rowNo + $rowspan]['elements']) && '>' === $rows[$rowNo + $rowspan]['elements'][$index]['handler']['argument'] && (@$element['attributes']['colspan'] ?: null) === (@$rows[$rowNo + $rowspan]['elements'][$index]['attributes']['colspan'] ?: null)) {
+                    // Version 1.8
+                    while (
+                        $rowNo + $rowspan < count($rows) &&
+                        $index < count($rows[$rowNo + $rowspan]['elements']) &&
+                        '^' === $rows[$rowNo + $rowspan]['elements'][$index]['handler']['argument'] &&
+                        (@$element['attributes']['colspan'] ?: null) === (@$rows[$rowNo + $rowspan]['elements'][$index]['attributes']['colspan'] ?: null)
+                    ) {
                         $rows[$rowNo + $rowspan]['elements'][$index]['merged'] = true;
                         $rowspan++;
                     }
                 }
 
+                // Assign rowspan attribute if rowspan is greater than 1
                 if ($rowspan > 1) {
-                    if (! isset($element['attributes'])) {
+                    if (!isset($element['attributes'])) {
                         $element['attributes'] = [];
                     }
                     $element['attributes']['rowspan'] = $rowspan;
@@ -1587,33 +2082,43 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
             }
         }
 
-        foreach ($rows as $rowNo => &$row) {
-
+        // Remove merged elements after processing row spans
+        foreach ($rows as &$row) {
             if ($this->legacyMode === true) {
-                // 1.7
-                $elements = & $row['text'];
+                // Version 1.7
+                $elements = &$row['text'];
             } else {
-                // 1.8
-                $elements = & $row['elements'];
+                // Version 1.8
+                $elements = &$row['elements'];
             }
 
             for ($index = count($elements) - 1; $index >= 0; --$index) {
                 if (isset($elements[$index]['merged'])) {
-                    array_splice($elements, $index, 1);
+                    array_splice($elements, $index, 1); // Remove merged element
                 }
             }
         }
 
-        return $block;
+        return $block; // Return the completed and modified table block
     }
-
 
 
     // Functions related to Table of Contents
     // Modified version of ToC by @KEINOS
     // -------------------------------------------------------------------------
 
-
+    /**
+     * Parses the provided text and handles escaping/unescaping of ToC tags.
+     *
+     * This function processes the given text, escaping the ToC tags temporarily,
+     * parsing the Markdown text into HTML, and then unescaping the ToC tags to
+     * include them in the final output.
+     *
+     * @since 1.0.0
+     *
+     * @param string $text The input Markdown text to be parsed.
+     * @return string The parsed HTML text with ToC tags properly handled.
+     */
     public function body(string $text): string
     {
         $text = $this->encodeTag($text); // Escapes ToC tag temporarily
@@ -1621,7 +2126,18 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
         return $this->decodeTag($html);  // Unescapes the ToC tag
     }
 
-
+    /**
+     * Retrieves the Table of Contents (ToC) in the specified format.
+     *
+     * This function returns the ToC either as a formatted string or as a JSON
+     * string. If an unknown type is provided, an exception is thrown.
+     *
+     * @since 1.0.0
+     *
+     * @param string $type_return The desired return format: 'string' or 'json'.
+     * @return string The Table of Contents in the specified format.
+     * @throws \InvalidArgumentException If an unknown return type is provided.
+     */
     public function contentsList(string $type_return = 'string'): string
     {
         switch (strtolower($type_return)) {
@@ -1637,28 +2153,49 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
         }
     }
 
-
-
+    /**
+     * Sets a callback function for creating anchor IDs for headers.
+     *
+     * This allows the user to provide custom logic for generating anchor IDs for
+     * the headers found in the Markdown content.
+     *
+     * @since 1.2.0
+     *
+     * @param callable $callback The callback function to generate anchor IDs.
+     * @return void
+     */
     public function setCreateAnchorIDCallback(callable $callback): void
     {
         $this->createAnchorIDCallback = $callback;
     }
 
-
+    /**
+     * Creates an anchor ID for a given header text.
+     *
+     * This function generates a unique anchor ID for a header, allowing for custom
+     * callbacks to be used for the generation logic. If no callback is provided,
+     * default logic is used, including transliteration, normalization, and sanitization.
+     *
+     * @since 1.0.0
+     *
+     * @param string $text The header text for which an anchor ID is generated.
+     * @return string|null The generated anchor ID or null if auto anchors are disabled.
+     */
     protected function createAnchorID(string $text): ?string
     {
-        // Check settings
+        // Check if automatic anchor generation is enabled in the settings
         if (!$this->config()->get('headings.auto_anchors')) {
-            return null;
+            return null; // Return null if auto anchors are disabled
         }
 
-        // Use user-defined logic if a callback is provided
+        // If a user-defined callback is provided, use it to generate the anchor ID
         if (is_callable($this->createAnchorIDCallback)) {
             return call_user_func($this->createAnchorIDCallback, $text, $this->config());
         }
 
-        // Default logic
+        // Default logic for anchor ID creation
 
+        // Convert text to lowercase if configured to do so
         if ($this->config()->get('headings.auto_anchors.lowercase')) {
             if (extension_loaded('mbstring')) {
                 $text = mb_strtolower($text);
@@ -1667,35 +2204,57 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
             }
         }
 
-        if($this->config()->get('headings.auto_anchors.replacements')) {
+        // Apply replacements to the text based on the configuration settings
+        if ($this->config()->get('headings.auto_anchors.replacements')) {
             $text = preg_replace(array_keys($this->config()->get('headings.auto_anchors.replacements')), $this->config()->get('headings.auto_anchors.replacements'), $text);
         }
 
+        // Normalize the text (ensure proper encoding)
         $text = $this->normalizeString($text);
 
+        // Transliterate text if configured to do so
         if ($this->config()->get('headings.auto_anchors.transliterate')) {
             $text = $this->transliterate($text);
         }
 
+        // Sanitize the text to make it a valid anchor ID
         $text = $this->sanitizeAnchor($text);
 
+        // Ensure the generated anchor ID is unique
         return $this->uniquifyAnchorID($text);
     }
 
-
+    /**
+     * Normalizes the given string to UTF-8 encoding.
+     *
+     * This function ensures that the given text is properly encoded to UTF-8, using
+     * `mb_convert_encoding` if available. If `mbstring` is not available, it returns
+     * the raw string as there is no equivalent alternative.
+     *
+     * @since 1.2.0
+     *
+     * @param string $text The input string to be normalized.
+     * @return string The normalized string.
+     */
     protected function normalizeString(string $text)
     {
         if (extension_loaded('mbstring')) {
             return mb_convert_encoding($text, 'UTF-8', mb_list_encodings());
         } else {
-            return $text; // Return raw as there is no good alternative for mb_convert_encoding
+            return $text; // Return raw text as there is no good alternative for mb_convert_encoding
         }
     }
 
     /**
-     * Transliterates the given text to ASCII.
+     * Transliterates the given string to ASCII format.
      *
-     * @param string $text The text to transliterate.
+     * This function attempts to transliterate text to ASCII, making it suitable for
+     * use in anchor IDs. It uses PHP's `Transliterator` class if available. If not,
+     * a manual transliteration method is used as a fallback.
+     *
+     * @since 1.2.0
+     *
+     * @param string $text The text to be transliterated.
      * @return string The transliterated text.
      */
     protected function transliterate(string $text): string
@@ -1707,17 +2266,25 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
             }
         }
 
-        return $this->manualTransliterate($text);
+        return $this->manualTransliterate($text); // Use manual transliteration if `Transliterator` is not available
     }
 
+
+
     /**
-     * Manually transliterates the given text to ASCII using a predefined character map.
+     * Manually transliterates a string from various alphabets to ASCII.
      *
-     * @param string $text The text to transliterate.
-     * @return string The transliterated text.
+     * This function converts characters from different scripts (Latin, Greek, Cyrillic, etc.) into their ASCII equivalents.
+     * It uses a predefined character map to replace accented or special characters with simpler ASCII versions.
+     *
+     * @since 1.3.0
+     *
+     * @param string $text The input text to be transliterated.
+     * @return string The transliterated ASCII string.
      */
     protected function manualTransliterate(string $text): string
     {
+        // Character mapping from different alphabets to their ASCII equivalents
         $characterMap = [
             // Latin
             'À' => 'A', 'Á' => 'A', 'Â' => 'A', 'Ã' => 'A', 'Ä' => 'A', 'Å' => 'AA', 'Æ' => 'AE', 'Ç' => 'C',
@@ -1783,158 +2350,296 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
             'ā' => 'a', 'ē' => 'e', 'ģ' => 'g', 'ī' => 'i', 'ķ' => 'k', 'ļ' => 'l', 'ņ' => 'n', 'ū' => 'u',
         ];
 
+        // Perform the character replacements based on the map
         return strtr($text, $characterMap);
     }
 
-
+    /**
+     * Sanitizes a string to make it suitable for use as an HTML anchor ID.
+     *
+     * This function replaces non-alphanumeric characters in the string with a delimiter
+     * (e.g., hyphen), ensuring the result is suitable as an HTML ID. Consecutive delimiters
+     * are collapsed into a single delimiter, and leading/trailing delimiters are trimmed.
+     *
+     * @since 1.2.0
+     *
+     * @param string $text The input text to be sanitized.
+     * @return string The sanitized string suitable for use as an anchor ID.
+     */
     protected function sanitizeAnchor(string $text): string
     {
+        // Get the delimiter used to replace non-alphanumeric characters (e.g., '-')
         $delimiter = $this->config()->get('headings.auto_anchors.delimiter');
-        // Replace non-alphanumeric characters with our delimiter
+
+        // Replace any character that is not a letter or number with the delimiter
         $text = preg_replace('/[^\p{L}\p{Nd}]+/u', $delimiter, $text);
-        // Remove consecutive delimiters
+
+        // Collapse consecutive delimiters into a single delimiter
         $text = preg_replace('/(' . preg_quote($delimiter, '/') . '){2,}/', '$1', $text);
-        // Remove leading and trailing delimiters
+
+        // Trim any leading or trailing delimiters
         $text = trim($text, $delimiter);
+
         return $text;
     }
 
-
+    /**
+     * Ensures that the generated anchor ID is unique.
+     *
+     * This function keeps track of generated anchor IDs to avoid duplicates. If an anchor ID has already been used,
+     * it appends a unique suffix to it. Blacklisted anchor IDs are also skipped to ensure the final anchor is valid.
+     *
+     * @since 1.2.0
+     *
+     * @param string $text The base anchor ID text.
+     * @return string A unique anchor ID.
+     */
     protected function uniquifyAnchorID(string $text): string
     {
+        // Retrieve the blacklist of forbidden anchor IDs from the configuration
         $blacklist = $this->config()->get('headings.auto_anchors.blacklist');
-        $originalText = $text; // Keep the original text for reference
 
-        // Initialize the count for this text if not already set
+        // Store the original text to use as the base for creating unique variants
+        $originalText = $text;
+
+        // Initialize or increment the counter for this specific anchor text
         if (!isset($this->anchorRegister[$text])) {
             $this->anchorRegister[$text] = 0;
         } else {
-            // If already set, increment to check for the next possible suffix
             $this->anchorRegister[$text]++;
         }
 
-        // Adjust the count based on the blacklist, ensuring we skip blacklisted numbers
+        // Adjust the anchor ID to ensure it is unique and not in the blacklist
         while (true) {
+            // Generate the potential anchor ID with the count as suffix (if needed)
             $potentialId = $originalText . ($this->anchorRegister[$text] > 0 ? '-' . $this->anchorRegister[$text] : '');
+
+            // Check if the potential ID is not blacklisted
             if (!in_array($potentialId, $blacklist)) {
-                break; // Found a non-blacklisted ID, stop adjusting the count
+                break; // The ID is valid and not blacklisted, so we can use it
             }
-            $this->anchorRegister[$text]++; // Increment the count and check the next potential ID
+
+            // Increment the counter to generate the next potential ID
+            $this->anchorRegister[$text]++;
         }
 
-        // If the adjusted count is 0, it means the original text is not blacklisted and has not appeared before
+        // If no suffix is required, return the original anchor text
         if ($this->anchorRegister[$text] === 0) {
-            return $originalText; // Return the original text as is
+            return $originalText;
         }
 
-        // Return the text appended with the adjusted count, skipping any blacklisted numbers
+        // Return the unique anchor ID with the appropriate suffix
         return $originalText . '-' . $this->anchorRegister[$text];
     }
 
 
-
+    /**
+     * Decodes the ToC tag by replacing a hashed version with the original tag.
+     *
+     * This function looks for the hashed ToC tag within the text and replaces it with the original ToC tag,
+     * effectively decoding the tag back to its original form.
+     *
+     * @since 1.2.0
+     *
+     * @param string $text The input text containing the hashed ToC tag.
+     * @return string The text with the hashed ToC tag replaced by the original tag.
+     */
     protected function decodeTag(string $text): string
     {
-        $salt = $this->getSalt();
-        $tag_origin = $this->config()->get('toc.tag');
-        $tag_hashed = hash('sha256', $salt . $tag_origin);
+        $salt = $this->getSalt(); // Retrieve the salt used for hashing
+        $tag_origin = $this->config()->get('toc.tag'); // Get the original ToC tag
+        $tag_hashed = hash('sha256', $salt . $tag_origin); // Generate the hashed version of the ToC tag
 
+        // If the hashed tag is not found, return the original text
         if (strpos($text, $tag_hashed) === false) {
             return $text;
         }
 
+        // Replace the hashed tag with the original tag
         return str_replace($tag_hashed, $tag_origin, $text);
     }
 
-
+    /**
+     * Encodes the ToC tag by replacing it with a hashed version.
+     *
+     * This function looks for the original ToC tag in the text and replaces it with a hashed version,
+     * effectively encoding it to avoid conflicts during parsing.
+     *
+     * @since 1.2.0
+     *
+     * @param string $text The input text containing the ToC tag.
+     * @return string The text with the original ToC tag replaced by the hashed version.
+     */
     protected function encodeTag(string $text): string
     {
-        $salt = $this->getSalt();
-        $tag_origin = $this->config()->get('toc.tag');
+        $salt = $this->getSalt(); // Retrieve the salt used for hashing
+        $tag_origin = $this->config()->get('toc.tag'); // Get the original ToC tag
 
+        // If the original tag is not found, return the original text
         if (strpos($text, $tag_origin) === false) {
             return $text;
         }
 
+        // Generate the hashed version of the ToC tag and replace the original tag
         $tag_hashed = hash('sha256', $salt . $tag_origin);
-
         return str_replace($tag_origin, $tag_hashed, $text);
     }
 
-
+    /**
+     * Fetches plain text from a given input by stripping tags.
+     *
+     * This function parses the given text using line formatting, then strips any HTML tags and trims whitespace,
+     * effectively extracting plain text.
+     *
+     * @since 1.0.0
+     *
+     * @param string $text The input text to be fetched.
+     * @return string The plain text version of the input.
+     */
     protected function fetchText($text): string
     {
         return trim(strip_tags($this->line($text)));
     }
 
+    /**
+     * Generates or retrieves a salt value for use in hashing.
+     *
+     * This function generates a unique salt value based on the current timestamp if it hasn't been set yet.
+     * The salt is used to create a unique hash for ToC tags, making them harder to predict.
+     *
+     * @since 1.0.0
+     *
+     * @return string The generated or retrieved salt value.
+     */
     protected function getSalt(): string
     {
         static $salt;
         if (isset($salt)) {
-            return $salt;
+            return $salt; // Return the previously generated salt
         }
 
+        // Generate a new salt based on the current timestamp
         $salt = hash('md5', (string) time());
         return $salt;
     }
 
-
+    /**
+     * Adds an entry to the contents list in both array and string formats.
+     *
+     * This function stores a representation of the contents as both an array and a formatted string.
+     * The array format can be used for structured data, while the string format is used for Markdown.
+     *
+     * @since 1.0.0
+     *
+     * @param array $Content The content entry containing 'text', 'id', and 'level' keys.
+     * @return void
+     */
     protected function setContentsList(array $Content): void
     {
-        // Stores as an array
+        // Stores content as an array
         $this->setContentsListAsArray($Content);
-        // Stores as string in markdown list format.
+        // Stores content as a string in Markdown list format
         $this->setContentsListAsString($Content);
     }
 
-
+    /**
+     * Stores the given content entry in the Table of Contents array.
+     *
+     * This function adds the content entry to the `contentsListArray`, which is used to hold a structured
+     * representation of all ToC entries.
+     *
+     * @since 1.0.0
+     *
+     * @param array $Content The content entry to be stored.
+     * @return void
+     */
     protected function setContentsListAsArray(array $Content): void
     {
-        $this->contentsListArray[] = $Content;
+        $this->contentsListArray[] = $Content; // Append content to the contents list array
     }
 
-
+    /**
+     * Adds the given content entry to the Table of Contents string.
+     *
+     * This function creates a formatted Markdown list item for the content and appends it to the
+     * Table of Contents string, which is used to generate the ToC in Markdown format.
+     *
+     * @since 1.0.0
+     *
+     * @param array $Content The content entry containing 'text', 'id', and 'level' keys.
+     * @return void
+     */
     protected function setContentsListAsString(array $Content): void
     {
-        $text = $this->fetchText($Content['text']);
-        $id = $Content['id'];
-        $level = (int) trim($Content['level'], 'h');
-        $link = "[{$text}](#{$id})";
+        $text = $this->fetchText($Content['text']); // Fetch the plain text of the content
+        $id = $Content['id']; // Get the ID of the content
+        $level = (int) trim($Content['level'], 'h'); // Get the level of the heading and convert to an integer
+        $link = "[{$text}](#{$id})"; // Create a Markdown link to the heading
 
+        // Set the first heading level if it hasn't been set yet
         if ($this->firstHeadLevel === 0) {
             $this->firstHeadLevel = $level;
         }
-        $indentLevel = max(1, $level - ($this->firstHeadLevel - 1));
-        $indent = str_repeat('  ', $indentLevel);
 
+        // Calculate the indent level for the list item
+        $indentLevel = max(1, $level - ($this->firstHeadLevel - 1));
+        $indent = str_repeat('  ', $indentLevel); // Create the appropriate indent based on the level
+
+        // Append the formatted list item to the contents list string
         $this->contentsListString .= "{$indent}- {$link}" . PHP_EOL;
     }
 
+    /**
+     * Parses the given Markdown text and replaces the ToC tag with the generated Table of Contents.
+     *
+     * This function calls the `body()` method to parse Markdown, and then replaces the placeholder
+     * ToC tag with the generated Table of Contents in HTML format.
+     *
+     * @since 0.1.0
+     *
+     * @param string $text The input Markdown text.
+     * @return string The parsed HTML text with the ToC embedded.
+     */
     public function text($text): string
     {
-        $html = $this->body($text);
+        $html = $this->body($text); // Parse the Markdown text into HTML
 
+        // If ToC functionality is disabled in the config, return the parsed HTML as is
         if (!$this->config()->get('toc')) {
             return $html;
         }
 
+        // Get the original ToC tag and check if it is in the input text
         $tag_origin = $this->config()->get('toc.tag');
         if (strpos($text, $tag_origin) === false) {
-            return $html;
+            return $html; // Return HTML if the ToC tag is not found
         }
 
+        // Replace the ToC placeholder with the actual ToC content
         $toc_data = $this->contentsList();
         $toc_id = $this->config()->get('toc.id');
         return str_replace("<p>{$tag_origin}</p>", "<div id=\"{$toc_id}\">{$toc_data}</div>", $html);
     }
 
-
+    /**
+     * Processes unmarked text, adding predefined abbreviations if configured.
+     *
+     * This function extends the parent class's functionality by adding predefined
+     * abbreviations from the configuration, before processing the unmarked text.
+     *
+     * @since 0.1.0
+     *
+     * @param string $text The input text to be processed.
+     * @return string The processed text with abbreviations applied.
+     */
     protected function unmarkedText($text)
     {
-        foreach ($this->config()->get('abbreviations.predefined') as $abbreviations => $description) {
-            $this->DefinitionData['Abbreviation'][$abbreviations] = $description;
+        // Add predefined abbreviations to the definition data
+        foreach ($this->config()->get('abbreviations.predefined') as $abbreviation => $description) {
+            $this->DefinitionData['Abbreviation'][$abbreviation] = $description;
         }
 
+        // Call the parent method to handle the rest of the text processing
         $text = parent::unmarkedText($text);
 
         return $text;
@@ -1944,54 +2649,118 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
     // Settings
     // -------------------------------------------------------------------------
 
-
-    // DEPRECATED: Use the new configuration system instead
+    /**
+     * Sets a configuration setting (DEPRECATED).
+     *
+     * This method sets a configuration setting using the new configuration system.
+     * It is deprecated and will be removed in future versions. Use `$ParsedownExtended->config()->set()` instead.
+     *
+     * @since 1.2.0
+     * @deprecated 1.3.0 Use ParsedownExtended->config()->set() instead.
+     * @see ParsedownExtended->config()->set()
+     *
+     * @param string $settingName The name of the setting to set.
+     * @param mixed $value The value to set for the setting.
+     * @param bool $overwrite Whether to overwrite an existing setting (default: false).
+     * @return void
+     */
     public function setSetting(string $settingName, $value, bool $overwrite = false)
     {
-        $this->deprecated(__METHOD__, '1.2.0', '$ParsedownExtended->config()->set()');
+        // Log the use of deprecated method for future reference
+        $this->deprecated(__METHOD__, '1.3.0', '$ParsedownExtended->config()->set()');
 
         // Use the new configuration system to set the value
         $this->config()->set($settingName, $value);
     }
 
-
-    // DEPRECATED: Use the new configuration system instead
+    /**
+     * Sets multiple configuration settings at once (DEPRECATED).
+     *
+     * This method sets multiple configuration settings using the new configuration system.
+     * It is deprecated and will be removed in future versions. Use `$ParsedownExtended->config()->set()` instead.
+     *
+     * @since 1.2.0
+     * @deprecated 1.3.0 Use ParsedownExtended->config()->set() instead.
+     * @see ParsedownExtended->config()->set()
+     *
+     * @param array $settings An associative array of settings to set (key-value pairs).
+     * @return $this
+     */
     public function setSettings(array $settings)
     {
-        $this->deprecated(__METHOD__, '1.2.0', '$ParsedownExtended->config()->set()');
+        // Log the use of deprecated method for future reference
+        $this->deprecated(__METHOD__, '1.3.0', '$ParsedownExtended->config()->set()');
 
+        // Set each individual setting using the existing setSetting method
         foreach ($settings as $key => $value) {
-            // Use the existing setSetting method to set each individual setting
             $this->setSetting($key, $value);
         }
 
         return $this;
     }
 
-    // DEPRECATED: Use the new configuration system instead
+    /**
+     * Checks if a configuration setting is enabled (DEPRECATED).
+     *
+     * This method checks if a particular setting is enabled using the new configuration system.
+     * It is deprecated and will be removed in future versions. Use `$ParsedownExtended->config()->get()` instead.
+     *
+     * @since 1.2.2
+     * @deprecated 1.3.0 Use ParsedownExtended->config()->get() instead.
+     * @see ParsedownExtended->config()->get()
+     *
+     * @param string $keyPath The key path of the setting to check.
+     * @return mixed The value of the setting (generally a boolean for 'enabled' settings).
+     */
     public function isEnabled(string $keyPath)
     {
-        $this->deprecated(__METHOD__, '1.2.0', '$ParsedownExtended->config()->get()');
+        // Log the use of deprecated method for future reference
+        $this->deprecated(__METHOD__, '1.3.0', '$ParsedownExtended->config()->get()');
 
         // Use the new configuration system to get the value
         return $this->config()->get($keyPath);
     }
 
-
-    // DEPRECATED: Use the new configuration system instead
+    /**
+     * Gets the value of a configuration setting (DEPRECATED).
+     *
+     * This method retrieves a setting using the new configuration system.
+     * It is deprecated and will be removed in future versions. Use `$ParsedownExtended->config()->get()` instead.
+     *
+     * @since 1.2.0
+     * @deprecated 1.3.0 Use ParsedownExtended->config()->get() instead.
+     * @see ParsedownExtended->config()->get()
+     *
+     * @param string $key The key of the setting to retrieve.
+     * @return mixed The value of the specified setting.
+     */
     public function getSetting(string $key)
     {
-        $this->deprecated(__METHOD__, '1.2.0', '$ParsedownExtended->config()->get()');
+        // Log the use of deprecated method for future reference
+        $this->deprecated(__METHOD__, '1.3.0', '$ParsedownExtended->config()->get()');
 
         // Use the new configuration system to get the value
         return $this->config()->get($key);
     }
 
-    // DEPRECATED: Use the new configuration system instead
+    /**
+     * Gets all configuration settings (DEPRECATED).
+     *
+     * This method retrieves all settings.
+     * It is deprecated and will be removed in future versions. Use `$ParsedownExtended->config()->get()` instead.
+     *
+     * @since 1.2.0
+     * @deprecated 1.3.0 Use ParsedownExtended->config()->get() instead.
+     * @see ParsedownExtended->config()->get()
+     *
+     * @return array An associative array of all settings.
+     */
     public function getSettings()
     {
-        $this->deprecated(__METHOD__, '1.2.0', '$ParsedownExtended->config()->get()');
+        // Log the use of deprecated method for future reference
+        $this->deprecated(__METHOD__, '1.3.0', '$ParsedownExtended->config()->get()');
 
+        // Return the current settings
         return $this->settings;
     }
 
@@ -1999,98 +2768,136 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
     // Helper functions
     // -------------------------------------------------------------------------
 
-
+    /**
+     * Registers an inline type marker with a corresponding handler function.
+     *
+     * This function ensures that a given marker is registered for inline parsing, associating it with
+     * a handler function that will handle the inline behavior for that marker.
+     *
+     * @since 1.1.2
+     *
+     * @param mixed $markers One or more markers to register (can be a string or an array).
+     * @param string $funcName The name of the handler function associated with the marker(s).
+     * @return void
+     */
     private function addInlineType($markers, string $funcName): void
     {
-        // Ensure $markers is an array, even if it's a single marker
+        // Ensure $markers is always an array, even if a single marker is passed as a string
         $markers = (array) $markers;
 
         foreach ($markers as $marker) {
+            // If the marker is not already registered, initialize it
             if (!isset($this->InlineTypes[$marker])) {
                 $this->InlineTypes[$marker] = [];
             }
 
-            // add to specialcharecters array
+            // Add the marker to the special characters array if it's not already present
             if (!in_array($marker, $this->specialCharacters)) {
                 $this->specialCharacters[] = $marker;
             }
 
-            // add to the beginning of the array so it has priority
+            // Add the function name to the beginning of the marker's handlers for priority
             array_unshift($this->InlineTypes[$marker], $funcName);
+
+            // Append the marker to the inline marker list
             $this->inlineMarkerList .= $marker;
         }
     }
 
-
-
+    /**
+     * Registers a block type marker with a corresponding handler function.
+     *
+     * This function ensures that a given marker is registered for block parsing, associating it with
+     * a handler function that will handle the block behavior for that marker.
+     *
+     * @since 1.1.2
+     *
+     * @param mixed $markers One or more markers to register (can be a string or an array).
+     * @param string $funcName The name of the handler function associated with the marker(s).
+     * @return void
+     */
     private function addBlockType($markers, string $funcName): void
     {
+        // Ensure $markers is always an array, even if a single marker is passed as a string
         $markers = (array) $markers;
 
         foreach ($markers as $marker) {
+            // If the marker is not already registered, initialize it
             if (!isset($this->BlockTypes[$marker])) {
                 $this->BlockTypes[$marker] = [];
             }
 
-            // add to specialcharecters array
+            // Add the marker to the special characters array if it's not already present
             if (!in_array($marker, $this->specialCharacters)) {
                 $this->specialCharacters[] = $marker;
             }
 
-            // add to the beginning of the array so it has priority
+            // Add the function name to the beginning of the marker's handlers for priority
             array_unshift($this->BlockTypes[$marker], $funcName);
         }
     }
 
-    /*
-     * This function is used to warn users about deprecated functions
+    /**
+     * Warns users about deprecated functions.
      *
-     * @param string $functionName The name of the function that is deprecated
-     * @param string $version The version in which the function was deprecated
-     * @param string $alternative The alternative function to use
+     * This function is used to trigger a deprecation warning when deprecated functions are called.
+     * It informs the user about the function being deprecated, the version it was deprecated in,
+     * and suggests an alternative function to use.
      *
+     * @since 1.3.0
+     *
+     * @param string $functionName The name of the deprecated function.
+     * @param string $version The version in which the function was deprecated.
+     * @param string $alternative (Optional) The name of an alternative function to use.
      * @return void
      */
     private function deprecated(string $functionName, string $version, string $alternative = ''): void
     {
+        // Get the call stack to determine where this deprecated function was called
         $backtrace = debug_backtrace();
         $caller = $backtrace[1] ?? $backtrace[0];
-        $message = "Function {$functionName} is deprecated as of version {$version} and will be removed in the future. ";
-        $message .= $alternative ? "Use {$alternative} instead." : '';
-        $message .= "Called in {$caller['file']} on line {$caller['line']}";
 
+        // Create the deprecation message with the function name and version
+        $message = "Function {$functionName} is deprecated as of version {$version} and will be removed in the future. ";
+        // Append an alternative function suggestion if provided
+        $message .= $alternative ? "Use {$alternative} instead." : '';
+        // Include the file and line number where the deprecated function was called
+        $message .= " Called in {$caller['file']} on line {$caller['line']}";
+
+        // Trigger the deprecated warning
         trigger_error($message, E_USER_DEPRECATED);
     }
-
-
-
 
     // Configurations Handler
     // -------------------------------------------------------------------------
 
     /**
-     * Initializes the configuration array based on the given schema.
+     * Initialize configuration using a given schema.
      *
-     * @param array $schema The schema defining the configuration structure.
-     * @return array The initialized configuration array.
+     * This function iterates through the given schema to initialize the default configuration settings.
+     * It handles nested arrays and array types with nested defaults.
+     *
+     * @since 1.3.0
+     *
+     * @param array $schema The configuration schema to use for initialization.
+     * @return array The initialized configuration based on the given schema.
      */
     private function initializeConfig(array $schema)
     {
         $config = [];
         foreach ($schema as $key => $definition) {
+            // Handle array types with nested defaults
             if (isset($definition['type'])) {
                 if ($definition['type'] === 'array' && is_array($definition['default'])) {
-                    // Handle array types with nested defaults
                     $config[$key] = $this->initializeConfig($definition['default']);
                 } else {
                     $config[$key] = $definition['default'];
                 }
             } else {
+                // Recursively initialize nested configurations
                 if (is_array($definition)) {
-                    // Recursively initialize nested configurations
                     $config[$key] = $this->initializeConfig($definition);
                 } else {
-                    // If the definition is not an array, assign it directly
                     $config[$key] = $definition;
                 }
             }
@@ -2099,9 +2906,14 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
     }
 
     /**
-     * Defines the configuration schema for ParsedownExtended.
+     * Define the configuration schema.
      *
-     * @return array The configuration schema.
+     * This function returns a comprehensive configuration schema that defines the type,
+     * default values, and nested structures for each configuration setting.
+     *
+     * @since 1.3.0
+     *
+     * @return array The defined configuration schema.
      */
     private function defineConfigSchema(): array
     {
@@ -2247,10 +3059,18 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
         ];
     }
 
+
     /**
-     * Retrieves the configuration schema.
+     * Retrieve the configuration schema.
      *
-     * @return array The configuration schema.
+     * This function returns the complete configuration schema that defines the structure,
+     * expected data types, and default values for all configurable settings.
+     *
+     * The schema is used internally for validation and providing type safety when getting or setting configuration values.
+     *
+     * @since 1.3.0
+     *
+     * @return array The configuration schema as an associative array.
      */
     public function getConfigSchema(): array
     {
@@ -2258,8 +3078,14 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
     }
 
     /**
-     * Represents a configuration object for ParsedownExtended.
-     * This class provides methods to retrieve and set configuration values based on key paths.
+     * Return a new instance of an anonymous configuration class.
+     *
+     * This function creates an instance of a class that provides methods to interact with the configuration settings.
+     * It allows getting and setting configuration values, including translating deprecated keys and validating types.
+     *
+     * @since 1.3.0
+     *
+     * @return object Anonymous configuration object with get and set methods.
      */
     public function config()
     {
@@ -2267,6 +3093,14 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
             private array $schema;
             private $config;
 
+            /**
+             * Constructor to initialize configuration schema and reference configuration array.
+             *
+             * @since 0.1.0
+             *
+             * @param array $schema The schema that defines the structure and types of config.
+             * @param array &$config A reference to the actual configuration array.
+             */
             public function __construct(array $schema, &$config)
             {
                 $this->schema = $schema;
@@ -2274,31 +3108,31 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
             }
 
             /**
-             * Translates deprecated key paths to their new equivalents.
-             * @param string $keyPath
-             * @return string
+             * Translate deprecated key paths to the new key paths.
+             *
+             * This function checks for deprecated configuration keys and suggests a newer version if available.
+             *
+             * @since 1.3.0
+             *
+             * @param string $keyPath The key path to be translated.
+             * @return string The translated or original key path.
              */
             private function translateDeprecatedKeyPath(string $keyPath): string
             {
                 static $deprecatedMapping = [
+                    // Mapping of deprecated keys to new keys.
                     'abbreviations.allow_custom_abbr' => 'abbreviations.allow_custom',
                     'abbreviations.predefine' => 'abbreviations.predefined',
                     'emphasis.marking' => 'emphasis.mark',
                     'headings.allowed' => 'headings.allowed_levels',
                     'smarty' => 'smartypants',
                     'smarty.substitutions.left-angle-quote' => 'smartypants.substitutions.left_angle_quote',
-                    'smarty.substitutions.left-double-quote' => 'smartypants.substitutions.left_double_quote',
-                    'smarty.substitutions.left-single-quote' => 'smartypants.substitutions.left_single_quote',
-                    'smarty.substitutions.right-angle-quote' => 'smartypants.substitutions.right_angle_quote',
-                    'smarty.substitutions.right-double-quote' => 'smartypants.substitutions.right_double_quote',
-                    'smarty.substitutions.right-single-quote' => 'smartypants.substitutions.right_single_quote',
                     'toc.toc_tag' => 'toc.tag',
                     'markup' => 'allow_raw_html',
-                    'special_attributes' => 'headings.special_attributes',
                     'toc.headings' => 'toc.levels',
                 ];
 
-                // If the key path is deprecated we should alert the user
+                // If the key path is deprecated, trigger a deprecation warning.
                 if (isset($deprecatedMapping[$keyPath])) {
                     $backtrace = debug_backtrace();
                     $caller = $backtrace[1] ?? $backtrace[0];
@@ -2309,23 +3143,25 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
                 return $deprecatedMapping[$keyPath] ?? $keyPath;
             }
 
-
             /**
-             * Retrieves the value from the configuration based on the given key path.
+             * Get the configuration value for the provided key path.
              *
-             * @param string $keyPath The key path to retrieve the value from.
-             * @return mixed The value retrieved from the configuration.
+             * @since 1.3.0
+             *
+             * @param string $keyPath Dot-separated key path indicating the config to get.
+             * @return mixed The value of the configuration setting.
              * @throws \InvalidArgumentException If the key path is invalid.
              */
             public function get(string $keyPath)
             {
-                // Translate deprecated key paths
+                // Translate deprecated key paths.
                 $keyPath = $this->translateDeprecatedKeyPath($keyPath);
 
-                // Split the key path into an array
+                // Split the key path into individual keys.
                 $keys = explode('.', $keyPath);
                 $value = $this->config;
 
+                // Traverse through keys to reach the desired value.
                 foreach ($keys as $key) {
                     if (!array_key_exists($key, $value)) {
                         $backtrace = debug_backtrace();
@@ -2336,40 +3172,41 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
                     $value = $value[$key];
                 }
 
+                // If the value is an array with an 'enabled' key, return that instead.
                 return is_array($value) && isset($value['enabled']) ? $value['enabled'] : $value;
             }
 
             /**
-             * Set a configuration value based on a key path.
+             * Set the configuration value for the provided key path.
              *
-             * @param string|array $keyPath The key path or an associative array of key-value pairs.
+             * @since 1.3.0
+             *
+             * @param string|array $keyPath Dot-separated key path indicating the config to set or an associative array of key paths and values.
              * @param mixed $value The value to set.
-             * @return self Returns an instance of the class.
-             * @throws \InvalidArgumentException If an invalid key path is given or if the value does not match the expected type.
+             * @return self Returns the instance for method chaining.
+             * @throws \InvalidArgumentException If the key path is invalid or the value is of the wrong type.
              */
             public function set($keyPath, $value = null): self
             {
-
                 if (is_array($keyPath)) {
-                    // Set multiple values if an associative array is provided
+                    // Set multiple values if an associative array is provided.
                     foreach ($keyPath as $key => $val) {
                         $this->set($key, $val);
                     }
                     return $this;
                 }
 
-                // Translate deprecated key paths
+                // Translate deprecated key paths.
                 $keyPath = $this->translateDeprecatedKeyPath($keyPath);
 
-                // Split the key path into an array
+                // Split the key path into individual keys.
                 $keys = explode('.', $keyPath);
-
                 $lastKey = array_pop($keys);
-                /** @psalm-suppress UnsupportedPropertyReferenceUsage */
+
                 $current = &$this->config;
                 $currentSchema = $this->schema;
 
-                // Navigate to the desired configuration section
+                // Navigate to the desired configuration section.
                 foreach ($keys as $key) {
                     if (!isset($current[$key])) {
                         $backtrace = debug_backtrace();
@@ -2384,7 +3221,7 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
                     $currentSchema = $currentSchema[$key];
                 }
 
-                // Validate and set the value for the specified key
+                // Validate and set the value for the specified key.
                 if (isset($currentSchema['default'][$lastKey])) {
                     $expectedType = $currentSchema['default'][$lastKey]['type'];
                     $this->validateType($value, $expectedType, $currentSchema['default'][$lastKey]);
@@ -2400,7 +3237,7 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
                     if ($expectedType) {
                         $this->validateType($value, $expectedType, $currentSchema[$lastKey]);
                     }
-                    // Update to handle 'enabled' field specifically
+                    // Update the 'enabled' field if applicable.
                     if (isset($current[$lastKey]) && is_array($current[$lastKey]) && isset($current[$lastKey]['enabled'])) {
                         $current[$lastKey]['enabled'] = $value;
                     } else {
@@ -2411,14 +3248,15 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
                 return $this;
             }
 
-
             /**
-             * Validates the type of a value against an expected type.
+             * Validate the type of the given value against the expected type.
              *
-             * @param mixed $value The value to validate.
-             * @param string $expectedType The expected type.
-             * @param array|null $schema Optional schema for additional checks.
-             * @throws \InvalidArgumentException If the value does not match the expected type.
+             * @since 1.3.0
+             *
+             * @param mixed $value The value to be validated.
+             * @param string $expectedType The expected type of the value.
+             * @param array|null $schema Additional schema for validation (e.g., item schema for arrays).
+             * @throws \InvalidArgumentException If the value type does not match the expected type.
              */
             protected function validateType($value, string $expectedType, ?array $schema = null): void
             {
@@ -2427,7 +3265,7 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
                 if ($expectedType === 'array' && $type === 'array') {
                     if (isset($schema['item_schema'])) {
                         if (isset($schema['item_schema']['key_type']) && isset($schema['item_schema']['value_type'])) {
-                            // Validate key-value pairs in the array
+                            // Validate key-value pairs in the array.
                             $keyType = $schema['item_schema']['key_type'];
                             $valueType = $schema['item_schema']['value_type'];
 
@@ -2440,35 +3278,12 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
                                 }
                             }
                             return;
-                        } elseif (isset($schema['item_schema']['keys'])) {
-                            // Validate arrays of associative arrays with specific keys
-                            foreach ($value as $item) {
-                                foreach ($schema['item_schema']['keys'] as $key => $itemType) {
-                                    if (!isset($item[$key]) || gettype($item[$key]) !== $itemType) {
-                                        $backtrace = debug_backtrace();
-                                        $caller = $backtrace[1] ?? $backtrace[0];
-                                        $errorMessage = "Array items must have '$key' of type '$itemType'. Called in " . ($caller['file'] ?? 'unknown') . " on line " . ($caller['line'] ?? 'unknown');
-                                        throw new \InvalidArgumentException($errorMessage);
-                                    }
-                                }
-                            }
-                        } else {
-                            // Validate arrays of simple types
-                            $itemType = $schema['item_schema']['type'];
-                            foreach ($value as $item) {
-                                if (gettype($item) !== $itemType) {
-                                    $backtrace = debug_backtrace();
-                                    $caller = $backtrace[1] ?? $backtrace[0];
-                                    $errorMessage = "Array items must be of type '$itemType'. Called in " . ($caller['file'] ?? 'unknown') . " on line " . ($caller['line'] ?? 'unknown');
-                                    throw new \InvalidArgumentException($errorMessage);
-                                }
-                            }
                         }
                     }
                     return;
                 }
 
-                // If types do not match, throw an error with debug information
+                // If types do not match, throw an error with debug information.
                 if ($type !== $expectedType) {
                     $backtrace = debug_backtrace();
                     $caller = $backtrace[1] ?? $backtrace[0];
@@ -2476,49 +3291,62 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
                     throw new \InvalidArgumentException($errorMessage);
                 }
             }
-
         };
     }
-
-
 
 
     // Overwriting core Parsedown functions
     // -------------------------------------------------------------------------
 
+    /**
+     * Handle an element based on the legacy mode.
+     *
+     * This function extends the core Parsedown behavior to handle specific cases
+     * when in legacy mode, particularly for empty element names.
+     *
+     * @since 0.1.0
+     *
+     * @param array $Element The element to be processed.
+     * @return string|array Processed element or markup.
+     */
     protected function element(array $Element)
     {
         if ($this->legacyMode) {
-            // Check if the name is empty
+            // If the element's name is empty, return the text attribute
             if (empty($Element['name'])) {
                 return $Element['text'] ?? '';
             }
         }
 
-        // Use the parent
+        // Use the original element method from the parent
         return parent::element($Element);
     }
 
-
     /**
-     * Overwrite line from Parsedown to allow for more precise control over inline elements
-     * line() is 1.7 version of lineElements() from 1.8, so we overwrite it too, it will not be called
-     * when using 1.8 version of parsedown
+     * Process a line of markdown text and extract inline elements.
+     *
+     * This function processes a line of markdown text by iteratively searching for
+     * markers in the text, and applies the appropriate inline handlers for those markers.
+     *
+     * @since 0.1.0
+     *
+     * @param string $text The text to be parsed for inline elements.
+     * @param array $nonNestables Array of inline types that should not be nested.
+     * @return string The parsed HTML markup for the given line.
      */
     public function line($text, $nonNestables = [])
     {
         $markup = '';
 
-        // $Excerpt is based on the first occurrence of a marker
-
+        // Search for inline markers in the text
         while ($Excerpt = strpbrk((string)$text, $this->inlineMarkerList)) {
             $marker = $Excerpt[0];
-
             $markerPosition = strpos($text, $marker);
 
-            // Get the charecter before the marker
+            // Get the character before the marker
             $before = $markerPosition > 0 ? $text[$markerPosition - 1] : '';
 
+            // Create an excerpt array with context for inline processing
             $Excerpt = [
                 'text' => $Excerpt,
                 'context' => $text,
@@ -2526,161 +3354,161 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
                 'parent' => $this,
             ];
 
+            // Iterate through possible inline types for the marker
             foreach ($this->InlineTypes[$marker] as $inlineType) {
-                // check to see if the current inline type is nestable in the current context
-
-                if (! empty($nonNestables) and in_array($inlineType, $nonNestables)) {
-                    continue;
+                if (!empty($nonNestables) && in_array($inlineType, $nonNestables)) {
+                    continue; // Skip non-nestable inline types in this context
                 }
 
+                // Attempt to create an inline element using the handler
                 $Inline = $this->{'inline'.$inlineType}($Excerpt);
 
-                if (! isset($Inline)) {
-                    continue;
+                if (!isset($Inline)) {
+                    continue; // If no inline element was found, continue to the next type
                 }
 
-
-                // makes sure that the inline belongs to "our" marker
-
-                if (isset($Inline['position']) and $Inline['position'] > $markerPosition) {
-                    continue;
+                if (isset($Inline['position']) && $Inline['position'] > $markerPosition) {
+                    continue; // Ensure the inline belongs to the current marker
                 }
 
-                // sets a default inline position
-
-                if (! isset($Inline['position'])) {
+                // Set a default position if not provided
+                if (!isset($Inline['position'])) {
                     $Inline['position'] = $markerPosition;
                 }
 
-                // cause the new element to 'inherit' our non nestables
-
+                // Add non-nestables to the inline element
                 foreach ($nonNestables as $non_nestable) {
                     $Inline['element']['nonNestables'][] = $non_nestable;
                 }
 
-                // the text that comes before the inline
+                // Compile the text that comes before the inline element
                 $unmarkedText = substr($text, 0, $Inline['position']);
-
-                // compile the unmarked text
                 $markup .= $this->unmarkedText($unmarkedText);
 
-                // compile the inline
+                // Compile the inline element
                 $markup .= $Inline['markup'] ?? $this->element($Inline['element']);
 
-                // remove the examined text
+                // Remove the processed text from the input
                 $text = substr($text, $Inline['position'] + $Inline['extent']);
 
-                continue 2;
+                continue 2; // Continue parsing the rest of the text
             }
 
-            // the marker does not belong to an inline
-
+            // If no valid inline marker was found, add the marker to the markup
             $unmarkedText = substr($text, 0, $markerPosition + 1);
-
             $markup .= $this->unmarkedText($unmarkedText);
-
             $text = substr($text, $markerPosition + 1);
         }
 
+        // Compile the remaining text
         $markup .= $this->unmarkedText($text);
 
         return $markup;
     }
 
+
     /**
-         * Overwrite lineElements from Parsedown to allow for more precise control over inline elements
-         * lineElements() is 1.8 version of line() from 1.7, so we overwrite it too, it will not be called
-         * when using 1.7 version of parsedown
-         */
+     * Parses a line of text into inline elements.
+     *
+     * This function processes the given text, identifying markers and breaking it into inline elements.
+     * Inline elements include things like bold, italic, links, etc. It recursively handles nesting and respects
+     * non-nestable contexts.
+     *
+     * lineElements() is 1.8 version of line() from 1.7
+     *
+     * @since 0.1.0
+     *
+     * @param string $text The text to be parsed.
+     * @param array $nonNestables An array of inline types that should not be nested within this context.
+     *
+     * @return array An array of parsed elements representing the structure of the given text.
+     */
     protected function lineElements($text, $nonNestables = []): array
     {
-
         $Elements = [];
 
+        // If non-nestable elements are provided, convert them to associative array for fast lookup
         $nonNestables = (
             empty($nonNestables)
             ? []
             : array_combine($nonNestables, $nonNestables)
         );
 
-        // $Excerpt is based on the first occurrence of a marker
-
+        // $Excerpt represents the first occurrence of an inline marker in the text
         while ($Excerpt = strpbrk($text, $this->inlineMarkerList)) {
-            $marker = $Excerpt[0];
+            $marker = $Excerpt[0]; // The detected marker
+            $markerPosition = strlen($text) - strlen($Excerpt); // Calculate the marker position in the text
 
-            $markerPosition = strlen($text) - strlen($Excerpt);
-
-            // Get the charecter before the marker
+            // Get the character before the marker (if any)
             $before = $markerPosition > 0 ? $text[$markerPosition - 1] : '';
 
+            // Prepare an excerpt for further processing
             $Excerpt = ['text' => $Excerpt, 'context' => $text, 'before' => $before];
 
+            // Process all inline types associated with this marker
             foreach ($this->InlineTypes[$marker] as $inlineType) {
-                // check to see if the current inline type is nestable in the current context
-
+                // Skip inline types that are non-nestable within this context
                 if (isset($nonNestables[$inlineType])) {
                     continue;
                 }
 
+                // Call the corresponding inline processing function
                 $Inline = $this->{"inline$inlineType"}($Excerpt);
 
-                if (! isset($Inline)) {
+                // If no valid inline element was found, continue to the next inline type
+                if (!isset($Inline)) {
                     continue;
                 }
 
-                // makes sure that the inline belongs to "our" marker
-
-                if (isset($Inline['position']) and $Inline['position'] > $markerPosition) {
+                // Ensure the inline element belongs to the current marker
+                if (isset($Inline['position']) && $Inline['position'] > $markerPosition) {
                     continue;
                 }
 
-                // sets a default inline position
-
-                if (! isset($Inline['position'])) {
+                // Set default inline position if not specified
+                if (!isset($Inline['position'])) {
                     $Inline['position'] = $markerPosition;
                 }
 
-                // cause the new element to 'inherit' our non nestables
+                // Inherit non-nestable elements from the current context
                 $Inline['element']['nonNestables'] = isset($Inline['element']['nonNestables'])
                     ? array_merge($Inline['element']['nonNestables'], $nonNestables)
-                    : $nonNestables
-                ;
+                    : $nonNestables;
 
-                // the text that comes before the inline
+                // Get the text before the inline marker
                 $unmarkedText = substr($text, 0, $Inline['position']);
 
-                // compile the unmarked text
-                /** @psalm-suppress UndefinedMethod */
+                // Process and add the unmarked text as an element
                 $InlineText = $this->inlineText($unmarkedText);
                 $Elements[] = $InlineText['element'];
 
-                // compile the inline
-                /** @psalm-suppress UndefinedMethod */
+                // Process and add the inline element
                 $Elements[] = $this->extractElement($Inline);
 
-                // remove the examined text
+                // Remove the processed portion from the text and continue parsing
                 $text = substr($text, $Inline['position'] + $Inline['extent']);
 
                 continue 2;
             }
 
-            // the marker does not belong to an inline
-
+            // If no valid inline element was found for the marker, treat it as plain text
             $unmarkedText = substr($text, 0, $markerPosition + 1);
 
-            /** @psalm-suppress UndefinedMethod */
+            // Process and add the unmarked text as an element
             $InlineText = $this->inlineText($unmarkedText);
             $Elements[] = $InlineText['element'];
 
+            // Remove the processed portion from the text
             $text = substr($text, $markerPosition + 1);
         }
 
-        /** @psalm-suppress UndefinedMethod */
+        // Process any remaining text after all markers
         $InlineText = $this->inlineText($text);
         $Elements[] = $InlineText['element'];
 
+        // Set the `autobreak` property for each element, defaulting to false if not already set
         foreach ($Elements as &$Element) {
-            if (! isset($Element['autobreak'])) {
+            if (!isset($Element['autobreak'])) {
                 $Element['autobreak'] = false;
             }
         }
