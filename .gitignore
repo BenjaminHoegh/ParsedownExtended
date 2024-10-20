@@ -18,6 +18,7 @@ composer.phar
 
 # phpDocumentor
 .phpdoc/
+phpDocumentor.phar
 
 # Windows
 Thumbs.db
