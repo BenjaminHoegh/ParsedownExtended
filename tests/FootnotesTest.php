@@ -3,7 +3,7 @@
 use BenjaminHoegh\ParsedownExtended\ParsedownExtended;
 use PHPUnit\Framework\TestCase;
 
-class FootnoteTest extends TestCase
+class FootnotesTest extends TestCase
 {
     protected ParsedownExtended $parsedownExtended;
 
