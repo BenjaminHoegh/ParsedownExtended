@@ -3414,7 +3414,7 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
              * @return mixed The value of the configuration setting.
              * @throws \InvalidArgumentException If the key path is invalid.
              */
-            public function get(string $keyPath)
+            public function get(string $keyPath, bool $raw = false)
             {
                 // Translate deprecated key paths.
                 $keyPath = $this->translateDeprecatedKeyPath($keyPath);
@@ -3432,6 +3432,10 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
                         throw new \InvalidArgumentException($errorMessage);
                     }
                     $value = $value[$key];
+                }
+
+                if ($raw) {
+                    return $value;
                 }
 
                 // If the value is an array with an 'enabled' key, return that instead.
@@ -3501,7 +3505,19 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
                     }
                     // Update the 'enabled' field if applicable.
                     if (isset($current[$lastKey]) && is_array($current[$lastKey]) && isset($current[$lastKey]['enabled'])) {
-                        $current[$lastKey]['enabled'] = $value;
+
+                        /**
+                         * If the value is an array, it recursively sets each sub-value.
+                         * Otherwise, it sets the 'enabled' key of the current configuration.
+                         */
+                        if (is_array($value)) {
+                            foreach ($value as $subKey => $subValue) {
+                                $this->set($keyPath . '.' . $subKey, $subValue);
+                            }
+                        } else {
+                            $current[$lastKey]['enabled'] = $value;
+                        }
+
                     } else {
                         $current[$lastKey] = $value;
                     }
