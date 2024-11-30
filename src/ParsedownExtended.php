@@ -3406,11 +3406,12 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
             }
 
             /**
-             * Get the configuration value for the provided key path.
+             * Retrieves a value from a nested array or object using a dot-separated key path.
              *
              * @since 1.3.0
              *
              * @param string $keyPath Dot-separated key path indicating the config to get.
+             * @param bool $raw Whether to return the raw value without any processing.
              * @return mixed The value of the configuration setting.
              * @throws \InvalidArgumentException If the key path is invalid.
              */
