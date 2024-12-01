@@ -168,6 +168,8 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
         if ($this->config()->get('code') && $this->config()->get('code.inline')) {
             return parent::inlineCode($Excerpt);
         }
+
+        return null;
     }
 
     /**
@@ -185,6 +187,8 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
         if ($this->config()->get('images')) {
             return parent::inlineImage($Excerpt);
         }
+
+        return null;
     }
 
     /**
@@ -202,6 +206,8 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
         if ($this->config()->get('allow_raw_html')) {
             return parent::inlineMarkup($Excerpt);
         }
+
+        return null;
     }
 
     /**
@@ -219,6 +225,8 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
         if ($this->config()->get('emphasis.strikethroughs') && $this->config()->get('emphasis')) {
             return parent::inlineStrikethrough($Excerpt);
         }
+
+        return null;
     }
 
     /**
@@ -1467,6 +1475,8 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
         if ($this->config()->get('footnotes')) {
             return parent::blockFootnote($Line); // Delegate to parent class
         }
+
+        return null;
     }
 
     /**
@@ -1484,6 +1494,8 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
         if ($this->config()->get('definition_lists')) {
             return parent::blockDefinitionList($Line, $Block); // Delegate to parent class
         }
+
+        return null;
     }
 
     /**
@@ -1501,6 +1513,8 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
         if ($this->config()->get('code') && $this->config()->get('code.blocks')) {
             return parent::blockCode($Line, $Block); // Delegate to parent class
         }
+
+        return null;
     }
 
     /**
@@ -1517,6 +1531,8 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
         if ($this->config()->get('comments')) {
             return parent::blockComment($Line); // Delegate to parent class
         }
+
+        return null;
     }
 
     /**
@@ -1534,6 +1550,8 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
         if ($this->config()->get('lists')) {
             return parent::blockList($Line, $CurrentBlock); // Delegate to parent class
         }
+
+        return null;
     }
 
     /**
@@ -1550,6 +1568,8 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
         if ($this->config()->get('quotes')) {
             return parent::blockQuote($Line); // Delegate to parent class
         }
+
+        return null;
     }
 
     /**
@@ -1566,6 +1586,8 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
         if ($this->config()->get('thematic_breaks')) {
             return parent::blockRule($Line); // Delegate to parent class
         }
+
+        return null;
     }
 
     /**
@@ -1582,6 +1604,8 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
         if ($this->config()->get('allow_raw_html')) {
             return parent::blockMarkup($Line); // Delegate to parent class
         }
+
+        return null;
     }
 
     /**
@@ -1598,6 +1622,8 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
         if ($this->config()->get('references')) {
             return parent::blockReference($Line); // Delegate to parent class
         }
+
+        return null;
     }
 
     /**
@@ -1615,6 +1641,8 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
         if ($this->config()->get('tables')) {
             return parent::blockTable($Line, $Block); // Delegate to parent class
         }
+
+        return null;
     }
 
 
@@ -1654,7 +1682,7 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
             $class = $this->config()->get('alerts.class');
 
             // Build the alert block with appropriate HTML attributes and content
-            $Block = [
+            return [
                 'element' => [
                     'name' => 'div',
                     'attributes' => [
@@ -1671,9 +1699,7 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
                         ],
                     ],
                 ],
-            ];
-
-            return $Block; // Return the parsed alert block
+            ]; // Return the parsed alert block
         }
 
         return null; // Return null if the line does not match the alert pattern
@@ -2020,10 +2046,7 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
             }
 
             // Remove unnecessary paragraph tags for the list item if not interrupted
-            if (!in_array('', $lines)
-                && isset($Elements[0]) && isset($Elements[0]['name'])
-                && $Elements[0]['name'] === 'p'
-            ) {
+            if (isset($Elements[0]['name']) && !in_array('', $lines) && $Elements[0]['name'] === 'p') {
                 unset($Elements[0]['name']); // Remove paragraph wrapper
             }
 
@@ -2081,6 +2104,8 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
 
             return $Block; // Return the modified header block
         }
+
+        return null; // Return null if the header block is empty
     }
 
     /**
@@ -2133,6 +2158,8 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
 
             return $Block; // Return the modified Setext header block
         }
+
+        return null; // Return null if the Setext header block is empty
     }
 
 
@@ -2640,9 +2667,7 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
         $text = preg_replace('/(' . preg_quote($delimiter, '/') . '){2,}/', '$1', $text);
 
         // Trim any leading or trailing delimiters
-        $text = trim($text, $delimiter);
-
-        return $text;
+        return trim($text, $delimiter);
     }
 
     /**
@@ -2902,9 +2927,7 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
         }
 
         // Call the parent method to handle the rest of the text processing
-        $text = parent::unmarkedText($text);
-
-        return $text;
+        return parent::unmarkedText($text);
     }
 
 
@@ -3505,7 +3528,7 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
                         $this->validateType($value, $expectedType, $currentSchema[$lastKey]);
                     }
                     // Update the 'enabled' field if applicable.
-                    if (isset($current[$lastKey]) && is_array($current[$lastKey]) && isset($current[$lastKey]['enabled'])) {
+                    if (isset($current[$lastKey]['enabled']) && is_array($current[$lastKey])) {
 
                         /**
                          * If the value is an array, it recursively sets each sub-value.
@@ -3602,9 +3625,9 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
     }
 
     /**
-     * Process a line of markdown text and extract inline elements.
+     * Process a line of Markdown text and extract inline elements.
      *
-     * This function processes a line of markdown text by iteratively searching for
+     * This function processes a line of Markdown text by iteratively searching for
      * markers in the text, and applies the appropriate inline handlers for those markers.
      *
      * @since 0.1.0
