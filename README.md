@@ -50,7 +50,7 @@ ParsedownExtended includes a variety of features to enhance your Markdown parsin
 
 - **Task Lists:** Create simple task lists in Markdown.
 - **Smartypants:** Automatically convert straight quotes to curly, dashes to en-dash and em-dash, etc.
-- **Emojis:** Support for rendering emojis.
+- **Emoji shortcodes:** Support for rendering emojis.
 - **Heading Permalinks:** Generate permalinks for your headings.
 - **Table of Contents:** Automatically generate a table of contents based on headings.
 - **Keystrokes:** Render keystroke combinations.
