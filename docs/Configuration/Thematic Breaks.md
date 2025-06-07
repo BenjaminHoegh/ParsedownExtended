@@ -35,5 +35,3 @@ To completely disable thematic breaks:
 ```php
 $ParsedownExtended->config()->set('thematic_breaks', false);
 ```
-
-This documentation provides users with clear guidance on how to configure the rendering of thematic breaks within their Markdown documents using ParsedownExtended, with the appropriate syntax and context.

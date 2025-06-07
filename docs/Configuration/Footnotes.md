@@ -47,5 +47,3 @@ To disable footnotes, preventing the parsing and rendering of footnote syntax:
 ```php
 $ParsedownExtended->config()->set('footnotes', false);
 ```
-
-By configuring the footnotes feature, you can tailor how your Markdown content utilizes footnotes, providing a cleaner and more informative reading experience. Whether enabling detailed references or maintaining a streamlined document body, ParsedownExtended offers the flexibility to suit your formatting preferences.

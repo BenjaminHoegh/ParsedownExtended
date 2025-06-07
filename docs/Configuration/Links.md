@@ -41,5 +41,3 @@ $ParsedownExtended->config()->set('links', [
     'email_links' => false
 ]);
 ```
-
-Using the full syntax like this ensures that users understand how to properly apply the settings within their specific instance of `ParsedownExtended`, reducing confusion and making your documentation more practical and user-friendly.

@@ -40,4 +40,3 @@ To prevent the automatic processing of definition lists, thereby disabling the f
 $ParsedownExtended->config()->set('definition_lists', false);
 ```
 
-This configuration allows you to control whether definition lists are recognized and formatted within your Markdown content based on your specific needs.

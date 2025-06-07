@@ -65,4 +65,3 @@ $ParsedownExtended->config()->set('diagrams', [
 ]);
 ```
 
-This configuration allows you to control how diagram syntax is handled within your Markdown content, ensuring that it is processed according to your project’s requirements.

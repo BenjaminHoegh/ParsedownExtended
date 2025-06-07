@@ -68,4 +68,3 @@ To completely disable all forms of text emphasis:
 $ParsedownExtended->config()->set('emphasis', false);
 ```
 
-This configuration allows you to have full control over how text emphasis is handled within your Markdown documents, ensuring that the content aligns with your specific presentation needs.

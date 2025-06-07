@@ -60,5 +60,3 @@ Create a table in Markdown:
 | Row 1    | Data     | Data     |
 | Row 2    | Data     | Data     |
 ```
-
-This documentation ensures that users have clear and precise instructions on how to configure and use the table rendering features within ParsedownExtended, using the correct syntax and context.

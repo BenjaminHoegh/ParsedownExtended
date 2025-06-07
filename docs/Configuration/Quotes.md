@@ -27,5 +27,3 @@ To disable the automatic conversion of text preceded by `>` into blockquotes:
 ```php
 $ParsedownExtended->config()->set('quotes', false);
 ```
-
-This documentation ensures that users have clear instructions on how to control the processing of blockquotes within their Markdown documents using ParsedownExtended, with full context provided.

@@ -68,5 +68,3 @@ $ParsedownExtended->config()->set('math', [
     ],
 ]);
 ```
-
-This documentation provides users with clear instructions on how to enable and configure LaTeX support for mathematical expressions within their Markdown content using the full context of `$ParsedownExtended->config()->set()`.

@@ -48,4 +48,3 @@ To enable the processing of comments, allowing annotations to be included in you
 $ParsedownExtended->config()->set('comments', true);
 ```
 
-This configuration will ensure that any comments added within the Markdown using the appropriate syntax will be processed accordingly, following your specified settings.

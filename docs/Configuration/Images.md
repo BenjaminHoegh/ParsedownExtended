@@ -47,5 +47,3 @@ To prevent Markdown syntax from being processed as images, effectively disabling
 ```php
 $ParsedownExtended->config()->set('images', false);
 ```
-
-This configuration provides you with the flexibility to control whether images are included in your Markdown documents, ensuring that your content is presented exactly as you intend.

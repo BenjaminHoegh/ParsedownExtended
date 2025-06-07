@@ -42,5 +42,3 @@ To enable the typographer feature:
 ```php
 $ParsedownExtended->config()->set('typographer', true);
 ```
-
-This documentation provides clear guidance on how to configure the typographer feature within ParsedownExtended, ensuring that users can easily enable and benefit from these typographic enhancements in their Markdown content.

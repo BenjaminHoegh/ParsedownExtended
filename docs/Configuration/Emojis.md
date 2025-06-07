@@ -58,4 +58,3 @@ Gone camping! ⛺ Be back soon.
 
 That is so funny! 😂
 
-This setup allows you to easily control whether emojis are converted from shortcodes within your Markdown content, helping you create more expressive and visually appealing documents.

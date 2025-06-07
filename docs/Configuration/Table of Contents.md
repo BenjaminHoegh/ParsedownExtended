@@ -66,5 +66,3 @@ $ParsedownExtended->config()->set('toc', [
     'id' => 'table-of-contents', // Custom ToC ID
 ]);
 ```
-
-This documentation ensures clarity by using the correct settings structure, allowing users to properly configure and use the Table of Contents feature within ParsedownExtended.

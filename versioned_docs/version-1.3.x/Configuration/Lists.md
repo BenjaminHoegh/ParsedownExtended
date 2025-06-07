@@ -55,5 +55,3 @@ To disable task list processing:
 ```php
 $ParsedownExtended->config()->set('lists.tasks', false);
 ```
-
-This documentation ensures that users have the correct context and syntax for configuring list processing in their Markdown documents using ParsedownExtended.

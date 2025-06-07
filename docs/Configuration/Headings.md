@@ -76,4 +76,3 @@ Define a blacklist for heading IDs:
 $ParsedownExtended->config()->set('headings.auto_anchors.blacklist', ['my_blacklisted_header_id', 'another_blacklisted_id']);
 ```
 
-This configuration gives you complete control over how headings are processed and rendered in your Markdown documents, allowing you to tailor the content hierarchy and linking behavior to your specific needs.
