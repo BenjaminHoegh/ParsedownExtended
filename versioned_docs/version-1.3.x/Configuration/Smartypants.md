@@ -61,5 +61,3 @@ To enable Smartypants and automatically apply typographical enhancements:
 ```php
 $ParsedownExtended->config()->set('smartypants', true);
 ```
-
-This documentation ensures clarity and provides the full context for configuring Smartypants within ParsedownExtended, making it easy for users to apply these settings correctly in their projects.
