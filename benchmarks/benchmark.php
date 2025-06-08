@@ -88,11 +88,54 @@ if (extension_loaded('xdebug')) {
     echo "<div class='xdebug-warning'>Warning: Xdebug is enabled. This may result in incorrect benchmark results.</div>";
 }
 
-// Ensure ParsedownExtra and ParsedownExtended are available
-if (!class_exists('ParsedownExtra') || !class_exists('BenjaminHoegh\ParsedownExtended\ParsedownExtended')) {
-    echo "<div class='error'>Error: ParsedownExtra and ParsedownExtended are required but not found. Please make sure these packages are installed.</div>";
+// Check for ParsedownExtended availability
+if (!class_exists('BenjaminHoegh\ParsedownExtended\ParsedownExtended')) {
+    echo "<div class='error'>Error: ParsedownExtended is required but not found. Please make sure the package is installed via Composer.</div>";
     exit; // Stop further execution
 }
+
+// Check for Parsedown availability (supporting both 1.x and 2.x)
+$parsedownAvailable = false;
+$parsedownVersion = '';
+if (class_exists('Erusev\Parsedown\Parsedown')) {
+    // Parsedown 2.x
+    $parsedownAvailable = true;
+    $parsedownVersion = 'v2.x (namespaced)';
+} elseif (class_exists('Parsedown')) {
+    // Parsedown 1.x
+    $parsedownAvailable = true;
+    $parsedownVersion = 'v1.x (global)';
+}
+
+if (!$parsedownAvailable) {
+    echo "<div class='error'>Error: Parsedown is required but not found. Please install either Parsedown 1.x or 2.x via Composer.</div>";
+    exit;
+}
+
+// Check for ParsedownExtra availability (supporting both 1.x and 2.x)
+$parsedownExtraAvailable = false;
+$parsedownExtraVersion = '';
+if (class_exists('Erusev\ParsedownExtra\ParsedownExtra')) {
+    // ParsedownExtra 2.x
+    $parsedownExtraAvailable = true;
+    $parsedownExtraVersion = 'v2.x (namespaced)';
+} elseif (class_exists('ParsedownExtra')) {
+    // ParsedownExtra 1.x
+    $parsedownExtraAvailable = true;
+    $parsedownExtraVersion = 'v1.x (global)';
+}
+
+// Display version information
+echo "<div style='background-color: #333; color: #fff; padding: 15px; margin: 20px 0; font-size: 14px;'>";
+echo "<strong>Environment Information:</strong><br>";
+echo "• Parsedown: {$parsedownVersion}<br>";
+if ($parsedownExtraAvailable) {
+    echo "• ParsedownExtra: {$parsedownExtraVersion}<br>";
+} else {
+    echo "• ParsedownExtra: Not available<br>";
+}
+echo "• ParsedownExtended: Available with hybrid architecture<br>";
+echo "</div>";
 
 ?>
 
@@ -146,7 +189,27 @@ $markdown_files = [
 
 // Initialize parsers
 $parsers = [];
-$parsers['ParsedownExtra'] = new ParsedownExtra();
+
+// Initialize ParsedownExtra (base parser for comparison)
+if ($parsedownExtraAvailable) {
+    if (class_exists('Erusev\ParsedownExtra\ParsedownExtra')) {
+        // ParsedownExtra 2.x - we need to create with StateBearer pattern
+        $stateBearer = new \Erusev\ParsedownExtra\ParsedownExtra();
+        $parsers['ParsedownExtra'] = new \Erusev\Parsedown\Parsedown($stateBearer);
+    } else {
+        // ParsedownExtra 1.x - traditional instantiation
+        $parsers['ParsedownExtra'] = new ParsedownExtra();
+    }
+} else {
+    // Fallback to regular Parsedown if ParsedownExtra is not available
+    if (class_exists('Erusev\Parsedown\Parsedown')) {
+        $parsers['ParsedownExtra'] = new \Erusev\Parsedown\Parsedown();
+    } else {
+        $parsers['ParsedownExtra'] = new Parsedown();
+    }
+}
+
+// Initialize ParsedownExtended (our main parser)
 $parsers['ParsedownExtended'] = new \BenjaminHoegh\ParsedownExtended\ParsedownExtended();
 
 if (class_exists('Michelf\MarkdownExtra')) {

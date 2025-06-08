@@ -533,7 +533,8 @@ trait ParsedownExtendedTrait
             $host = parse_url($href, PHP_URL_HOST);
 
             // Check if the domain matches the current domain
-            if ($host && $host !== $_SERVER['HTTP_HOST']) {
+            $currentHost = $_SERVER['HTTP_HOST'] ?? '';
+            if ($host && $host !== $currentHost) {
 
                 // Remove 'www.' from the host to get the base domain name
                 $domain = preg_replace('/^www\\./', '', $host);
