@@ -67,7 +67,7 @@ ParsedownExtended includes a variety of features to enhance your Markdown parsin
 
 ### Manual
 Download the source code from the latest release
-You must include `parsedown.php` 1.7+
+You must include `parsedown.php` 1.7.4+ (supports Parsedown 1.x and 2.x)
 Include `ParsedownExtended.php`
 
 ```php
