@@ -45,8 +45,8 @@ if (!$GLOBALS['__PARSEDOWN_2X_AVAILABLE__']) {
          */
         public function text($text)
         {
-            // For Parsedown 1.x, delegate to the parent's text method
-            return parent::text($text);
+            // For Parsedown 1.x, call the trait's text method which includes TOC processing
+            return $this->processText($text);
         }
     }
 } else {
@@ -81,7 +81,8 @@ if (!$GLOBALS['__PARSEDOWN_2X_AVAILABLE__']) {
          */
         public function text(string $text): string
         {
-            return $this->parsedown->toHtml($text);
+            // For Parsedown 2.x, call the trait's text method which includes TOC processing
+            return $this->processText($text);
         }
         
         /**
@@ -3020,19 +3021,20 @@ trait ParsedownExtendedTrait
     }
 
     /**
-     * Parses the given Markdown text and replaces the ToC tag with the generated Table of Contents.
+     * Processes Markdown text and applies ToC functionality.
      *
-     * This function calls the `body()` method to parse Markdown, and then replaces the placeholder
-     * ToC tag with the generated Table of Contents in HTML format.
+     * This method extends the basic Markdown processing to include Table of Contents (ToC) functionality.
+     * If ToC is enabled and the input text contains the ToC tag, it will replace the tag with the generated ToC.
      *
      * @since 0.1.0
      *
      * @param string $text The input Markdown text.
      * @return string The parsed HTML text with the ToC embedded.
      */
-    public function text($text): string
+    public function processText(string $text): string
     {
-        $html = $this->body($text); // Parse the Markdown text into HTML
+        // Call the underlying parser based on the version
+        $html = $this->parseBody($text);
 
         // If ToC functionality is disabled in the config, return the parsed HTML as is
         if (!$this->config()->get('toc')) {
@@ -3049,6 +3051,20 @@ trait ParsedownExtendedTrait
         $toc_data = $this->contentsList();
         $toc_id = $this->config()->get('toc.id');
         return str_replace("<p>{$tag_origin}</p>", "<div id=\"{$toc_id}\">{$toc_data}</div>", $html);
+    }
+    
+    /**
+     * Parse the body of the text using the appropriate parser
+     */
+    private function parseBody(string $text): string
+    {
+        // Check if we're using Parsedown 2.x composition pattern
+        if (isset($this->parsedown)) {
+            return $this->parsedown->toHtml($text);
+        } else {
+            // For Parsedown 1.x inheritance pattern, call the body method
+            return $this->body($text);
+        }
     }
 
     /**
