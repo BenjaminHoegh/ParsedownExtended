@@ -83,6 +83,11 @@
 # Load the autoloader first
 require_once '../vendor/autoload.php';
 
+# Set HTTP_HOST for CLI execution to prevent warnings
+if (!isset($_SERVER['HTTP_HOST'])) {
+    $_SERVER['HTTP_HOST'] = 'localhost';
+}
+
 # Check if xdebug is enabled
 if (extension_loaded('xdebug')) {
     echo "<div class='xdebug-warning'>Warning: Xdebug is enabled. This may result in incorrect benchmark results.</div>";
@@ -165,7 +170,11 @@ function benchmark($parser, $markdown, $iterations = 10)
             $parser->defaultTransform($markdown);
         } elseif ($parser instanceof League\CommonMark\CommonMarkConverter) {
             $parser->convert($markdown);
+        } elseif ($parser instanceof Erusev\Parsedown\Parsedown) {
+            // Parsedown 2.x uses toHtml() method
+            $parser->toHtml($markdown);
         } else {
+            // Parsedown 1.x and ParsedownExtended use text() method
             $parser->text($markdown);
         }
 
