@@ -43,7 +43,7 @@ if (!$GLOBALS['__PARSEDOWN_2X_AVAILABLE__']) {
         /**
          * Parse markdown text to HTML - compatibility method for both 1.x and 2.x
          */
-        public function text(string $text): string
+        public function text($text)
         {
             // For Parsedown 1.x, delegate to the parent's text method
             return parent::text($text);
