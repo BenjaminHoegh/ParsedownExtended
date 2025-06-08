@@ -24,7 +24,7 @@ body:
     attributes:
       label: PHP Version
       description: Specify the PHP version you were using. This information helps us replicate the issue under similar conditions.
-      placeholder: e.g., 7.4.3
+      placeholder: e.g., 8.2.0
     validations:
       required: true
       
