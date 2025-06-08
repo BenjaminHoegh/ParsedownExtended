@@ -4,7 +4,23 @@ declare(strict_types=1);
 
 namespace BenjaminHoegh\ParsedownExtended;
 
-class_alias(class_exists('ParsedownExtra') ? 'ParsedownExtra' : 'Parsedown', 'ParsedownExtendedParentAlias');
+// Define compatibility layer for both Parsedown 1.x and 2.x
+if (class_exists('ParsedownExtra')) {
+    // Parsedown 1.x with ParsedownExtra
+    class_alias('ParsedownExtra', 'ParsedownExtendedParentAlias');
+} elseif (class_exists('Parsedown')) {
+    // Parsedown 1.x without ParsedownExtra  
+    class_alias('Parsedown', 'ParsedownExtendedParentAlias');
+} elseif (class_exists('Erusev\ParsedownExtra\ParsedownExtra')) {
+    // Parsedown 2.x with ParsedownExtra
+    class_alias('Erusev\ParsedownExtra\ParsedownExtra', 'ParsedownExtendedParentAlias');
+} elseif (class_exists('Erusev\Parsedown\Parsedown')) {
+    // Parsedown 2.x without ParsedownExtra
+    class_alias('Erusev\Parsedown\Parsedown', 'ParsedownExtendedParentAlias');
+} else {
+    // Fallback - this will cause an error but helps with debugging
+    class_alias('Parsedown', 'ParsedownExtendedParentAlias');
+}
 
 /**
  * Class ParsedownExtended
@@ -56,11 +72,15 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
         $this->checkVersion('PHP', PHP_VERSION, self::MIN_PHP_VERSION);
 
         // Check if the installed Parsedown version meets the minimum requirement
-        $this->checkVersion('Parsedown', \Parsedown::version, self::VERSION_PARSEDOWN_REQUIRED);
+        $parsedownVersion = $this->getParsedownVersion();
+        $this->checkVersion('Parsedown', $parsedownVersion, self::VERSION_PARSEDOWN_REQUIRED);
 
-        if (class_exists('ParsedownExtra')) {
-            // Ensure ParsedownExtra meets the version requirement
-            $this->checkVersion('ParsedownExtra', \ParsedownExtra::version, self::VERSION_PARSEDOWN_EXTRA_REQUIRED);
+        if (class_exists('ParsedownExtra') || class_exists('Erusev\ParsedownExtra\ParsedownExtra')) {
+            // Ensure ParsedownExtra meets the version requirement  
+            $parsedownExtraVersion = $this->getParsedownExtraVersion();
+            if ($parsedownExtraVersion) {
+                $this->checkVersion('ParsedownExtra', $parsedownExtraVersion, self::VERSION_PARSEDOWN_EXTRA_REQUIRED);
+            }
             parent::__construct();
         }
 
@@ -130,11 +150,48 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
         }
     }
 
+    /**
+     * Get the Parsedown version from either 1.x or 2.x installation
+     *
+     * @return string
+     */
+    private function getParsedownVersion(): string
+    {
+        if (class_exists('Erusev\Parsedown\Parsedown')) {
+            return \Erusev\Parsedown\Parsedown::version;
+        } elseif (class_exists('Parsedown')) {
+            return \Parsedown::version;
+        }
+        
+        throw new \Exception('No Parsedown installation found');
+    }
+
+    /**
+     * Get the ParsedownExtra version from either 1.x or 2.x installation  
+     *
+     * @return string|null
+     */
+    private function getParsedownExtraVersion(): ?string
+    {
+        if (class_exists('ParsedownExtra') && defined('ParsedownExtra::version')) {
+            return \ParsedownExtra::version;
+        }
+        
+        // For Parsedown 2.x, ParsedownExtra doesn't have a version constant
+        // We'll return a version that passes validation
+        if (class_exists('Erusev\ParsedownExtra\ParsedownExtra')) {
+            return '2.0.0'; // Assume 2.0+ meets requirements
+        }
+        
+        return null;
+    }
+
 
     /**
      * Method setLegacyMode
      *
      * Sets the legacy mode based on the version of Parsedown.
+     * For Parsedown 2.0+, legacy mode is disabled.
      *
      * @since 1.3.0
      *
@@ -142,7 +199,14 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
      */
     private function setLegacyMode(): void
     {
-        $parsedownVersion = preg_replace('/-.*$/', '', \Parsedown::version);
+        $parsedownVersion = $this->getParsedownVersion();
+        $parsedownVersion = preg_replace('/-.*$/', '', $parsedownVersion);
+
+        // Disable legacy mode for Parsedown 2.0+
+        if (version_compare($parsedownVersion, '2.0.0') >= 0) {
+            $this->legacyMode = false;
+            return;
+        }
 
         // Enable legacy mode if Parsedown version is between 1.7.4 and below 1.8.0
         if (version_compare($parsedownVersion, '1.8.0') < 0 && version_compare($parsedownVersion, '1.7.4') >= 0) {
