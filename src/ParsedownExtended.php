@@ -4,30 +4,104 @@ declare(strict_types=1);
 
 namespace BenjaminHoegh\ParsedownExtended;
 
-// Support both Parsedown 1.x and 2.x versions
-if (class_exists('Erusev\ParsedownExtra\ParsedownExtra')) {
-    // Parsedown 2.x with namespaced ParsedownExtra
-    class_alias('Erusev\ParsedownExtra\ParsedownExtra', 'ParsedownExtendedParentAlias');
-} elseif (class_exists('ParsedownExtra')) {
-    // Parsedown 1.x with global ParsedownExtra
-    class_alias('ParsedownExtra', 'ParsedownExtendedParentAlias');
-} elseif (class_exists('Erusev\Parsedown\Parsedown')) {
-    // Parsedown 2.x with namespaced Parsedown
-    class_alias('Erusev\Parsedown\Parsedown', 'ParsedownExtendedParentAlias');
+// Import classes at the top level
+if (class_exists('Erusev\Parsedown\Parsedown')) {
+    // Parsedown 2.x classes are available
+    $GLOBALS['__PARSEDOWN_2X_AVAILABLE__'] = true;
 } else {
-    // Parsedown 1.x with global Parsedown
-    class_alias('Parsedown', 'ParsedownExtendedParentAlias');
+    $GLOBALS['__PARSEDOWN_2X_AVAILABLE__'] = false;
+}
+
+// Determine which Parsedown version is available and create appropriate base class
+if (!$GLOBALS['__PARSEDOWN_2X_AVAILABLE__']) {
+    // For Parsedown 1.x - use inheritance approach
+    if (class_exists('ParsedownExtra')) {
+        class_alias('ParsedownExtra', 'ParsedownExtendedParentAlias');
+    } else {
+        class_alias('Parsedown', 'ParsedownExtendedParentAlias');
+    }
+    
+    /**
+     * Class ParsedownExtended for Parsedown 1.x
+     *
+     * Extended version of Parsedown for customized Markdown parsing.
+     * Provides extended parsing capabilities, version checking, and custom configuration options.
+     */
+    // @psalm-suppress UndefinedClass
+    class ParsedownExtended extends \ParsedownExtendedParentAlias
+    {
+        use ParsedownExtendedTrait;
+        
+        public function __construct()
+        {
+            $this->initializeParsedownExtended();
+            if (class_exists('ParsedownExtra')) {
+                parent::__construct();
+            }
+        }
+        
+        /**
+         * Parse markdown text to HTML - compatibility method for both 1.x and 2.x
+         */
+        public function text(string $text): string
+        {
+            // For Parsedown 1.x, delegate to the parent's text method
+            return parent::text($text);
+        }
+    }
+} else {
+    /**
+     * Class ParsedownExtended for Parsedown 2.x
+     *
+     * Extended version of Parsedown for customized Markdown parsing.
+     * Uses composition pattern since Parsedown 2.x classes are final.
+     */
+    class ParsedownExtended
+    {
+        use ParsedownExtendedTrait;
+        
+        /** @var \Erusev\Parsedown\Parsedown The underlying Parsedown instance */
+        private $parsedown;
+        
+        public function __construct()
+        {
+            $this->initializeParsedownExtended();
+            
+            // Create StateBearer with ParsedownExtra if available
+            $stateBearer = null;
+            if (class_exists('Erusev\ParsedownExtra\ParsedownExtra')) {
+                $stateBearer = new \Erusev\ParsedownExtra\ParsedownExtra();
+            }
+            
+            $this->parsedown = new \Erusev\Parsedown\Parsedown($stateBearer);
+        }
+        
+        /**
+         * Main text parsing method for Parsedown 2.x
+         */
+        public function text(string $text): string
+        {
+            return $this->parsedown->toHtml($text);
+        }
+        
+        /**
+         * Magic method to delegate unknown methods to the underlying Parsedown instance
+         */
+        public function __call(string $name, array $arguments)
+        {
+            if (method_exists($this->parsedown, $name)) {
+                return $this->parsedown->$name(...$arguments);
+            }
+            
+            throw new \BadMethodCallException("Method '$name' not found");
+        }
+    }
 }
 
 /**
- * Class ParsedownExtended
- *
- * Extended version of Parsedown for customized Markdown parsing.
- * Provides extended parsing capabilities, version checking, and custom configuration options.
- *
+ * Trait containing shared functionality between Parsedown 1.x and 2.x implementations
  */
-// @psalm-suppress UndefinedClass
-class ParsedownExtended extends \ParsedownExtendedParentAlias
+trait ParsedownExtendedTrait
 {
     public const VERSION = '2.0.0';
     public const VERSION_PARSEDOWN_REQUIRED = '1.7.4';
@@ -59,11 +133,10 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
     private bool $legacyMode = false;
 
     /**
-     * Constructor for ParsedownExtended.
-     *
-     * Initializes the class and performs version checks for PHP and Parsedown dependencies.
+     * Initialize ParsedownExtended functionality.
+     * This method is called by both inheritance and composition implementations.
      */
-    public function __construct()
+    protected function initializeParsedownExtended(): void
     {
         // Check if the current PHP version meets the minimum requirement
         $this->checkVersion('PHP', PHP_VERSION, self::MIN_PHP_VERSION);
@@ -78,7 +151,6 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
             if ($parsedownExtraVersion) {
                 $this->checkVersion('ParsedownExtra', $parsedownExtraVersion, self::VERSION_PARSEDOWN_EXTRA_REQUIRED);
             }
-            parent::__construct();
         }
 
         $this->setLegacyMode();
@@ -87,6 +159,17 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
         $this->configSchema = $this->defineConfigSchema();
         $this->config = $this->initializeConfig($this->configSchema);
 
+        // For Parsedown 1.x, add support for inline and block types
+        if (!class_exists('Erusev\Parsedown\Parsedown')) {
+            $this->initializeParsedown1xTypes();
+        }
+    }
+
+    /**
+     * Initialize inline and block types for Parsedown 1.x
+     */
+    private function initializeParsedown1xTypes(): void
+    {
         // Add support for inline types (e.g., special formatting)
         $this->addInlineType('=', 'Marking');
         $this->addInlineType('+', 'Insertions');
@@ -103,17 +186,21 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
         $this->addBlockType('>', 'Alert');
 
         // Reorganize 'SpecialCharacter' to ensure it is processed last in InlineTypes and BlockTypes
-        foreach ($this->InlineTypes as &$list) {
-            if (($key = array_search('SpecialCharacter', $list)) !== false) {
-                unset($list[$key]);
-                $list[] = 'SpecialCharacter'; // Append 'SpecialCharacter' at the end
+        if (property_exists($this, 'InlineTypes')) {
+            foreach ($this->InlineTypes as &$list) {
+                if (($key = array_search('SpecialCharacter', $list)) !== false) {
+                    unset($list[$key]);
+                    $list[] = 'SpecialCharacter'; // Append 'SpecialCharacter' at the end
+                }
             }
         }
 
-        foreach ($this->BlockTypes as &$list) {
-            if (($key = array_search('SpecialCharacter', $list)) !== false) {
-                unset($list[$key]);
-                $list[] = 'SpecialCharacter'; // Append 'SpecialCharacter' at the end
+        if (property_exists($this, 'BlockTypes')) {
+            foreach ($this->BlockTypes as &$list) {
+                if (($key = array_search('SpecialCharacter', $list)) !== false) {
+                    unset($list[$key]);
+                    $list[] = 'SpecialCharacter'; // Append 'SpecialCharacter' at the end
+                }
             }
         }
     }
