@@ -13,6 +13,7 @@ use BenjaminHoegh\ParsedownExtended\Features\Superscripts;
 use BenjaminHoegh\ParsedownExtended\Features\Subscripts;
 use BenjaminHoegh\ParsedownExtended\Features\Emojis;
 use BenjaminHoegh\ParsedownExtended\Features\Typographers;
+use BenjaminHoegh\ParsedownExtended\Features\TaskLists;
 
 final class ParsedownExtended implements StateBearer
 {
@@ -29,6 +30,7 @@ final class ParsedownExtended implements StateBearer
         $StateBearer = Subscripts::from($StateBearer);
         $StateBearer = Emojis::from($StateBearer);
         $StateBearer = Typographers::from($StateBearer);
+        $StateBearer = TaskLists::from($StateBearer);
 
         $this->State = $StateBearer->state();
     }
