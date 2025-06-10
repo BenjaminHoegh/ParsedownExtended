@@ -6,7 +6,6 @@ use Erusev\Parsedown\State;
 use Erusev\Parsedown\StateBearer;
 
 use BenjaminHoegh\ParsedownExtended\Features\Maths;
-// use BenjaminHoegh\ParsedownExtended\Features\TLists;
 use BenjaminHoegh\ParsedownExtended\Features\Highlights;
 use BenjaminHoegh\ParsedownExtended\Features\Keystrokes;
 use BenjaminHoegh\ParsedownExtended\Features\Superscripts;
