@@ -22,7 +22,6 @@ final class ParsedownExtended implements StateBearer
     public function __construct(StateBearer $StateBearer = null)
     {
         $StateBearer = Maths::from($StateBearer ?? new State());
-        // $StateBearer = TLists::from($StateBearer);
         $StateBearer = Highlights::from($StateBearer);
         $StateBearer = Keystrokes::from($StateBearer);
         $StateBearer = Superscripts::from($StateBearer);
