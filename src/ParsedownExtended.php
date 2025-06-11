@@ -14,6 +14,7 @@ use BenjaminHoegh\ParsedownExtended\Features\Emojis;
 use BenjaminHoegh\ParsedownExtended\Features\Typographers;
 use BenjaminHoegh\ParsedownExtended\Features\TaskLists;
 use BenjaminHoegh\ParsedownExtended\Features\HeadingPermalinks;
+use BenjaminHoegh\ParsedownExtended\Features\TableOfContents;
 
 final class ParsedownExtended implements StateBearer
 {
@@ -31,6 +32,7 @@ final class ParsedownExtended implements StateBearer
         $StateBearer = Typographers::from($StateBearer);
         $StateBearer = TaskLists::from($StateBearer);
         $StateBearer = HeadingPermalinks::from($StateBearer);
+        $StateBearer = TableOfContents::from($StateBearer);
 
         $this->State = $StateBearer->state();
     }
@@ -45,4 +47,5 @@ final class ParsedownExtended implements StateBearer
     {
         return new self($StateBearer);
     }
+
 }
