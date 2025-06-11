@@ -12,6 +12,7 @@ use BenjaminHoegh\ParsedownExtended\Features\Superscripts;
 use BenjaminHoegh\ParsedownExtended\Features\Subscripts;
 use BenjaminHoegh\ParsedownExtended\Features\Emojis;
 use BenjaminHoegh\ParsedownExtended\Features\Typographers;
+use BenjaminHoegh\ParsedownExtended\Features\Smartypants;
 use BenjaminHoegh\ParsedownExtended\Features\TaskLists;
 use BenjaminHoegh\ParsedownExtended\Features\HeadingPermalinks;
 use BenjaminHoegh\ParsedownExtended\Features\TableOfContents;
@@ -30,6 +31,7 @@ final class ParsedownExtended implements StateBearer
         $StateBearer = Subscripts::from($StateBearer);
         $StateBearer = Emojis::from($StateBearer);
         $StateBearer = Typographers::from($StateBearer);
+        $StateBearer = Smartypants::from($StateBearer);
         $StateBearer = TaskLists::from($StateBearer);
         $StateBearer = HeadingPermalinks::from($StateBearer);
         $StateBearer = TableOfContents::from($StateBearer);
