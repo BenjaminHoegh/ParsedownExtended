@@ -24,16 +24,20 @@ final class TocSetextHeader implements AcquisitioningBlock
     /** @var string */
     private $slug;
 
+    /** @var array<string,string> */
+    private $attributes;
+
     /**
      * @param string $text
      * @param 1|2 $level
      * @param string $slug
      */
-    private function __construct($text, $level, $slug)
+    private function __construct($text, $level, $slug, array $attributes = [])
     {
         $this->text = $text;
         $this->level = $level;
         $this->slug = $slug;
+        $this->attributes = $attributes;
     }
 
     public static function build(Context $Context, State $State, Block $Block = null)
@@ -56,24 +60,26 @@ final class TocSetextHeader implements AcquisitioningBlock
 
             $text = \trim($Block->text());
 
+            list($text, $attributes) = self::parseAttributes($text);
+
             $HeaderSlug = $State->get(HeaderSlug::class);
             $Register = $State->get(SlugRegister::class);
-            $slug = $HeaderSlug->transform($Register, $text);
+            $slug = $attributes['id'] ?? $HeaderSlug->transform($Register, $text);
 
             $State->get(HeadingBook::class)->mutatingAdd($slug, $text, $level);
 
-            return new self($text, $level, $slug);
+            return new self($text, $level, $slug, $attributes);
         }
 
         return null;
     }
 
-    public function acquiredPrevious()
+    public function acquiredPrevious(): bool
     {
         return true;
     }
 
-    public function text()
+    public function text(): string
     {
         return $this->text;
     }
@@ -83,11 +89,20 @@ final class TocSetextHeader implements AcquisitioningBlock
         return $this->level;
     }
 
+    /**
+     * @return array<string,string>
+     */
+    public function attributes(): array
+    {
+        return $this->attributes;
+    }
+
     public function stateRenderable()
     {
         return new Handler(function (State $State) {
             $HeaderSlug = $State->get(HeaderSlug::class);
             $attributes = $HeaderSlug->isEnabled() ? ['id' => $this->slug] : [];
+            $attributes = array_merge($attributes, $this->attributes);
 
             return new Element(
                 'h' . \strval($this->level()),
@@ -95,5 +110,35 @@ final class TocSetextHeader implements AcquisitioningBlock
                 $State->applyTo(Parsedown::line($this->text(), $State))
             );
         });
+    }
+
+    /**
+     * @param string $text
+     * @return array{0:string,1:array<string,string>}
+     */
+    private static function parseAttributes(string $text): array
+    {
+        $attributes = [];
+
+        if (preg_match('/\s*\{([^}]*)\}\s*$/', $text, $m)) {
+            $text = rtrim(substr($text, 0, -strlen($m[0])));
+            $parts = preg_split('/\s+/', trim($m[1]));
+            $classes = [];
+            foreach ($parts as $part) {
+                if ($part === '') {
+                    continue;
+                }
+                if ($part[0] === '#') {
+                    $attributes['id'] = substr($part, 1);
+                } elseif ($part[0] === '.') {
+                    $classes[] = substr($part, 1);
+                }
+            }
+            if ($classes) {
+                $attributes['class'] = implode(' ', $classes);
+            }
+        }
+
+        return [$text, $attributes];
     }
 }
