@@ -4,11 +4,11 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "60484bf4c1a65db71066c0ea22556e9d",
+    "content-hash": "6d90e122d07b42e76e588ac318c8e362",
     "packages": [
         {
             "name": "erusev/parsedown",
-            "version": "2.0.x-dev",
+            "version": "v2.0.0-beta-1",
             "source": {
                 "type": "git",
                 "url": "https://github.com/erusev/parsedown.git",
@@ -56,7 +56,7 @@
             ],
             "support": {
                 "issues": "https://github.com/erusev/parsedown/issues",
-                "source": "https://github.com/erusev/parsedown/tree/2.0.x"
+                "source": "https://github.com/erusev/parsedown/tree/v2.0.0-beta-1"
             },
             "time": "2022-05-21T21:40:24+00:00"
         }
@@ -65,7 +65,7 @@
     "aliases": [],
     "minimum-stability": "stable",
     "stability-flags": {
-        "erusev/parsedown": 20
+        "erusev/parsedown": 10
     },
     "prefer-stable": false,
     "prefer-lowest": false,
@@ -74,5 +74,5 @@
         "ext-mbstring": "*"
     },
     "platform-dev": [],
-    "plugin-api-version": "2.0.0"
+    "plugin-api-version": "2.2.0"
 }
