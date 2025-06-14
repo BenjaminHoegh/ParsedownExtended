@@ -19,7 +19,7 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
     public const VERSION = '1.4.2';
     public const VERSION_PARSEDOWN_REQUIRED = '1.7.4';
     public const VERSION_PARSEDOWN_EXTRA_REQUIRED = '0.8.1';
-    public const MIN_PHP_VERSION = '8.2';
+    public const MIN_PHP_VERSION = '7.4';
 
     /** @var array $anchorRegister Registry for anchors generated during parsing */
     private array $anchorRegister = [];
@@ -34,7 +34,7 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
     private string $contentsListString = '';
 
     /** @var callable|null $createAnchorIDCallback Callback function for anchor creation */
-    private $createAnchorIDCallback = null;
+    private ?callable $createAnchorIDCallback = null;
 
     /** @var array $config Configuration options */
     private array $config;
@@ -163,7 +163,7 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
      * @param array $Excerpt The portion of text being parsed
      * @return mixed|null The parsed element or null if not processed
      */
-    protected function inlineCode($Excerpt)
+    protected function inlineCode(array $Excerpt): ?array
     {
         if ($this->config()->get('code') && $this->config()->get('code.inline')) {
             return parent::inlineCode($Excerpt);
@@ -182,7 +182,7 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
      * @param array $Excerpt The portion of text being parsed
      * @return mixed|null The parsed image element or null if not processed
      */
-    protected function inlineImage($Excerpt)
+    protected function inlineImage(array $Excerpt): ?array
     {
         if ($this->config()->get('images')) {
             return parent::inlineImage($Excerpt);
@@ -201,7 +201,7 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
      * @param array $Excerpt The portion of text being parsed
      * @return mixed|null The parsed HTML markup or null if not allowed
      */
-    protected function inlineMarkup($Excerpt)
+    protected function inlineMarkup(array $Excerpt): ?array
     {
         if ($this->config()->get('allow_raw_html')) {
             return parent::inlineMarkup($Excerpt);
@@ -220,7 +220,7 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
      * @param array $Excerpt The portion of text being parsed
      * @return mixed|null The parsed strikethrough or null if not processed
      */
-    protected function inlineStrikethrough($Excerpt)
+    protected function inlineStrikethrough(array $Excerpt): ?array
     {
         if ($this->config()->get('emphasis.strikethroughs') && $this->config()->get('emphasis')) {
             return parent::inlineStrikethrough($Excerpt);
@@ -239,7 +239,7 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
      * @param array $Excerpt The portion of text being parsed
      * @return array|null The processed link element or null if not processed
      */
-    protected function inlineLink($Excerpt)
+    protected function inlineLink(array $Excerpt): ?array
     {
         return $this->processLinkElement(parent::inlineLink($Excerpt));
     }
@@ -254,7 +254,7 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
      * @param array $Excerpt The portion of text being parsed
      * @return array|null The processed URL element or null if not processed
      */
-    protected function inlineUrl($Excerpt)
+    protected function inlineUrl(array $Excerpt): ?array
     {
         return $this->processLinkElement(parent::inlineUrl($Excerpt));
     }
@@ -269,7 +269,7 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
      * @param array $Excerpt The portion of text being parsed
      * @return array|null The processed URL tag or null if not processed
      */
-    protected function inlineUrlTag($Excerpt)
+    protected function inlineUrlTag(array $Excerpt): ?array
     {
         return $this->processLinkElement(parent::inlineUrlTag($Excerpt));
     }
@@ -286,7 +286,7 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
      * @param array $Excerpt The portion of text being parsed
      * @return mixed|null The parsed email tag or null if links are disabled
      */
-    protected function inlineEmailTag($Excerpt)
+    protected function inlineEmailTag(array $Excerpt): ?array
     {
         if (!$this->config()->get('links') || !$this->config()->get('links.email_links')) {
             return null;
@@ -418,7 +418,7 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
      * @param array $Excerpt The portion of text being parsed
      * @return array|null The parsed emphasis or null if not processed
      */
-    protected function inlineEmphasis($Excerpt)
+    protected function inlineEmphasis(array $Excerpt): ?array
     {
         if (!$this->config()->get('emphasis') || !isset($Excerpt['text'][1])) {
             return null; // If emphasis is disabled or the excerpt is too short, return null
@@ -629,7 +629,7 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
      * @param array $Excerpt The portion of text being parsed to identify math notation.
      * @return array|null The parsed math notation element or null if math parsing is disabled or not applicable.
      */
-    protected function inlineMathNotation($Excerpt)
+    protected function inlineMathNotation(array $Excerpt): ?array
     {
         // Check if parsing of math notation is enabled in the configuration settings
         if (!$this->config()->get('math') || !$this->config()->get('math.inline')) {
@@ -686,7 +686,7 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
      * @param array $Excerpt The portion of text being parsed to identify escape sequences.
      * @return array|null The parsed escape sequence element or null if no valid escape sequence is found.
      */
-    protected function inlineEscapeSequence($Excerpt)
+    protected function inlineEscapeSequence(array $Excerpt): ?array
     {
         // If math is enabled, check for any inline math delimiters that might need special handling
         if ($this->config()->get('math')) {
@@ -787,7 +787,7 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
      * @param array $Excerpt The portion of text being parsed for Smartypants substitutions.
      * @return array|null The parsed Smartypants substitution or null if Smartypants is disabled.
      */
-    protected function inlineSmartypants($Excerpt)
+    protected function inlineSmartypants(array $Excerpt): ?array
     {
         // Check if Smartypants is enabled in the configuration settings
         if (!$this->config()->get('smartypants')) {
@@ -1668,7 +1668,7 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
         $alertTypes = $this->config()->get('alerts.types');
 
         // Build the regex pattern dynamically based on the alert types
-        $alertTypesPattern = implode('|', array_map('strtoupper', $alertTypes));
+        $alertTypesPattern = implode('|', array_map(fn ($t) => strtoupper($t), $alertTypes));
 
         // Create the full regex pattern for matching alert block syntax
         $pattern = '/^> \[!(' . $alertTypesPattern . ')\]/';
@@ -1720,7 +1720,7 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
         $alertTypes = $this->config()->get('alerts.types');
 
         // Build the regex pattern dynamically based on the alert types
-        $alertTypesPattern = implode('|', array_map('strtoupper', $alertTypes));
+        $alertTypesPattern = implode('|', array_map(fn ($t) => strtoupper($t), $alertTypes));
 
         // Create the full regex pattern for identifying new alert blocks
         $pattern = '/^> \[!(' . $alertTypesPattern . ')\]/';
