@@ -16,10 +16,10 @@ class_alias(class_exists('ParsedownExtra') ? 'ParsedownExtra' : 'Parsedown', 'Pa
 // @psalm-suppress UndefinedClass
 class ParsedownExtended extends \ParsedownExtendedParentAlias
 {
-    public const VERSION = '1.4.2';
+    public const VERSION = '1.4.3';
     public const VERSION_PARSEDOWN_REQUIRED = '1.7.4';
     public const VERSION_PARSEDOWN_EXTRA_REQUIRED = '0.8.1';
-    public const MIN_PHP_VERSION = '8.2';
+    public const MIN_PHP_VERSION = '7.4';
 
     /** @var array $anchorRegister Registry for anchors generated during parsing */
     private array $anchorRegister = [];
