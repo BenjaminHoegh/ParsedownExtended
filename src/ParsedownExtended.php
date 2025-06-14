@@ -34,7 +34,7 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
     private string $contentsListString = '';
 
     /** @var callable|null $createAnchorIDCallback Callback function for anchor creation */
-    private ?callable $createAnchorIDCallback = null;
+    private $createAnchorIDCallback = null;
 
     /** @var array $config Configuration options */
     private array $config;
@@ -1668,7 +1668,7 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
         $alertTypes = $this->config()->get('alerts.types');
 
         // Build the regex pattern dynamically based on the alert types
-        $alertTypesPattern = implode('|', array_map(fn ($t) => strtoupper($t), $alertTypes));
+        $alertTypesPattern = implode('|', array_map('strtoupper', $alertTypes));
 
         // Create the full regex pattern for matching alert block syntax
         $pattern = '/^> \[!(' . $alertTypesPattern . ')\]/';
