@@ -8,7 +8,7 @@ $config = new Config();
 
 return $config
     ->setRules([
-        '@PHP82Migration' => true,
+        '@PHP74Migration' => true,
         '@PSR12' => true,
     ])
     ->setFinder(
