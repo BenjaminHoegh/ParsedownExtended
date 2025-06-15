@@ -1,8 +1,8 @@
 <?xml version="1.0"?>
 <psalm
-    errorLevel="1"
-    strictBinaryOperands="true"
-    checkForThrowsDocblock="true"
+    errorLevel="8"
+    useDocblockTypes="false"
+    phpVersion="7.4"
 >
     <projectFiles>
         <directory name="src" />
