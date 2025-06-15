@@ -31,6 +31,8 @@ Table of contents
 - [Introduction](#introduction)
 - [Features](#features)
 - [Getting started](#getting-started)
+- [Development](#development)
+  - [PHP Compatibility Checking](#php-compatibility-checking)
 - [Bugs and feature requests](#bugs-and-feature-requests)
 - [Contributing](#contributing)
 - [Community](#community)
@@ -103,6 +105,28 @@ echo $ParsedownExtended->text('Hello _Parsedown_!'); # prints: <p>Hello <em>Pars
 echo $ParsedownExtended->line('Hello _Parsedown_!'); # prints: Hello <em>Parsedown</em>!
 ```
 
+## Development
+
+### PHP Compatibility Checking
+
+ParsedownExtended includes tools to check PHP compatibility across different PHP versions. This helps ensure that the code works correctly on the PHP versions it claims to support.
+
+To check PHP compatibility:
+
+1. Make sure you have installed the development dependencies:
+   ```shell
+   composer install --dev
+   ```
+
+2. Run the PHP compatibility check:
+   ```shell
+   composer check-php-compatibility
+   ```
+
+This will analyze the codebase and report any compatibility issues with PHP 7.4 and higher versions.
+
+If you need to check compatibility with a specific PHP version, you can modify the `testVersion` value in the `phpcs.xml` file.
+
 ## Bugs and feature requests
 
 Have a bug or a feature request? Please first read the [issue guidelines](https://github.com/BenjaminHoegh/ParsedownExtended/blob/main/.github/CONTRIBUTING.md#using-the-issue-tracker) and search for existing and closed issues. If your problem or idea is not addressed yet, [please open a new issue](https://github.com/BenjaminHoegh/ParsedownExtended/issues/new/choose).
@@ -110,6 +134,8 @@ Have a bug or a feature request? Please first read the [issue guidelines](https:
 ## Contributing
 
 Please read through our [contributing guidelines](https://github.com/BenjaminHoegh/ParsedownExtended/blob/main/.github/CONTRIBUTING.md). Included are directions for opening issues, coding standards, and notes on development.
+
+For developers, we have documentation on [how to check PHP compatibility](docs/php-compatibility.md) to ensure your code works across different PHP versions.
 
 All PHP should conform to the [Code Guide](https://www.php-fig.org/psr/psr-12/).
 
