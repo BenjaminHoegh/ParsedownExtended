@@ -45,7 +45,7 @@ final class Math implements ContinuableBlock
     public static function build(
         Context $Context,
         State $State,
-        Block $Block = null
+        ?Block $Block = null
     ) {
         $line = $Context->line()->text();
 

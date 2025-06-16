@@ -31,7 +31,7 @@ final class Typographer implements Inline
      * @param State $State
      * @return static|null
      */
-    public static function build(Excerpt $Excerpt, State $State = null)
+    public static function build(Excerpt $Excerpt, ?State $State = null)
     {
         $text = $Excerpt->text();
 

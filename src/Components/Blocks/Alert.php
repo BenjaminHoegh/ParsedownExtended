@@ -36,7 +36,7 @@ final class Alert implements ContinuableBlock
         $this->class = $class;
     }
 
-    public static function build(Context $Context, State $State, Block $Block = null)
+    public static function build(Context $Context, State $State, ?Block $Block = null)
     {
         $config = $State->get(AlertsConfig::class);
         $typesPattern = implode('|', array_map('strtoupper', $config->types()));

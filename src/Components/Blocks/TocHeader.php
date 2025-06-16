@@ -39,7 +39,7 @@ final class TocHeader implements Block
         $this->attributes = $attributes;
     }
 
-    public static function build(Context $Context, State $State, Block $Block = null)
+    public static function build(Context $Context, State $State, ?Block $Block = null)
     {
         if ($Context->line()->indent() > 3) {
             return null;

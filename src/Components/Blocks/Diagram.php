@@ -27,7 +27,7 @@ final class Diagram implements ContinuableBlock
         $this->isComplete = $isComplete;
     }
 
-    public static function build(Context $Context, State $State, Block $Block = null)
+    public static function build(Context $Context, State $State, ?Block $Block = null)
     {
         $line = $Context->line()->text();
 
