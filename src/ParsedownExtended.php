@@ -17,6 +17,7 @@ use BenjaminHoegh\ParsedownExtended\Features\TaskLists;
 use BenjaminHoegh\ParsedownExtended\Features\Alerts;
 use BenjaminHoegh\ParsedownExtended\Features\HeadingPermalinks;
 use BenjaminHoegh\ParsedownExtended\Features\TableOfContents;
+use BenjaminHoegh\ParsedownExtended\Features\Diagrams;
 
 final class ParsedownExtended implements StateBearer
 {
@@ -42,6 +43,7 @@ final class ParsedownExtended implements StateBearer
         $StateBearer = Alerts::from($StateBearer);
         $StateBearer = HeadingPermalinks::from($StateBearer);
         $StateBearer = TableOfContents::from($StateBearer);
+        $StateBearer = Diagrams::from($StateBearer);
 
         $this->State = $StateBearer->state();
     }
