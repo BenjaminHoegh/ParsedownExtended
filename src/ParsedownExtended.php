@@ -15,6 +15,7 @@ use BenjaminHoegh\ParsedownExtended\Features\Typographers;
 use BenjaminHoegh\ParsedownExtended\Features\Smartypants;
 use BenjaminHoegh\ParsedownExtended\Features\TaskLists;
 use BenjaminHoegh\ParsedownExtended\Features\Alerts;
+use BenjaminHoegh\ParsedownExtended\Features\CriticMarkup;
 use BenjaminHoegh\ParsedownExtended\Features\HeadingPermalinks;
 use BenjaminHoegh\ParsedownExtended\Features\TableOfContents;
 
@@ -40,6 +41,7 @@ final class ParsedownExtended implements StateBearer
         $StateBearer = Smartypants::from($StateBearer);
         $StateBearer = TaskLists::from($StateBearer);
         $StateBearer = Alerts::from($StateBearer);
+        $StateBearer = CriticMarkup::from($StateBearer);
         $StateBearer = HeadingPermalinks::from($StateBearer);
         $StateBearer = TableOfContents::from($StateBearer);
 
