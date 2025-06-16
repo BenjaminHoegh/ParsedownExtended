@@ -25,7 +25,7 @@ final class Smartypant implements Inline
         $this->width = $width;
     }
 
-    public static function build(Excerpt $Excerpt, State $State = null)
+    public static function build(Excerpt $Excerpt, ?State $State = null)
     {
         $text = $Excerpt->text();
 

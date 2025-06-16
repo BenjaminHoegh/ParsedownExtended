@@ -21,7 +21,7 @@ final class Toc implements Inline
         $this->width = $width;
     }
 
-    public static function build(Excerpt $Excerpt, State $State = null)
+    public static function build(Excerpt $Excerpt, ?State $State = null)
     {
         if (preg_match('/^\[toc\]/i', $Excerpt->text(), $m)) {
             return new self(strlen($m[0]));

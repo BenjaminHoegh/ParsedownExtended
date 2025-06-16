@@ -40,7 +40,7 @@ final class TocSetextHeader implements AcquisitioningBlock
         $this->attributes = $attributes;
     }
 
-    public static function build(Context $Context, State $State, Block $Block = null)
+    public static function build(Context $Context, State $State, ?Block $Block = null)
     {
         if (! isset($Block) || ! $Block instanceof \Erusev\Parsedown\Components\Blocks\Paragraph || $Context->precedingEmptyLines() > 0) {
             return null;
