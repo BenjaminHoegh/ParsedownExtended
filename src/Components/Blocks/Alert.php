@@ -8,6 +8,8 @@ use Erusev\Parsedown\Components\ContinuableBlock;
 use Erusev\Parsedown\Html\Renderables\Element;
 use Erusev\Parsedown\Parsedown;
 use Erusev\Parsedown\Parsing\Context;
+use Erusev\Parsedown\Parsing\Line;
+use Erusev\Parsedown\Parsing\Lines;
 use Erusev\Parsedown\State;
 use BenjaminHoegh\ParsedownExtended\Configurables\AlertsConfig;
 
@@ -16,7 +18,7 @@ final class Alert implements ContinuableBlock
     /** @var string */
     private $type;
 
-    /** @var string[] */
+    /** @var lines */
     private $lines;
 
     /** @var string */
@@ -24,10 +26,10 @@ final class Alert implements ContinuableBlock
 
     /**
      * @param string $type
-     * @param string[] $lines
+     * @param lines $lines
      * @param string $class
      */
-    private function __construct(string $type, array $lines, string $class)
+    private function __construct(string $type, Lines $lines, string $class)
     {
         $this->type = $type;
         $this->lines = $lines;
@@ -39,9 +41,20 @@ final class Alert implements ContinuableBlock
         $config = $State->get(AlertsConfig::class);
         $typesPattern = implode('|', array_map('strtoupper', $config->types()));
 
-        if (preg_match('/^> \[!(' . $typesPattern . ')\]/i', $Context->line()->text(), $matches)) {
-            $type = strtolower($matches[1]);
-            return new self($type, [], $config->class());
+        if (preg_match('/^(>[ \t]?+)\[!(' . $typesPattern . ')\](.*)/i', $Context->line()->text(), $matches)) {
+            $indentOffset = $Context->line()->indentOffset() + $Context->line()->indent() + strlen($matches[1]);
+
+            $recoveredSpaces = 0;
+            if (strlen($matches[1]) === 2 && substr($matches[1], 1, 1) === "\t") {
+                $recoveredSpaces = Line::tabShortage(0, $indentOffset - 1) - 1;
+            }
+
+            $lines = Lines::fromTextLines(
+                str_repeat(' ', $recoveredSpaces) . ltrim($matches[3]),
+                $indentOffset
+            );
+
+            return new self(strtolower($matches[2]), $lines, $config->class());
         }
 
         return null;
@@ -49,30 +62,43 @@ final class Alert implements ContinuableBlock
 
     public function advance(Context $Context, State $State)
     {
+        if ($Context->precedingEmptyLines() > 0) {
+            return null;
+        }
+
         $config = $State->get(AlertsConfig::class);
         $typesPattern = implode('|', array_map('strtoupper', $config->types()));
 
         $text = $Context->line()->text();
 
-        if (preg_match('/^> \[!(' . $typesPattern . ')\]/i', $text)) {
+        if (preg_match('/^(>[ \t]?+)\[!(' . $typesPattern . ')\]/i', $text)) {
             return null;
         }
 
-        if (isset($text[0]) && $text[0] === '>' && preg_match('/^> ?(.*)/', $text, $matches)) {
-            $lines = $this->lines;
-            $lines[] = $matches[1];
+        if (preg_match('/^(>[ \t]?+)(.*+)/', $text, $matches)) {
+            $indentOffset = $Context->line()->indentOffset() + $Context->line()->indent() + strlen($matches[1]);
+
+            $recoveredSpaces = 0;
+            if (strlen($matches[1]) === 2 && substr($matches[1], 1, 1) === "\t") {
+                $recoveredSpaces = Line::tabShortage(0, $indentOffset - 1) - 1;
+            }
+
+            $lines = $this->lines->appendingTextLines(
+                str_repeat(' ', $recoveredSpaces) . $matches[2],
+                $indentOffset
+            );
+
             return new self($this->type, $lines, $this->class);
         }
 
-        if ($text !== '') {
-            $lines = $this->lines;
-            $lines[] = $text;
+        if (!($Context->precedingEmptyLines() > 0)) {
+            $indentOffset = $Context->line()->indentOffset() + $Context->line()->indent();
+            $lines = $this->lines->appendingTextLines($Context->line()->text(), $indentOffset);
+
             return new self($this->type, $lines, $this->class);
         }
 
-        $lines = $this->lines;
-        $lines[] = '';
-        return new self($this->type, $lines, $this->class);
+        return null;
     }
 
     /**
@@ -82,12 +108,16 @@ final class Alert implements ContinuableBlock
     {
         $class = $this->class;
         $title = ucfirst($this->type);
+
         return new Handler(function (State $State) use ($class, $title) {
+            list($Blocks, $State) = Parsedown::blocks($this->lines, $State);
+
+            $StateRenderables = Parsedown::stateRenderablesFrom($Blocks);
+
             $elements = [];
             $elements[] = new Element('p', ['class' => $class . '-title'], $State->applyTo(Parsedown::line($title, $State)));
-            foreach ($this->lines as $line) {
-                $elements[] = new Element('p', [], $State->applyTo(Parsedown::line($line, $State)));
-            }
+            $elements = array_merge($elements, $State->applyTo($StateRenderables));
+
             return new Element('div', ['class' => $class . ' ' . $class . '-' . $this->type], $elements);
         });
     }
