@@ -18,7 +18,8 @@ final class Diagrams implements StateBearer
         $State = ($StateBearer ?? new State)->state();
 
         $BlockTypes = $State->get(BlockTypes::class)
-            ->addingMarkedHighPrecedence('`', [Diagram::class]);
+            ->addingMarkedHighPrecedence('`', [Diagram::class])
+            ->addingMarkedHighPrecedence('~', [Diagram::class]);
 
         $this->State = $State
             ->setting($BlockTypes);
