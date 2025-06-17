@@ -1,26 +1,25 @@
 <?php
 
+use Erusev\Parsedown\Parsedown;
 use BenjaminHoegh\ParsedownExtended\ParsedownExtended;
 use PHPUnit\Framework\TestCase;
 
 class SmartypantsTest extends TestCase
 {
-    protected ParsedownExtended $parsedownExtended;
+    protected Parsedown $parsedown;
 
     protected function setUp(): void
     {
-        $this->parsedownExtended = new ParsedownExtended();
-        $this->parsedownExtended->setSafeMode(true); // As we always want to support safe mode
+        $this->parsedown = new Parsedown(new ParsedownExtended());
     }
 
     protected function tearDown(): void
     {
-        unset($this->parsedownExtended);
+        unset($this->parsedown);
     }
 
     public function testEnableSmartypants()
     {
-        $this->parsedownExtended->config()->set('smartypants', true);
 
         $markdown = <<<MARKDOWN
             "Hello," he said.
@@ -30,12 +29,11 @@ class SmartypantsTest extends TestCase
             <p>“Hello,” he said.</p>
             HTML;
 
-        $this->assertEquals($expected, $this->parsedownExtended->text($markdown));
+        $this->assertEquals($expected, $this->parsedown->toHtml($markdown));
     }
 
     public function testDisableSmartypants()
     {
-        $this->parsedownExtended->config()->set('smartypants', false);
 
         $markdown = <<<MARKDOWN
             "Hello," he said.
@@ -45,6 +43,6 @@ class SmartypantsTest extends TestCase
             <p>&quot;Hello,&quot; he said.</p>
             HTML;
 
-        $this->assertEquals($expected, $this->parsedownExtended->text($markdown));
+        $this->assertEquals($expected, $this->parsedown->toHtml($markdown));
     }
 }

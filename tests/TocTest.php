@@ -1,21 +1,21 @@
 <?php
 
+use Erusev\Parsedown\Parsedown;
 use BenjaminHoegh\ParsedownExtended\ParsedownExtended;
 use PHPUnit\Framework\TestCase;
 
 class TocTest extends TestCase
 {
-    protected ParsedownExtended $parsedownExtended;
+    protected Parsedown $parsedown;
 
     protected function setUp(): void
     {
-        $this->parsedownExtended = new ParsedownExtended();
-        $this->parsedownExtended->setSafeMode(true); // As we always want to support safe mode
+        $this->parsedown = new Parsedown(new ParsedownExtended());
     }
 
     protected function tearDown(): void
     {
-        unset($this->parsedownExtended);
+        unset($this->parsedown);
     }
 
     /**
@@ -23,8 +23,6 @@ class TocTest extends TestCase
      */
     public function testTocEnabled()
     {
-        $this->parsedownExtended->config()->set('headings.auto_anchors', true);
-        $this->parsedownExtended->config()->set('toc', true);
 
         $markdown = <<<MARKDOWN
             # Heading 1
@@ -50,15 +48,13 @@ class TocTest extends TestCase
             </ul>
             HTML;
 
-        $actual = $this->parsedownExtended->body($markdown);
-        $actual = $this->parsedownExtended->contentsList();
+        $actual = $this->parsedown->body($markdown);
+        $actual = $this->parsedown->contentsList();
         $this->assertEquals($expected, $actual);
     }
 
     public function testTocDisabled()
     {
-        $this->parsedownExtended->config()->set('headings.auto_anchors', true);
-        $this->parsedownExtended->config()->set('toc', false);
 
         $markdown = <<<MARKDOWN
             [toc]
@@ -80,7 +76,7 @@ class TocTest extends TestCase
             <h2 id="heading-2-2">Heading 2.2</h2>
             HTML;
 
-        $actual = $this->parsedownExtended->text($markdown);
+        $actual = $this->parsedown->toHtml($markdown);
         $this->assertEquals($expected, $actual);
     }
 
@@ -89,8 +85,6 @@ class TocTest extends TestCase
      */
     public function testTocWithCustomHeadingLevels()
     {
-        $this->parsedownExtended->config()->set('headings.auto_anchors', true);
-        $this->parsedownExtended->config()->set('toc.levels', ['h1', 'h2']);
 
         $markdown = <<<MARKDOWN
             # Heading 1
@@ -120,8 +114,8 @@ class TocTest extends TestCase
             </ul>
             HTML;
 
-        $actual = $this->parsedownExtended->body($markdown);
-        $actual = $this->parsedownExtended->contentsList();
+        $actual = $this->parsedown->body($markdown);
+        $actual = $this->parsedown->contentsList();
         $this->assertEquals($expected, $actual);
     }
 
@@ -131,8 +125,6 @@ class TocTest extends TestCase
 
     public function testTocTag()
     {
-        $this->parsedownExtended->config()->set('headings.auto_anchors', true);
-        $this->parsedownExtended->config()->set('toc.tag', '[toc]');
 
         $markdown = <<<MARKDOWN
             [toc]
@@ -165,7 +157,7 @@ class TocTest extends TestCase
             <h2 id="heading-2-2">Heading 2.2</h2>
             HTML;
 
-        $actual = $this->parsedownExtended->text($markdown);
+        $actual = $this->parsedown->toHtml($markdown);
         $this->assertEquals($expected, $actual);
     }
 
@@ -175,7 +167,6 @@ class TocTest extends TestCase
 
     public function testTocMultipleSettings()
     {
-        $this->parsedownExtended->config()->set('toc', [
             'tag' => '[custom-toc-tag]',
             'levels' => ['h1', 'h2'],
         ]);
@@ -213,7 +204,7 @@ class TocTest extends TestCase
             <h2 id="heading-2-2">Heading 2.2</h2>
             HTML;
 
-        $actual = $this->parsedownExtended->text($markdown);
+        $actual = $this->parsedown->toHtml($markdown);
         $this->assertEquals($expected, $actual);
     }
 }

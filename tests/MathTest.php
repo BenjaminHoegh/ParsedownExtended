@@ -1,21 +1,21 @@
 <?php
 
+use Erusev\Parsedown\Parsedown;
 use BenjaminHoegh\ParsedownExtended\ParsedownExtended;
 use PHPUnit\Framework\TestCase;
 
 class MathTest extends TestCase
 {
-    protected ParsedownExtended $parsedownExtended;
+    protected Parsedown $parsedown;
 
     protected function setUp(): void
     {
-        $this->parsedownExtended = new ParsedownExtended();
-        $this->parsedownExtended->setSafeMode(true); // As we always want to support safe mode
+        $this->parsedown = new Parsedown(new ParsedownExtended());
     }
 
     protected function tearDown(): void
     {
-        unset($this->parsedownExtended);
+        unset($this->parsedown);
     }
 
     public function testInlineMath()
@@ -23,8 +23,7 @@ class MathTest extends TestCase
         $markdown = '$E=mc^2$';
         $expectedHtml = '<p>$E=mc^2$</p>';
 
-        $this->parsedownExtended->config()->set('math', true);
-        $result = $this->parsedownExtended->text($markdown);
+        $result = $this->parsedown->toHtml($markdown);
 
         $this->assertEquals($expectedHtml, $result);
     }
@@ -34,8 +33,7 @@ class MathTest extends TestCase
         $markdown = '$$E=mc^2$$';
         $expectedHtml = 'E=mc^2';
 
-        $this->parsedownExtended->config()->set('math', true);
-        $result = $this->parsedownExtended->text($markdown);
+        $result = $this->parsedown->toHtml($markdown);
 
         $this->assertEquals($expectedHtml, $result);
     }
@@ -44,7 +42,6 @@ class MathTest extends TestCase
     {
         // Test that inline math works correctly when followed by various punctuation
         // This addresses the issue where certain punctuation would prevent math detection
-        $this->parsedownExtended->config()->set('math', true);
 
         $testCases = [
             'Math with semicolon: $F=ma$; force formula' => '<p>Math with semicolon: $F=ma$; force formula</p>',
@@ -56,7 +53,7 @@ class MathTest extends TestCase
         ];
 
         foreach ($testCases as $markdown => $expectedHtml) {
-            $result = $this->parsedownExtended->text($markdown);
+            $result = $this->parsedown->toHtml($markdown);
             $this->assertEquals($expectedHtml, $result, "Failed for: $markdown");
         }
     }
@@ -64,13 +61,12 @@ class MathTest extends TestCase
     public function testInlineMathWithFollowingElements()
     {
         // Test that inline math doesn't interfere with subsequent markdown elements
-        $this->parsedownExtended->config()->set('math', true);
 
         $markdown = '$E=mc^2$
 
 > This is a blockquote';
         
-        $result = $this->parsedownExtended->text($markdown);
+        $result = $this->parsedown->toHtml($markdown);
         
         // Should contain both the math expression and the blockquote
         $this->assertStringContainsString('$E=mc^2$', $result);
@@ -81,13 +77,12 @@ class MathTest extends TestCase
     public function testOriginalIssueCase()
     {
         // Test the specific case mentioned in GitHub issue #65
-        $this->parsedownExtended->config()->set('math', true);
 
         $markdown = '$C=(1,0,1,0;)$, $CA=(0,1,0,1;)$, $CA^2=(b,0,a,0;)$, $CA^3=(0,b,0,a;)$
 
 > La matrice d\'observabilité s\'écrit donc :';
 
-        $result = $this->parsedownExtended->text($markdown);
+        $result = $this->parsedown->toHtml($markdown);
         
         // Should preserve all 4 math expressions
         $mathCount = substr_count($result, '$') / 2;

@@ -1,26 +1,25 @@
 <?php
 
+use Erusev\Parsedown\Parsedown;
 use BenjaminHoegh\ParsedownExtended\ParsedownExtended;
 use PHPUnit\Framework\TestCase;
 
 class AlertsTest extends TestCase
 {
-    protected ParsedownExtended $parsedownExtended;
+    protected Parsedown $parsedown;
 
     protected function setUp(): void
     {
-        $this->parsedownExtended = new ParsedownExtended();
-        $this->parsedownExtended->setSafeMode(true); // Set any necessary configurations
+        $this->parsedown = new Parsedown(new ParsedownExtended());
     }
 
     protected function tearDown(): void
     {
-        unset($this->parsedownExtended);
+        unset($this->parsedown);
     }
 
     public function testEnableAlerts()
     {
-        $this->parsedownExtended->config()->set('alerts', true);
 
         $markdown = <<<MARKDOWN
             > [!NOTE]
@@ -34,14 +33,13 @@ class AlertsTest extends TestCase
             </div>
             HTML;
 
-        $result = $this->parsedownExtended->text($markdown);
+        $result = $this->parsedown->toHtml($markdown);
 
         $this->assertEquals(trim($expectedHtml), trim($result));
     }
 
     public function testDisableAlerts()
     {
-        $this->parsedownExtended->config()->set('alerts', false);
 
         $markdown = <<<MARKDOWN
             > [!NOTE]
@@ -55,7 +53,7 @@ class AlertsTest extends TestCase
             </blockquote>
             HTML;
 
-        $result = $this->parsedownExtended->text($markdown);
+        $result = $this->parsedown->toHtml($markdown);
 
         $this->assertEquals(trim($expectedHtml), trim($result));
     }
@@ -74,7 +72,7 @@ class AlertsTest extends TestCase
             </div>
             HTML;
 
-        $result = $this->parsedownExtended->text($markdown);
+        $result = $this->parsedown->toHtml($markdown);
 
         $this->assertEquals(trim($expectedHtml), trim($result));
     }
@@ -93,7 +91,7 @@ class AlertsTest extends TestCase
             </div>
             HTML;
 
-        $result = $this->parsedownExtended->text($markdown);
+        $result = $this->parsedown->toHtml($markdown);
 
         $this->assertEquals(trim($expectedHtml), trim($result));
     }
@@ -112,7 +110,7 @@ class AlertsTest extends TestCase
             </div>
             HTML;
 
-        $result = $this->parsedownExtended->text($markdown);
+        $result = $this->parsedown->toHtml($markdown);
 
         $this->assertEquals(trim($expectedHtml), trim($result));
     }
@@ -131,7 +129,7 @@ class AlertsTest extends TestCase
             </div>
             HTML;
 
-        $result = $this->parsedownExtended->text($markdown);
+        $result = $this->parsedown->toHtml($markdown);
 
         $this->assertEquals(trim($expectedHtml), trim($result));
     }
@@ -150,14 +148,13 @@ class AlertsTest extends TestCase
             </div>
             HTML;
 
-        $result = $this->parsedownExtended->text($markdown);
+        $result = $this->parsedown->toHtml($markdown);
 
         $this->assertEquals(trim($expectedHtml), trim($result));
     }
 
     public function testCustomAlertTypes()
     {
-        $this->parsedownExtended->config()->set('alerts.types', ['custom']);
 
         $markdown = <<<MARKDOWN
             > [!CUSTOM]
@@ -171,7 +168,7 @@ class AlertsTest extends TestCase
             </div>
             HTML;
 
-        $result = $this->parsedownExtended->text($markdown);
+        $result = $this->parsedown->toHtml($markdown);
 
         $this->assertEquals(trim($expectedHtml), trim($result));
     }

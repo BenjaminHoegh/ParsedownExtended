@@ -89,11 +89,10 @@ if (extension_loaded('xdebug')) {
 }
 
 // Ensure ParsedownExtra and ParsedownExtended are available
-if (!class_exists('ParsedownExtra') || !class_exists('BenjaminHoegh\ParsedownExtended\ParsedownExtended')) {
-    echo "<div class='error'>Error: ParsedownExtra and ParsedownExtended are required but not found. Please make sure these packages are installed.</div>";
+if (!class_exists('ParsedownExtra') || !class_exists('Erusev\Parsedown\Parsedown') || !class_exists('BenjaminHoegh\ParsedownExtended\ParsedownExtended')) {
+    echo "<div class=error>Error: ParsedownExtra, Parsedown, and ParsedownExtended are required but not found. Please make sure these packages are installed.</div>";
     exit; // Stop further execution
 }
-
 ?>
 
 <table>
@@ -122,6 +121,8 @@ function benchmark($parser, $markdown, $iterations = 10)
             $parser->defaultTransform($markdown);
         } elseif ($parser instanceof League\CommonMark\CommonMarkConverter) {
             $parser->convert($markdown);
+        } elseif ($parser instanceof Erusev\Parsedown\Parsedown) {
+            $parser->toHtml($markdown);
         } else {
             $parser->text($markdown);
         }
@@ -147,7 +148,9 @@ $markdown_files = [
 // Initialize parsers
 $parsers = [];
 $parsers['ParsedownExtra'] = new ParsedownExtra();
-$parsers['ParsedownExtended'] = new \BenjaminHoegh\ParsedownExtended\ParsedownExtended();
+$parsers['ParsedownExtended'] = new \Erusev\Parsedown\Parsedown(
+    new \BenjaminHoegh\ParsedownExtended\ParsedownExtended()
+);
 
 if (class_exists('Michelf\MarkdownExtra')) {
     $parsers['Markdown PHP'] = new \Michelf\MarkdownExtra();

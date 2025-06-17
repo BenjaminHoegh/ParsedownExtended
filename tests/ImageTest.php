@@ -1,28 +1,28 @@
 <?php
 
+use Erusev\Parsedown\Parsedown;
 use BenjaminHoegh\ParsedownExtended\ParsedownExtended;
 use PHPUnit\Framework\TestCase;
 
 class ImageTest extends TestCase
 {
-    protected ParsedownExtended $parsedownExtended;
+    protected Parsedown $parsedown;
 
     protected function setUp(): void
     {
-        $this->parsedownExtended = new ParsedownExtended();
-        $this->parsedownExtended->setSafeMode(true); // As we always want to support safe mode
+        $this->parsedown = new Parsedown(new ParsedownExtended());
     }
 
     protected function tearDown(): void
     {
-        unset($this->parsedownExtended);
+        unset($this->parsedown);
     }
 
     public function testInlineImage()
     {
         $markdown = "![](image.png)";
         $expectedHtml = '<p><img src="image.png" alt="" /></p>';
-        $result = $this->parsedownExtended->text($markdown);
+        $result = $this->parsedown->toHtml($markdown);
 
         $this->assertEquals($expectedHtml, trim($result));
     }
@@ -31,7 +31,7 @@ class ImageTest extends TestCase
     {
         $markdown = "![alt text](image.png)";
         $expectedHtml = '<p><img src="image.png" alt="alt text" /></p>';
-        $result = $this->parsedownExtended->text($markdown);
+        $result = $this->parsedown->toHtml($markdown);
 
         $this->assertEquals($expectedHtml, trim($result));
     }

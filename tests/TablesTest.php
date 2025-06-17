@@ -1,26 +1,25 @@
 <?php
 
+use Erusev\Parsedown\Parsedown;
 use BenjaminHoegh\ParsedownExtended\ParsedownExtended;
 use PHPUnit\Framework\TestCase;
 
 class TablesTest extends TestCase
 {
-    protected ParsedownExtended $parsedownExtended;
+    protected Parsedown $parsedown;
 
     protected function setUp(): void
     {
-        $this->parsedownExtended = new ParsedownExtended();
-        $this->parsedownExtended->setSafeMode(true); // As we always want to support safe mode
+        $this->parsedown = new Parsedown(new ParsedownExtended());
     }
 
     protected function tearDown(): void
     {
-        unset($this->parsedownExtended);
+        unset($this->parsedown);
     }
 
     public function testEnableTables(): void
     {
-        $this->parsedownExtended->config()->set('tables', true);
 
         $markdown = <<<MARKDOWN
             | Header 1 | Header 2 |
@@ -45,14 +44,13 @@ class TablesTest extends TestCase
             </table>
             HTML;
 
-        $result = $this->parsedownExtended->text($markdown);
+        $result = $this->parsedown->toHtml($markdown);
 
         $this->assertEquals(trim($expectedHtml), trim($result));
     }
 
     public function testDisableTables(): void
     {
-        $this->parsedownExtended->config()->set('tables', false);
 
         $markdown = <<<MARKDOWN
             | Header 1 | Header 2 |
@@ -66,14 +64,13 @@ class TablesTest extends TestCase
             | Cell 1   | Cell 2   |</p>
             HTML;
 
-        $result = $this->parsedownExtended->text($markdown);
+        $result = $this->parsedown->toHtml($markdown);
 
         $this->assertEquals(trim($expectedHtml), trim($result));
     }
 
     public function testTableAlign(): void
     {
-        $this->parsedownExtended->config()->set('tables', true);
 
         $markdown = <<<MARKDOWN
             | Left-aligned | Center-aligned | Right-aligned |
@@ -106,15 +103,13 @@ class TablesTest extends TestCase
             </table>
             HTML;
 
-        $result = $this->parsedownExtended->text($markdown);
+        $result = $this->parsedown->toHtml($markdown);
 
         $this->assertEquals($expectedHtml, $result);
     }
 
     public function testTableSpan(): void
     {
-        $this->parsedownExtended->config()->set('tables', true);
-        $this->parsedownExtended->config()->set('tables.tablespan', true);
 
         $markdown = <<<MARKDOWN
             | >     | >           |   Colspan       | >           | for thead |
@@ -166,7 +161,7 @@ class TablesTest extends TestCase
             </table>
             HTML;
 
-        $result = $this->parsedownExtended->text($markdown);
+        $result = $this->parsedown->toHtml($markdown);
 
         $this->assertEquals(trim($expectedHtml), trim($result));
     }
