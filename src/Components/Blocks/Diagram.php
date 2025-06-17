@@ -17,22 +17,48 @@ final class Diagram implements ContinuableBlock
     /** @var string */
     private $language;
 
+    /** @var string */
+    private $marker;
+
+    /** @var int */
+    private $openerLength;
+
     /** @var bool */
     private $isComplete;
 
-    private function __construct(string $text, string $language, bool $isComplete)
+    private function __construct(string $text, string $language, string $marker, int $openerLength, bool $isComplete)
     {
         $this->text = $text;
         $this->language = $language;
+        $this->marker = $marker;
+        $this->openerLength = $openerLength;
         $this->isComplete = $isComplete;
     }
 
     public static function build(Context $Context, State $State, ?Block $Block = null)
     {
-        $line = $Context->line()->text();
+        $marker = substr($Context->line()->text(), 0, 1);
 
-        if (preg_match('/^```(mermaid|graphviz|dot|chartjs|chart)\s*$/', $line, $m)) {
-            return new self('', $m[1], false);
+        if ($marker !== '`' && $marker !== '~') {
+            return null;
+        }
+
+        $openerLength = strspn($Context->line()->text(), $marker);
+
+        if ($openerLength < 3) {
+            return null;
+        }
+
+        $infostring = trim(substr($Context->line()->text(), $openerLength), "\t ");
+
+        if (strpos($infostring, $marker) !== false) {
+            return null;
+        }
+
+        $language = substr($infostring, 0, strcspn($infostring, " \t\n\f\r"));
+
+        if (in_array($language, self::SUPPORTED_LANGUAGES)) {
+            return new self('', $language, $marker, $openerLength, false);
         }
 
         return null;
@@ -44,13 +70,19 @@ final class Diagram implements ContinuableBlock
             return null;
         }
 
-        if ($Context->line()->text() === '```') {
-            return new self($this->text, $this->language, true);
+        $newText = $this->text;
+
+        $newText .= $Context->precedingEmptyLinesText();
+
+        if (($len = strspn($Context->line()->text(), $this->marker)) >= $this->openerLength
+            && rtrim(substr($Context->line()->text(), $len)) === ''
+        ) {
+            return new self($newText, $this->language, $this->marker, $this->openerLength, true);
         }
 
-        $newText = $this->text . $Context->line()->rawLine() . "\n";
+        $newText .= $Context->line()->rawLine() . "\n";
 
-        return new self($newText, $this->language, false);
+        return new self($newText, $this->language, $this->marker, $this->openerLength, false);
     }
 
     public function text()
