@@ -1,0 +1,64 @@
+body {
+    background-color: #222;
+    color: #777;
+    font-family: "Roboto", sans-serif;
+    font-size: 16px;
+    margin: 0;
+    padding: 0;
+}
+
+table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+th,
+td {
+    padding: 20px;
+    text-align: left;
+}
+
+td {
+    width: 20%;
+}
+
+table th:first-child,
+table td:first-child {
+    width: 20%;
+}
+
+tbody tr:nth-child(odd) {
+    background-color: #1D1D1D;
+}
+
+.average {
+    border-top: 1px solid #333;
+}
+
+strong {
+    color: #ddd;
+    font-weight: 400;
+    font-size: 16px;
+}
+
+.faster {
+    color: #77dd77;
+}
+
+.slower {
+    color: #dd7777;
+}
+
+.xdebug-warning {
+    background-color: #ffcc00;
+    color: #333;
+    padding: 10px;
+    margin: 20px 0;
+    font-size: 16px;
+}
+
+.error {
+    color: #dd7777;
+    padding: 20px;
+    font-size: 18px;
+}
