@@ -57,7 +57,7 @@ final class Diagram implements ContinuableBlock
 
         $language = substr($infostring, 0, strcspn($infostring, " \t\n\f\r"));
 
-        if (in_array($language, ['mermaid', 'graphviz', 'dot', 'chartjs', 'chart'])) {
+        if (in_array($language, self::SUPPORTED_LANGUAGES)) {
             return new self('', $language, $marker, $openerLength, false);
         }
 
