@@ -41,4 +41,28 @@ class DiagramsTest extends TestCase
 
         $this->assertEquals($expectedHtml, $result);
     }
+
+    public function testTildeFencedDiagram()
+    {
+        $this->parsedownExtended->config()->set('diagrams', true);
+
+        $markdown = "~~~mermaid\ngraph TD;\n    A-->B;\n~~~";
+        $expectedHtml = "<div class=\"mermaid\">graph TD;\n    A-->B;</div>";
+
+        $result = $this->parsedownExtended->text($markdown);
+
+        $this->assertEquals($expectedHtml, $result);
+    }
+
+    public function testLongFenceDiagram()
+    {
+        $this->parsedownExtended->config()->set('diagrams', true);
+
+        $markdown = "~~~~mermaid\ngraph TD;\n    A-->B;\n~~~~~~   \n";
+        $expectedHtml = "<div class=\"mermaid\">graph TD;\n    A-->B;</div>";
+
+        $result = $this->parsedownExtended->text($markdown);
+
+        $this->assertEquals($expectedHtml, $result);
+    }
 }
