@@ -79,7 +79,7 @@ final class Diagram implements ContinuableBlock
         $newText .= $Context->precedingEmptyLinesText();
 
         if (($len = strspn($Context->line()->text(), $this->marker)) >= $this->openerLength
-            && chop(substr($Context->line()->text(), $len), ' ') === ''
+            && rtrim(substr($Context->line()->text(), $len)) === ''
         ) {
             return new self($newText, $this->language, $this->marker, $this->openerLength, true);
         }
