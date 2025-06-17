@@ -51,7 +51,7 @@ final class Diagram implements ContinuableBlock
 
         $infostring = trim(substr($Context->line()->text(), $openerLength), "\t ");
 
-        if (strpos($infostring, '`') !== false) {
+        if (strpos($infostring, $marker) !== false) {
             return null;
         }
 
