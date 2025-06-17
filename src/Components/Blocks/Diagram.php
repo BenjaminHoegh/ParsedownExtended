@@ -26,6 +26,22 @@ final class Diagram implements ContinuableBlock
     /** @var bool */
     private $isComplete;
 
+    public const SUPPORTED_LANGUAGES = [
+        'mermaid' => [
+            'element' => 'pre',
+            'class' => 'mermaid',
+        ],
+        'chartjs' => [
+            'element' => 'canvas',
+            'class' => 'chartjs',
+        ],
+        'chart' => [
+            'element' => 'canvas',
+            'class' => 'chartjs',
+        ],
+        // add other supported languages here
+    ];
+
     private function __construct(string $text, string $language, string $marker, int $openerLength, bool $isComplete)
     {
         $this->text = $text;
@@ -57,7 +73,7 @@ final class Diagram implements ContinuableBlock
 
         $language = substr($infostring, 0, strcspn($infostring, " \t\n\f\r"));
 
-        if (in_array($language, self::SUPPORTED_LANGUAGES)) {
+        if (array_key_exists($language, self::SUPPORTED_LANGUAGES)) {
             return new self('', $language, $marker, $openerLength, false);
         }
 
@@ -92,18 +108,11 @@ final class Diagram implements ContinuableBlock
 
     public function stateRenderable()
     {
-        if (in_array($this->language, ['chartjs', 'chart'])) {
+        if (isset(self::SUPPORTED_LANGUAGES[$this->language])) {
+            $config = self::SUPPORTED_LANGUAGES[$this->language];
             return new Element(
-                'canvas',
-                ['class' => 'chartjs'],
-                [new Text($this->text)]
-            );
-        }
-
-        if ($this->language === 'mermaid') {
-            return new Element(
-                'pre',
-                ['class' => 'mermaid'],
+                $config['element'],
+                ['class' => $config['class']],
                 [new Text($this->text)]
             );
         }
