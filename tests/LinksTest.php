@@ -240,6 +240,24 @@ class LinksTest extends TestCase
         $this->assertStringNotContainsString('noreferrer"', $html);
     }
 
+    public function testNoServerVars()
+    {
+        $this->parsedownExtended->config()->set('links.enabled', true);
+
+        // this is not set e.g. when used from CLI
+        $temp = $_SERVER['HTTP_HOST'];
+        unset($_SERVER['HTTP_HOST']);
+
+        $markdown = '[Link](https://www.example.com/blah)';
+        $html = $this->parsedownExtended->line($markdown);
+
+        // just checking if above throws some error/warning
+        $this->assertTrue(true);
+
+        // restore for other tests
+        $_SERVER['HTTP_HOST'] = $temp;
+    }
+
     // Markdown Edge Cases
     // ----------------------------
 
