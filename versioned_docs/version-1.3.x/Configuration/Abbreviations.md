@@ -25,7 +25,7 @@ $configValue = config()->get('abbreviations');
 To adjust the Abbreviations feature, use:
 
 ```php
-config()->set('abbreviations', (bool|array) $value);
+$ParsedownExtended->config()->set('abbreviations', (bool|array) $value);
 ```
 
 - `$value` can be a boolean to enable or disable the feature globally, or an array for more detailed configuration options.
