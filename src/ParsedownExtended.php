@@ -389,7 +389,7 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
             $host = parse_url($href, PHP_URL_HOST);
 
             // Check if the domain matches the current domain
-            if ($host && $host !== $_SERVER['HTTP_HOST']) {
+            if ($host && (!isset($_SERVER['HTTP_HOST']) || ($host !== $_SERVER['HTTP_HOST']))) {
 
                 // Remove 'www.' from the host to get the base domain name
                 $domain = preg_replace('/^www\\./', '', $host);
