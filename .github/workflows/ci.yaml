@@ -21,25 +21,9 @@ jobs:
         with:
           php-version: ${{ matrix.php }}
 
-      - name: Use version-specific composer.lock
-        run: |
-          PHP_VERSION=${{ matrix.php }}
-          if [[ "$PHP_VERSION" == 7.4* ]]; then
-            cp composer.lock-74 composer.lock
-          elif [[ "$PHP_VERSION" == 8.0* ]]; then
-            cp composer.lock-80 composer.lock
-          elif [[ "$PHP_VERSION" == 8.1* ]]; then
-            cp composer.lock-81 composer.lock
-          elif [[ "$PHP_VERSION" == 8.2* ]]; then
-            cp composer.lock-82 composer.lock
-          elif [[ "$PHP_VERSION" == 8.3* ]]; then
-            cp composer.lock-83 composer.lock
-          elif [[ "$PHP_VERSION" == 8.4* ]]; then
-            cp composer.lock-84 composer.lock
-          fi
-
       - name: Install dependencies
-        run: composer install
+        run: composer update --prefer-dist --no-interaction
 
       - name: Run tests
-        run: vendor/bin/phpunit
+        run: |
+          vendor/bin/phpunit
