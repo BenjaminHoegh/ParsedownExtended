@@ -1,0 +1,23 @@
+<?xml version="1.0"?>
+<ruleset name="ParsedownExtended PHP Compatibility">
+    <description>PHP Compatibility checking for ParsedownExtended</description>
+
+    <!-- Check all PHP files in the project -->
+    <file>src</file>
+
+    <!-- Exclude vendor directory -->
+    <exclude-pattern>*/vendor/*</exclude-pattern>
+
+    <!-- Set installed PHP version for reference -->
+    <config name="installed_paths" value="vendor/phpcompatibility/php-compatibility" />
+
+    <!-- Check for compatibility with PHP 7.4 and higher -->
+    <config name="testVersion" value="7.4-"/>
+
+    <!-- Include PHPCompatibility standard -->
+    <rule ref="PHPCompatibility"/>
+
+    <!-- Show progress and colors -->
+    <arg name="colors"/>
+    <arg value="p"/>
+</ruleset>

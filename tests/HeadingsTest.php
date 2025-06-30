@@ -2,17 +2,20 @@
 
 // NOTE: Add special attributes test to HeadingsTest.php
 
+use Erusev\Parsedown\State;
+use Erusev\Parsedown\Parsedown;
+use Erusev\ParsedownExtra\ParsedownExtra;
 use BenjaminHoegh\ParsedownExtended\ParsedownExtended;
 use PHPUnit\Framework\TestCase;
 
 class HeadingsTest extends TestCase
 {
-    protected ParsedownExtended $parsedownExtended;
+    protected Parsedown $parsedownExtended;
 
     protected function setUp(): void
     {
-        $this->parsedownExtended = new ParsedownExtended();
-        $this->parsedownExtended->setSafeMode(true); // As we always want to support safe mode
+        $this->parsedownExtended = new Parsedown(ParsedownExtended::from(new State()));
+
     }
 
     protected function tearDown(): void
@@ -29,7 +32,7 @@ class HeadingsTest extends TestCase
 
         $markdown = '# Heading 1';
         $expected = '<h1>Heading 1</h1>';
-        $actual = $this->parsedownExtended->text($markdown);
+        $actual = $this->parsedownExtended->toHtml($markdown);
         $this->assertEquals($expected, $actual);
     }
 
@@ -42,7 +45,7 @@ class HeadingsTest extends TestCase
 
         $markdown = '# Heading 1';
         $expected = '<h1 id="heading-1">Heading 1</h1>';
-        $actual = $this->parsedownExtended->text($markdown);
+        $actual = $this->parsedownExtended->toHtml($markdown);
         $this->assertEquals($expected, $actual);
     }
 
@@ -64,7 +67,7 @@ class HeadingsTest extends TestCase
             <h1 id="heading-1-1">Heading 1</h1>
             <h1 id="heading-1-2">Heading 1</h1>
             HTML;
-        $actual = $this->parsedownExtended->text($markdown);
+        $actual = $this->parsedownExtended->toHtml($markdown);
         $this->assertEquals($expected, $actual);
     }
 
@@ -77,7 +80,7 @@ class HeadingsTest extends TestCase
 
         $markdown = '# Heading 1 {#custom-anchor}';
         $expected = '<h1 id="custom-anchor">Heading 1</h1>';
-        $actual = $this->parsedownExtended->text($markdown);
+        $actual = $this->parsedownExtended->toHtml($markdown);
         $this->assertEquals($expected, $actual);
     }
 
@@ -91,7 +94,7 @@ class HeadingsTest extends TestCase
 
         $markdown = '# Heading 1';
         $expected = '<h1 id="heading-1-1">Heading 1</h1>';
-        $actual = $this->parsedownExtended->text($markdown);
+        $actual = $this->parsedownExtended->toHtml($markdown);
         $this->assertEquals($expected, $actual);
     }
 
@@ -116,7 +119,7 @@ class HeadingsTest extends TestCase
             <h1 id="heading-3">Heading</h1>
             <h1 id="heading-5">Heading</h1>
             HTML;
-        $actual = $this->parsedownExtended->text($markdown);
+        $actual = $this->parsedownExtended->toHtml($markdown);
         $this->assertEquals($expected, $actual);
     }
 
@@ -130,7 +133,7 @@ class HeadingsTest extends TestCase
 
         $markdown = '# Heading 1 {#custom-anchor}';
         $expected = '<h1 id="custom-anchor-1">Heading 1</h1>';
-        $actual = $this->parsedownExtended->text($markdown);
+        $actual = $this->parsedownExtended->toHtml($markdown);
         $this->assertEquals($expected, $actual);
     }
 
@@ -160,7 +163,7 @@ class HeadingsTest extends TestCase
             ##### Heading 5
             ###### Heading 6</p>
             HTML;
-        $actual = $this->parsedownExtended->text($markdown);
+        $actual = $this->parsedownExtended->toHtml($markdown);
         $this->assertEquals($expected, $actual);
     }
 
@@ -174,7 +177,7 @@ class HeadingsTest extends TestCase
 
         $markdown = '# Heading 1';
         $expected = '<h1 id="heading-1">Heading 1</h1>';
-        $actual = $this->parsedownExtended->text($markdown);
+        $actual = $this->parsedownExtended->toHtml($markdown);
         $this->assertEquals($expected, $actual);
 
 
@@ -182,7 +185,7 @@ class HeadingsTest extends TestCase
 
         $markdown = '# Heading 1';
         $expected = '<h1 id="Heading-1">Heading 1</h1>';
-        $actual = $this->parsedownExtended->text($markdown);
+        $actual = $this->parsedownExtended->toHtml($markdown);
         $this->assertEquals($expected, $actual);
     }
 
@@ -196,7 +199,7 @@ class HeadingsTest extends TestCase
 
         $markdown = '# Heading 1';
         $expected = '<h1 id="heading_1">Heading 1</h1>';
-        $actual = $this->parsedownExtended->text($markdown);
+        $actual = $this->parsedownExtended->toHtml($markdown);
         $this->assertEquals($expected, $actual);
     }
 
@@ -212,7 +215,7 @@ class HeadingsTest extends TestCase
 
         $markdown = '# Heading 1';
         $expected = '<h1 id="deading-1">Heading 1</h1>';
-        $actual = $this->parsedownExtended->text($markdown);
+        $actual = $this->parsedownExtended->toHtml($markdown);
         $this->assertEquals($expected, $actual);
     }
 
@@ -228,7 +231,7 @@ class HeadingsTest extends TestCase
 
         $markdown = '# Heading 1';
         $expected = '<h1 id="custom-anchor">Heading 1</h1>';
-        $actual = $this->parsedownExtended->text($markdown);
+        $actual = $this->parsedownExtended->toHtml($markdown);
         $this->assertEquals($expected, $actual);
     }
 }

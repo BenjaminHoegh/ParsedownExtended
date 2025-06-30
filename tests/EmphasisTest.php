@@ -1,16 +1,19 @@
 <?php
 
+use Erusev\Parsedown\State;
+use Erusev\Parsedown\Parsedown;
+use Erusev\ParsedownExtra\ParsedownExtra;
 use BenjaminHoegh\ParsedownExtended\ParsedownExtended;
 use PHPUnit\Framework\TestCase;
 
 class EmphasisTest extends TestCase
 {
-    protected ParsedownExtended $parsedownExtended;
+    protected Parsedown $parsedownExtended;
 
     protected function setUp(): void
     {
-        $this->parsedownExtended = new ParsedownExtended();
-        $this->parsedownExtended->setSafeMode(true); // As we always want to support safe mode
+        $this->parsedownExtended = new Parsedown(ParsedownExtended::from(new State()));
+
     }
 
     protected function tearDown(): void
@@ -26,7 +29,7 @@ class EmphasisTest extends TestCase
         $this->parsedownExtended->config()
         ->set('emphasis', true)
         ->set('emphasis.bold', true);
-        $result = $this->parsedownExtended->text($markdown);
+        $result = $this->parsedownExtended->toHtml($markdown);
 
         $this->assertEquals($expectedHtml, $result);
     }
@@ -39,7 +42,7 @@ class EmphasisTest extends TestCase
         $this->parsedownExtended->config()
         ->set('emphasis', true)
         ->set('emphasis.bold', false);
-        $result = $this->parsedownExtended->text($markdown);
+        $result = $this->parsedownExtended->toHtml($markdown);
 
         $this->assertEquals($expectedHtml, $result);
     }
@@ -52,7 +55,7 @@ class EmphasisTest extends TestCase
         $this->parsedownExtended->config()
         ->set('emphasis', true)
         ->set('emphasis.italic', true);
-        $result = $this->parsedownExtended->text($markdown);
+        $result = $this->parsedownExtended->toHtml($markdown);
 
         $this->assertEquals($expectedHtml, $result);
     }
@@ -65,7 +68,7 @@ class EmphasisTest extends TestCase
         $this->parsedownExtended->config()
         ->set('emphasis', true)
         ->set('emphasis.italic', false);
-        $result = $this->parsedownExtended->text($markdown);
+        $result = $this->parsedownExtended->toHtml($markdown);
 
         $this->assertEquals($expectedHtml, $result);
     }
@@ -78,7 +81,7 @@ class EmphasisTest extends TestCase
         $this->parsedownExtended->config()
         ->set('emphasis', true)
         ->set('emphasis.bold', true);
-        $result = $this->parsedownExtended->text($markdown);
+        $result = $this->parsedownExtended->toHtml($markdown);
 
         $this->assertEquals($expectedHtml, $result);
     }
@@ -91,7 +94,7 @@ class EmphasisTest extends TestCase
         $this->parsedownExtended->config()
         ->set('emphasis', true)
         ->set('emphasis.bold', false);
-        $result = $this->parsedownExtended->text($markdown);
+        $result = $this->parsedownExtended->toHtml($markdown);
 
         $this->assertEquals($expectedHtml, $result);
     }
@@ -104,7 +107,7 @@ class EmphasisTest extends TestCase
         $this->parsedownExtended->config()
         ->set('emphasis', true)
         ->set('emphasis.italic', true);
-        $result = $this->parsedownExtended->text($markdown);
+        $result = $this->parsedownExtended->toHtml($markdown);
 
         $this->assertEquals($expectedHtml, $result);
     }
@@ -117,7 +120,7 @@ class EmphasisTest extends TestCase
         $this->parsedownExtended->config()
         ->set('emphasis', true)
         ->set('emphasis.italic', false);
-        $result = $this->parsedownExtended->text($markdown);
+        $result = $this->parsedownExtended->toHtml($markdown);
 
         $this->assertEquals($expectedHtml, $result);
     }
@@ -130,7 +133,7 @@ class EmphasisTest extends TestCase
         $this->parsedownExtended->config()
         ->set('emphasis', true)
         ->set('emphasis.mark', true);
-        $result = $this->parsedownExtended->text($markdown);
+        $result = $this->parsedownExtended->toHtml($markdown);
 
         $this->assertEquals($expectedHtml, $result);
     }
@@ -143,7 +146,7 @@ class EmphasisTest extends TestCase
         $this->parsedownExtended->config()
         ->set('emphasis', true)
         ->set('emphasis.mark', false);
-        $result = $this->parsedownExtended->text($markdown);
+        $result = $this->parsedownExtended->toHtml($markdown);
 
         $this->assertEquals($expectedHtml, $result);
     }
@@ -156,7 +159,7 @@ class EmphasisTest extends TestCase
         $this->parsedownExtended->config()
         ->set('emphasis', true)
         ->set('emphasis.strikethroughs', true);
-        $result = $this->parsedownExtended->text($markdown);
+        $result = $this->parsedownExtended->toHtml($markdown);
 
         $this->assertEquals($expectedHtml, $result);
     }
@@ -169,7 +172,7 @@ class EmphasisTest extends TestCase
         $this->parsedownExtended->config()
         ->set('emphasis', true)
         ->set('emphasis.strikethroughs', false);
-        $result = $this->parsedownExtended->text($markdown);
+        $result = $this->parsedownExtended->toHtml($markdown);
 
         $this->assertEquals($expectedHtml, $result);
     }
@@ -182,7 +185,7 @@ class EmphasisTest extends TestCase
         $this->parsedownExtended->config()
         ->set('emphasis', true)
         ->set('emphasis.insertions', true);
-        $result = $this->parsedownExtended->text($markdown);
+        $result = $this->parsedownExtended->toHtml($markdown);
 
         $this->assertEquals($expectedHtml, $result);
     }
@@ -195,7 +198,7 @@ class EmphasisTest extends TestCase
         $this->parsedownExtended->config()
         ->set('emphasis', true)
         ->set('emphasis.insertions', false);
-        $result = $this->parsedownExtended->text($markdown);
+        $result = $this->parsedownExtended->toHtml($markdown);
 
         $this->assertEquals($expectedHtml, $result);
     }
@@ -208,7 +211,7 @@ class EmphasisTest extends TestCase
         $this->parsedownExtended->config()
         ->set('emphasis', true)
         ->set('emphasis.superscript', true);
-        $result = $this->parsedownExtended->text($markdown);
+        $result = $this->parsedownExtended->toHtml($markdown);
 
         $this->assertEquals($expectedHtml, $result);
     }
@@ -221,7 +224,7 @@ class EmphasisTest extends TestCase
         $this->parsedownExtended->config()
         ->set('emphasis', true)
         ->set('emphasis.superscript', false);
-        $result = $this->parsedownExtended->text($markdown);
+        $result = $this->parsedownExtended->toHtml($markdown);
 
         $this->assertEquals($expectedHtml, $result);
     }
@@ -234,7 +237,7 @@ class EmphasisTest extends TestCase
         $this->parsedownExtended->config()
         ->set('emphasis', true)
         ->set('emphasis.subscript', true);
-        $result = $this->parsedownExtended->text($markdown);
+        $result = $this->parsedownExtended->toHtml($markdown);
 
         $this->assertEquals($expectedHtml, $result);
     }
@@ -247,7 +250,7 @@ class EmphasisTest extends TestCase
         $this->parsedownExtended->config()
         ->set('emphasis', true)
         ->set('emphasis.subscript', false);
-        $result = $this->parsedownExtended->text($markdown);
+        $result = $this->parsedownExtended->toHtml($markdown);
 
         $this->assertEquals($expectedHtml, $result);
     }
@@ -260,7 +263,7 @@ class EmphasisTest extends TestCase
         $this->parsedownExtended->config()
         ->set('emphasis', true)
         ->set('emphasis.keystrokes', true);
-        $result = $this->parsedownExtended->text($markdown);
+        $result = $this->parsedownExtended->toHtml($markdown);
 
         $this->assertEquals($expectedHtml, $result);
     }
@@ -273,7 +276,7 @@ class EmphasisTest extends TestCase
         $this->parsedownExtended->config()
         ->set('emphasis', true)
         ->set('emphasis.keystrokes', false);
-        $result = $this->parsedownExtended->text($markdown);
+        $result = $this->parsedownExtended->toHtml($markdown);
 
         $this->assertEquals($expectedHtml, $result);
     }

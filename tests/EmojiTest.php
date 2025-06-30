@@ -1,16 +1,19 @@
 <?php
 
+use Erusev\Parsedown\State;
+use Erusev\Parsedown\Parsedown;
+use Erusev\ParsedownExtra\ParsedownExtra;
 use BenjaminHoegh\ParsedownExtended\ParsedownExtended;
 use PHPUnit\Framework\TestCase;
 
 class EmojiTest extends TestCase
 {
-    protected ParsedownExtended $parsedownExtended;
+    protected Parsedown $parsedownExtended;
 
     protected function setUp(): void
     {
-        $this->parsedownExtended = new ParsedownExtended();
-        $this->parsedownExtended->setSafeMode(true); // As we always want to support safe mode
+        $this->parsedownExtended = new Parsedown(ParsedownExtended::from(new State()));
+
     }
 
     protected function tearDown(): void
@@ -25,7 +28,7 @@ class EmojiTest extends TestCase
         $markdown = ":grinning_face:";
         $expectedHtml = '<p>😀</p>';
 
-        $result = $this->parsedownExtended->text($markdown);
+        $result = $this->parsedownExtended->toHtml($markdown);
 
         $this->assertEquals($expectedHtml, $result);
     }
@@ -37,7 +40,7 @@ class EmojiTest extends TestCase
         $markdown = ":grinning_face:";
         $expectedHtml = '<p>:grinning_face:</p>';
 
-        $result = $this->parsedownExtended->text($markdown);
+        $result = $this->parsedownExtended->toHtml($markdown);
 
         $this->assertEquals($expectedHtml, $result);
     }
@@ -50,7 +53,7 @@ class EmojiTest extends TestCase
         $markdown = "```php\n:grinning_face:\n```";
         $expectedHtml = '<pre><code class="language-php">:grinning_face:</code></pre>';
 
-        $result = $this->parsedownExtended->text($markdown);
+        $result = $this->parsedownExtended->toHtml($markdown);
 
         $this->assertEquals($expectedHtml, $result);
     }
@@ -63,7 +66,7 @@ class EmojiTest extends TestCase
         $markdown = "`:grinning_face:`";
         $expectedHtml = '<p><code>:grinning_face:</code></p>';
 
-        $result = $this->parsedownExtended->text($markdown);
+        $result = $this->parsedownExtended->toHtml($markdown);
 
         $this->assertEquals($expectedHtml, $result);
     }
@@ -76,14 +79,14 @@ class EmojiTest extends TestCase
         $markdown = "testing:grinning_face:";
         $expectedHtml = '<p>testing:grinning_face:</p>';
 
-        $result = $this->parsedownExtended->text($markdown);
+        $result = $this->parsedownExtended->toHtml($markdown);
 
         $this->assertEquals($expectedHtml, $result);
 
         $markdown = ":grinning_face:ing";
         $expectedHtml = '<p>:grinning_face:ing</p>';
 
-        $result = $this->parsedownExtended->text($markdown);
+        $result = $this->parsedownExtended->toHtml($markdown);
 
         $this->assertEquals($expectedHtml, $result);
     }

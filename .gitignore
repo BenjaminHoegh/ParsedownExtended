@@ -1,32 +1,8 @@
 .nova/
 vendor/
 lab/
-tools/
-build/
-docs/
-
-# PHP-CS-Fixer
+test/
+.idea/
 .php_cs.cache
 .php-cs-fixer.cache
-
-# PHPUnit
 .phpunit.result.cache
-
-# Composer
-composer.phar
-
-# phpDocumentor
-.phpdoc/
-phpDocumentor.phar
-
-# Windows
-Thumbs.db
-
-# macOS
-.DS_Store
-
-# IDE
-.vscode/
-.idea/
-qodana.yaml
-

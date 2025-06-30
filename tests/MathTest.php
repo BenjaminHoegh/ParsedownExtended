@@ -1,16 +1,19 @@
 <?php
 
+use Erusev\Parsedown\State;
+use Erusev\Parsedown\Parsedown;
+use Erusev\ParsedownExtra\ParsedownExtra;
 use BenjaminHoegh\ParsedownExtended\ParsedownExtended;
 use PHPUnit\Framework\TestCase;
 
 class MathTest extends TestCase
 {
-    protected ParsedownExtended $parsedownExtended;
+    protected Parsedown $parsedownExtended;
 
     protected function setUp(): void
     {
-        $this->parsedownExtended = new ParsedownExtended();
-        $this->parsedownExtended->setSafeMode(true); // As we always want to support safe mode
+        $this->parsedownExtended = new Parsedown(ParsedownExtended::from(new State()));
+
     }
 
     protected function tearDown(): void
@@ -24,7 +27,7 @@ class MathTest extends TestCase
         $expectedHtml = '<p>$E=mc^2$</p>';
 
         $this->parsedownExtended->config()->set('math', true);
-        $result = $this->parsedownExtended->text($markdown);
+        $result = $this->parsedownExtended->toHtml($markdown);
 
         $this->assertEquals($expectedHtml, $result);
     }
@@ -35,7 +38,7 @@ class MathTest extends TestCase
         $expectedHtml = 'E=mc^2';
 
         $this->parsedownExtended->config()->set('math', true);
-        $result = $this->parsedownExtended->text($markdown);
+        $result = $this->parsedownExtended->toHtml($markdown);
 
         $this->assertEquals($expectedHtml, $result);
     }
@@ -56,7 +59,7 @@ class MathTest extends TestCase
         ];
 
         foreach ($testCases as $markdown => $expectedHtml) {
-            $result = $this->parsedownExtended->text($markdown);
+            $result = $this->parsedownExtended->toHtml($markdown);
             $this->assertEquals($expectedHtml, $result, "Failed for: $markdown");
         }
     }
@@ -69,9 +72,9 @@ class MathTest extends TestCase
         $markdown = '$E=mc^2$
 
 > This is a blockquote';
-        
-        $result = $this->parsedownExtended->text($markdown);
-        
+
+        $result = $this->parsedownExtended->toHtml($markdown);
+
         // Should contain both the math expression and the blockquote
         $this->assertStringContainsString('$E=mc^2$', $result);
         $this->assertStringContainsString('<blockquote>', $result);
@@ -87,12 +90,12 @@ class MathTest extends TestCase
 
 > La matrice d\'observabilité s\'écrit donc :';
 
-        $result = $this->parsedownExtended->text($markdown);
-        
+        $result = $this->parsedownExtended->toHtml($markdown);
+
         // Should preserve all 4 math expressions
         $mathCount = substr_count($result, '$') / 2;
         $this->assertEquals(4, $mathCount, 'All math expressions should be preserved');
-        
+
         // Should render the blockquote correctly
         $this->assertStringContainsString('<blockquote>', $result);
         $this->assertStringContainsString('La matrice', $result);
