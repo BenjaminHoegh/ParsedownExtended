@@ -1,16 +1,19 @@
 <?php
 
+use Erusev\Parsedown\State;
+use Erusev\Parsedown\Parsedown;
+use Erusev\ParsedownExtra\ParsedownExtra;
 use BenjaminHoegh\ParsedownExtended\ParsedownExtended;
 use PHPUnit\Framework\TestCase;
 
 class ListsTest extends TestCase
 {
-    protected ParsedownExtended $parsedownExtended;
+    protected Parsedown $parsedownExtended;
 
     protected function setUp(): void
     {
-        $this->parsedownExtended = new ParsedownExtended();
-        $this->parsedownExtended->setSafeMode(true); // As we always want to support safe mode
+        $this->parsedownExtended = new Parsedown(ParsedownExtended::from(new State()));
+
     }
 
     protected function tearDown(): void
@@ -22,7 +25,7 @@ class ListsTest extends TestCase
     {
         $markdown = "- Item 1\n- Item 2";
         $expectedHtml = "<ul>\n<li>Item 1</li>\n<li>Item 2</li>\n</ul>";
-        $result = $this->parsedownExtended->text($markdown);
+        $result = $this->parsedownExtended->toHtml($markdown);
 
         $this->assertEquals($expectedHtml, trim($result));
     }
@@ -31,7 +34,7 @@ class ListsTest extends TestCase
     {
         $markdown = "1. Item 1\n2. Item 2";
         $expectedHtml = "<ol>\n<li>Item 1</li>\n<li>Item 2</li>\n</ol>";
-        $result = $this->parsedownExtended->text($markdown);
+        $result = $this->parsedownExtended->toHtml($markdown);
 
         $this->assertEquals($expectedHtml, trim($result));
     }

@@ -1,16 +1,19 @@
 <?php
 
+use Erusev\Parsedown\State;
+use Erusev\Parsedown\Parsedown;
+use Erusev\ParsedownExtra\ParsedownExtra;
 use BenjaminHoegh\ParsedownExtended\ParsedownExtended;
 use PHPUnit\Framework\TestCase;
 
 class FootnotesTest extends TestCase
 {
-    protected ParsedownExtended $parsedownExtended;
+    protected Parsedown $parsedownExtended;
 
     protected function setUp(): void
     {
-        $this->parsedownExtended = new ParsedownExtended();
-        $this->parsedownExtended->setSafeMode(true); // As we always want to support safe mode
+        $this->parsedownExtended = new Parsedown(ParsedownExtended::from(new State()));
+
     }
 
     protected function tearDown(): void

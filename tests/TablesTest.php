@@ -1,16 +1,19 @@
 <?php
 
+use Erusev\Parsedown\State;
+use Erusev\Parsedown\Parsedown;
+use Erusev\ParsedownExtra\ParsedownExtra;
 use BenjaminHoegh\ParsedownExtended\ParsedownExtended;
 use PHPUnit\Framework\TestCase;
 
 class TablesTest extends TestCase
 {
-    protected ParsedownExtended $parsedownExtended;
+    protected Parsedown $parsedownExtended;
 
     protected function setUp(): void
     {
-        $this->parsedownExtended = new ParsedownExtended();
-        $this->parsedownExtended->setSafeMode(true); // As we always want to support safe mode
+        $this->parsedownExtended = new Parsedown(ParsedownExtended::from(new State()));
+
     }
 
     protected function tearDown(): void
@@ -45,7 +48,7 @@ class TablesTest extends TestCase
             </table>
             HTML;
 
-        $result = $this->parsedownExtended->text($markdown);
+        $result = $this->parsedownExtended->toHtml($markdown);
 
         $this->assertEquals(trim($expectedHtml), trim($result));
     }
@@ -66,7 +69,7 @@ class TablesTest extends TestCase
             | Cell 1   | Cell 2   |</p>
             HTML;
 
-        $result = $this->parsedownExtended->text($markdown);
+        $result = $this->parsedownExtended->toHtml($markdown);
 
         $this->assertEquals(trim($expectedHtml), trim($result));
     }
@@ -106,7 +109,7 @@ class TablesTest extends TestCase
             </table>
             HTML;
 
-        $result = $this->parsedownExtended->text($markdown);
+        $result = $this->parsedownExtended->toHtml($markdown);
 
         $this->assertEquals($expectedHtml, $result);
     }
@@ -166,7 +169,7 @@ class TablesTest extends TestCase
             </table>
             HTML;
 
-        $result = $this->parsedownExtended->text($markdown);
+        $result = $this->parsedownExtended->toHtml($markdown);
 
         $this->assertEquals(trim($expectedHtml), trim($result));
     }

@@ -1,5 +1,8 @@
 <?php
 
+use Erusev\Parsedown\State;
+use Erusev\Parsedown\Parsedown;
+use Erusev\ParsedownExtra\ParsedownExtra;
 use BenjaminHoegh\ParsedownExtended\ParsedownExtended;
 use PHPUnit\Framework\TestCase;
 
@@ -9,8 +12,8 @@ class LinksTest extends TestCase
 
     protected function setUp(): void
     {
-        $this->parsedownExtended = new ParsedownExtended();
-        $this->parsedownExtended->setSafeMode(true);
+        $this->parsedownExtended = new Parsedown(ParsedownExtended::from(new State()));
+
         $_SERVER['HTTP_HOST'] = 'www.example.com';  // Default host for testing
     }
 
@@ -27,7 +30,7 @@ class LinksTest extends TestCase
         $this->parsedownExtended->config()->set('links.enabled', true);
 
         $markdown = '[Link](https://www.example.com)';
-        $html = $this->parsedownExtended->text($markdown);
+        $html = $this->parsedownExtended->toHtml($markdown);
 
         $this->assertStringContainsString('<a href="https://www.example.com">Link</a>', $html);
     }
@@ -37,7 +40,7 @@ class LinksTest extends TestCase
         $this->parsedownExtended->config()->set('links.enabled', false);
 
         $markdown = '[Link](https://www.example.com)';
-        $html = $this->parsedownExtended->text($markdown);
+        $html = $this->parsedownExtended->toHtml($markdown);
 
         $this->assertStringNotContainsString('<a href="https://www.example.com">Link</a>', $html);
     }
@@ -50,7 +53,7 @@ class LinksTest extends TestCase
         $this->parsedownExtended->config()->set('links.email_links', true);
 
         $markdown = '<test@example.com>';
-        $html = $this->parsedownExtended->text($markdown);
+        $html = $this->parsedownExtended->toHtml($markdown);
 
         $this->assertStringContainsString('<a href="mailto:test@example.com" target="_blank">test@example.com</a>', $html);
     }
@@ -60,7 +63,7 @@ class LinksTest extends TestCase
         $this->parsedownExtended->config()->set('links.email_links', false);
 
         $markdown = '<mailto:test@example.com>';
-        $html = $this->parsedownExtended->text($markdown);
+        $html = $this->parsedownExtended->toHtml($markdown);
 
         $this->assertStringNotContainsString('<a href="mailto:test@example.com">test@example.com</a>', $html);
     }
@@ -77,7 +80,7 @@ class LinksTest extends TestCase
         $this->parsedownExtended->config()->set('links.external_links.open_in_new_window', false);
 
         $markdown = '[External](https://www.google.com)';
-        $html = $this->parsedownExtended->text($markdown);
+        $html = $this->parsedownExtended->toHtml($markdown);
 
         $this->assertStringContainsString('<a href="https://www.google.com">External</a>', $html);
     }
@@ -87,7 +90,7 @@ class LinksTest extends TestCase
         $this->parsedownExtended->config()->set('links.external_links', false);
 
         $markdown = '[External](https://www.google.com)';
-        $html = $this->parsedownExtended->text($markdown);
+        $html = $this->parsedownExtended->toHtml($markdown);
 
         $this->assertStringNotContainsString('<a href="https://www.google.com">External</a>', $html);
     }
@@ -101,7 +104,7 @@ class LinksTest extends TestCase
         $this->parsedownExtended->config()->set('links.external_links.open_in_new_window', false);
 
         $markdown = '[External](https://www.google.com)';
-        $html = $this->parsedownExtended->text($markdown);
+        $html = $this->parsedownExtended->toHtml($markdown);
 
         $this->assertStringContainsString('rel="nofollow"', $html);
     }
@@ -115,7 +118,7 @@ class LinksTest extends TestCase
         $this->parsedownExtended->config()->set('links.external_links.open_in_new_window', false);
 
         $markdown = '[External](https://www.google.com)';
-        $html = $this->parsedownExtended->text($markdown);
+        $html = $this->parsedownExtended->toHtml($markdown);
 
         $this->assertStringNotContainsString('rel="nofollow"', $html);
     }
@@ -129,7 +132,7 @@ class LinksTest extends TestCase
         $this->parsedownExtended->config()->set('links.external_links.open_in_new_window', false);
 
         $markdown = '[External](https://www.google.com)';
-        $html = $this->parsedownExtended->text($markdown);
+        $html = $this->parsedownExtended->toHtml($markdown);
 
         $this->assertStringContainsString('rel="noopener"', $html);
     }
@@ -143,7 +146,7 @@ class LinksTest extends TestCase
         $this->parsedownExtended->config()->set('links.external_links.open_in_new_window', false);
 
         $markdown = '[External](https://www.google.com)';
-        $html = $this->parsedownExtended->text($markdown);
+        $html = $this->parsedownExtended->toHtml($markdown);
 
         $this->assertStringNotContainsString('rel="noopener"', $html);
     }
@@ -157,7 +160,7 @@ class LinksTest extends TestCase
         $this->parsedownExtended->config()->set('links.external_links.open_in_new_window', false);
 
         $markdown = '[External](https://www.google.com)';
-        $html = $this->parsedownExtended->text($markdown);
+        $html = $this->parsedownExtended->toHtml($markdown);
 
         $this->assertStringContainsString('rel="noreferrer"', $html);
     }
@@ -171,7 +174,7 @@ class LinksTest extends TestCase
         $this->parsedownExtended->config()->set('links.external_links.open_in_new_window', false);
 
         $markdown = '[External](https://www.google.com)';
-        $html = $this->parsedownExtended->text($markdown);
+        $html = $this->parsedownExtended->toHtml($markdown);
 
         $this->assertStringNotContainsString('rel="noreferrer"', $html);
     }
@@ -185,7 +188,7 @@ class LinksTest extends TestCase
         $this->parsedownExtended->config()->set('links.external_links.open_in_new_window', true);
 
         $markdown = '[External](https://www.google.com)';
-        $html = $this->parsedownExtended->text($markdown);
+        $html = $this->parsedownExtended->toHtml($markdown);
 
         $this->assertStringContainsString('target="_blank"', $html);
     }
@@ -199,7 +202,7 @@ class LinksTest extends TestCase
         $this->parsedownExtended->config()->set('links.external_links.open_in_new_window', false);
 
         $markdown = '[External](https://www.google.com)';
-        $html = $this->parsedownExtended->text($markdown);
+        $html = $this->parsedownExtended->toHtml($markdown);
 
         $this->assertStringNotContainsString('target="_blank"', $html);
     }
@@ -213,7 +216,7 @@ class LinksTest extends TestCase
         $this->parsedownExtended->config()->set('links.external_links.internal_hosts', ['google.com']);
 
         $markdown = '[Home](https://www.google.com)';
-        $html = $this->parsedownExtended->text($markdown);
+        $html = $this->parsedownExtended->toHtml($markdown);
 
 
         $this->assertStringNotContainsString('noopener"', $html);
@@ -225,7 +228,7 @@ class LinksTest extends TestCase
     public function testSameDomainLinkWithoutNewWindow()
     {
         $markdown = '[Home](https://www.example.com)';
-        $html = $this->parsedownExtended->text($markdown);
+        $html = $this->parsedownExtended->toHtml($markdown);
 
         $this->assertStringNotContainsString('target="_blank"', $html);
     }
@@ -233,7 +236,7 @@ class LinksTest extends TestCase
     public function testSameDomainLinkWithAttributes()
     {
         $markdown = '[Home](https://www.example.com)';
-        $html = $this->parsedownExtended->text($markdown);
+        $html = $this->parsedownExtended->toHtml($markdown);
 
         $this->assertStringNotContainsString('nofollow"', $html);
         $this->assertStringNotContainsString('noopener"', $html);
@@ -264,7 +267,7 @@ class LinksTest extends TestCase
     // public function testMultipleLinksInText()
     // {
     //     $markdown = '[Google](https://www.google.com) and [Bing](https://www.bing.com)';
-    //     $html = $this->parsedownExtended->text($markdown);
+    //     $html = $this->parsedownExtended->toHtml($markdown);
     //     $this->assertStringContainsString('href="https://www.google.com"', $html);
     //     $this->assertStringContainsString('href="https://www.bing.com"', $html);
     // }
@@ -272,14 +275,14 @@ class LinksTest extends TestCase
     // public function testLinkWithSpecialCharacters()
     // {
     //     $markdown = '[Google](https://www.google.com/search?q=hello+world)';
-    //     $html = $this->parsedownExtended->text($markdown);
+    //     $html = $this->parsedownExtended->toHtml($markdown);
     //     $this->assertStringContainsString('href="https://www.google.com/search?q=hello+world"', $html);
     // }
 
     // public function testNestedMarkdownElements()
     // {
     //     $markdown = '![Image](https://www.example.com/image.jpg) and [Link](https://www.example.com)';
-    //     $html = $this->parsedownExtended->text($markdown);
+    //     $html = $this->parsedownExtended->toHtml($markdown);
     //     $this->assertStringContainsString('<img src="https://www.example.com/image.jpg"', $html);
     //     $this->assertStringContainsString('<a href="https://www.example.com">Link</a>', $html);
     // }

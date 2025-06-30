@@ -1,16 +1,19 @@
 <?php
 
+use Erusev\Parsedown\State;
+use Erusev\Parsedown\Parsedown;
+use Erusev\ParsedownExtra\ParsedownExtra;
 use BenjaminHoegh\ParsedownExtended\ParsedownExtended;
 use PHPUnit\Framework\TestCase;
 
 class TocTest extends TestCase
 {
-    protected ParsedownExtended $parsedownExtended;
+    protected Parsedown $parsedownExtended;
 
     protected function setUp(): void
     {
-        $this->parsedownExtended = new ParsedownExtended();
-        $this->parsedownExtended->setSafeMode(true); // As we always want to support safe mode
+        $this->parsedownExtended = new Parsedown(ParsedownExtended::from(new State()));
+
     }
 
     protected function tearDown(): void
@@ -80,7 +83,7 @@ class TocTest extends TestCase
             <h2 id="heading-2-2">Heading 2.2</h2>
             HTML;
 
-        $actual = $this->parsedownExtended->text($markdown);
+        $actual = $this->parsedownExtended->toHtml($markdown);
         $this->assertEquals($expected, $actual);
     }
 
@@ -165,7 +168,7 @@ class TocTest extends TestCase
             <h2 id="heading-2-2">Heading 2.2</h2>
             HTML;
 
-        $actual = $this->parsedownExtended->text($markdown);
+        $actual = $this->parsedownExtended->toHtml($markdown);
         $this->assertEquals($expected, $actual);
     }
 
@@ -213,7 +216,7 @@ class TocTest extends TestCase
             <h2 id="heading-2-2">Heading 2.2</h2>
             HTML;
 
-        $actual = $this->parsedownExtended->text($markdown);
+        $actual = $this->parsedownExtended->toHtml($markdown);
         $this->assertEquals($expected, $actual);
     }
 }
