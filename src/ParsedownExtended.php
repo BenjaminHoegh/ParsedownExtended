@@ -42,6 +42,9 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
     /** @var array $configSchema Schema for validating configuration options */
     private array $configSchema;
 
+    /** @var object|null $configHandler Cached configuration handler */
+    private $configHandler = null;
+
     /** @var bool $legacyMode Flag indicating if legacy compatibility mode is enabled */
     private bool $legacyMode = false;
 
@@ -3374,9 +3377,10 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
      */
     public function config()
     {
-        return new class ($this->configSchema, $this->config) {
-            private array $schema;
-            private $config;
+        if ($this->configHandler === null) {
+            $this->configHandler = new class ($this->configSchema, $this->config) {
+                private array $schema;
+                private $config;
 
             /**
              * Constructor to initialize configuration schema and reference configuration array.
@@ -3594,6 +3598,9 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
                 }
             }
         };
+        }
+
+        return $this->configHandler;
     }
 
 
