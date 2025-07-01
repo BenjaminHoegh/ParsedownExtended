@@ -165,7 +165,9 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
      */
     protected function inlineCode($Excerpt)
     {
-        if ($this->config()->get('code') && $this->config()->get('code.inline')) {
+        $config = $this->config();
+
+        if ($config->get('code') && $config->get('code.inline')) {
             return parent::inlineCode($Excerpt);
         }
 
@@ -184,7 +186,9 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
      */
     protected function inlineImage($Excerpt)
     {
-        if ($this->config()->get('images')) {
+        $config = $this->config();
+
+        if ($config->get('images')) {
             return parent::inlineImage($Excerpt);
         }
 
@@ -203,7 +207,9 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
      */
     protected function inlineMarkup($Excerpt)
     {
-        if ($this->config()->get('allow_raw_html')) {
+        $config = $this->config();
+
+        if ($config->get('allow_raw_html')) {
             return parent::inlineMarkup($Excerpt);
         }
 
@@ -222,7 +228,9 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
      */
     protected function inlineStrikethrough($Excerpt)
     {
-        if ($this->config()->get('emphasis.strikethroughs') && $this->config()->get('emphasis')) {
+        $config = $this->config();
+
+        if ($config->get('emphasis.strikethroughs') && $config->get('emphasis')) {
             return parent::inlineStrikethrough($Excerpt);
         }
 
@@ -288,7 +296,9 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
      */
     protected function inlineEmailTag($Excerpt)
     {
-        if (!$this->config()->get('links') || !$this->config()->get('links.email_links')) {
+        $config = $this->config();
+
+        if (!$config->get('links') || !$config->get('links.email_links')) {
             return null;
         }
 
@@ -316,7 +326,9 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
      */
     protected function processLinkElement($Excerpt)
     {
-        if (!$this->config()->get('links') || !$Excerpt || !isset($Excerpt['element']['attributes']['href'])) {
+        $config = $this->config();
+
+        if (!$config->get('links') || !$Excerpt || !isset($Excerpt['element']['attributes']['href'])) {
             return null;
         }
 
@@ -329,29 +341,29 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
 
             if ($isExternal === true) {
                 // Check if external links are disabled
-                if (!$this->config()->get('links.external_links')) {
+                if (!$config->get('links.external_links')) {
                     return null;
                 }
 
                 $rel = [];
 
                 // Add nofollow attribute if specified in the configuration
-                if ($this->config()->get('links.external_links.nofollow')) {
+                if ($config->get('links.external_links.nofollow')) {
                     $rel[] = 'nofollow';
                 }
 
                 // Add noopener attribute if specified in the configuration
-                if ($this->config()->get('links.external_links.noopener')) {
+                if ($config->get('links.external_links.noopener')) {
                     $rel[] = 'noopener';
                 }
 
                 // Add noreferrer attribute if specified in the configuration
-                if ($this->config()->get('links.external_links.noreferrer')) {
+                if ($config->get('links.external_links.noreferrer')) {
                     $rel[] = 'noreferrer';
                 }
 
                 // Add target attribute with '_blank' value
-                if ($this->config()->get('links.external_links.open_in_new_window')) {
+                if ($config->get('links.external_links.open_in_new_window')) {
                     $Excerpt['element']['attributes']['target'] = '_blank';
                 }
 
@@ -395,7 +407,8 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
                 $domain = preg_replace('/^www\\./', '', $host);
 
                 // Get the list of internal hosts from the configuration
-                $internalHosts = $this->config()->get('links.external_links.internal_hosts');
+                $config = $this->config();
+                $internalHosts = $config->get('links.external_links.internal_hosts');
 
                 // Return false if the link is considered internal based on the configuration
                 if (in_array($domain, $internalHosts)) {
@@ -420,18 +433,20 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
      */
     protected function inlineEmphasis($Excerpt)
     {
-        if (!$this->config()->get('emphasis') || !isset($Excerpt['text'][1])) {
+        $config = $this->config();
+
+        if (!$config->get('emphasis') || !isset($Excerpt['text'][1])) {
             return null; // If emphasis is disabled or the excerpt is too short, return null
         }
 
         $marker = $Excerpt['text'][0]; // Extract the marker character ('*', '_', etc.)
 
         // Check if the text matches bold emphasis using the marker
-        if ($this->config()->get('emphasis.bold') && preg_match($this->StrongRegex[$marker], $Excerpt['text'], $matches)) {
+        if ($config->get('emphasis.bold') && preg_match($this->StrongRegex[$marker], $Excerpt['text'], $matches)) {
             $emphasis = 'strong'; // Use 'strong' for bold text
         }
         // Check if the text matches italic emphasis using the marker
-        elseif ($this->config()->get('emphasis.italic') && preg_match($this->EmRegex[$marker], $Excerpt['text'], $matches)) {
+        elseif ($config->get('emphasis.italic') && preg_match($this->EmRegex[$marker], $Excerpt['text'], $matches)) {
             $emphasis = 'em'; // Use 'em' for italic text
         } else {
             return null; // No valid emphasis match found
@@ -461,8 +476,10 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
      */
     protected function inlineMarking(array $Excerpt): ?array
     {
+        $config = $this->config();
+
         // Check if marking is enabled in the configuration settings
-        if (!$this->config()->get('emphasis.mark') || !$this->config()->get('emphasis')) {
+        if (!$config->get('emphasis.mark') || !$config->get('emphasis')) {
             return null; // Return null if marking or emphasis is disabled
         }
 
@@ -494,8 +511,10 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
      */
     protected function inlineInsertions(array $Excerpt): ?array
     {
+        $config = $this->config();
+
         // Check if insertions are enabled in the configuration settings
-        if (!$this->config()->get('emphasis.insertions') || !$this->config()->get('emphasis')) {
+        if (!$config->get('emphasis.insertions') || !$config->get('emphasis')) {
             return null; // Return null if insertions or general emphasis is disabled
         }
 
@@ -527,8 +546,10 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
      */
     protected function inlineKeystrokes(array $Excerpt): ?array
     {
+        $config = $this->config();
+
         // Check if keystrokes are enabled in the configuration settings
-        if (!$this->config()->get('emphasis.keystrokes') || !$this->config()->get('emphasis')) {
+        if (!$config->get('emphasis.keystrokes') || !$config->get('emphasis')) {
             return null; // Return null if keystrokes or general emphasis is disabled
         }
 
@@ -561,8 +582,10 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
      */
     protected function inlineSuperscript(array $Excerpt): ?array
     {
+        $config = $this->config();
+
         // Check if superscript is enabled in the configuration settings
-        if (!$this->config()->get('emphasis.superscript') || !$this->config()->get('emphasis')) {
+        if (!$config->get('emphasis.superscript') || !$config->get('emphasis')) {
             return null; // Return null if superscript or general emphasis is disabled
         }
 
@@ -595,8 +618,10 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
      */
     protected function inlineSubscript(array $Excerpt): ?array
     {
+        $config = $this->config();
+
         // Check if subscript is enabled in the configuration settings
-        if (!$this->config()->get('emphasis.subscript') || !$this->config()->get('emphasis')) {
+        if (!$config->get('emphasis.subscript') || !$config->get('emphasis')) {
             return null; // Return null if subscript or general emphasis is disabled
         }
 
@@ -631,8 +656,10 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
      */
     protected function inlineMathNotation($Excerpt)
     {
+        $config = $this->config();
+
         // Check if parsing of math notation is enabled in the configuration settings
-        if (!$this->config()->get('math') || !$this->config()->get('math.inline')) {
+        if (!$config->get('math') || !$config->get('math.inline')) {
             return null; // Return null if math or inline math is disabled
         }
 
@@ -647,12 +674,13 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
         }
 
         // Iterate through the inline math delimiters (e.g., `$...$`, `\\(...\\)`)
-        foreach ($this->config()->get('math.inline.delimiters') as $config) {
-            $leftMarker = preg_quote($config['left'], '/');  // Escape the left delimiter for use in regex
-            $rightMarker = preg_quote($config['right'], '/'); // Escape the right delimiter for use in regex
+        $delimiters = $config->get('math.inline.delimiters');
+        foreach ($delimiters as $dConfig) {
+            $leftMarker = preg_quote($dConfig['left'], '/');  // Escape the left delimiter for use in regex
+            $rightMarker = preg_quote($dConfig['right'], '/'); // Escape the right delimiter for use in regex
 
             // Create the regex pattern for matching math notation
-            if ($config['left'][0] === '\\' || strlen($config['left']) > 1) {
+            if ($dConfig['left'][0] === '\\' || strlen($dConfig['left']) > 1) {
                 $regex = '/^(?<!\S)' . $leftMarker . '(?![\r\n])((?:\\\\' . $rightMarker . '|\\\\' . $leftMarker . '|[^\r\n])+?)' . $rightMarker . '(?!\w)/s';
             } else {
                 $regex = '/^(?<!\S)' . $leftMarker . '(?![\r\n])((?:\\\\' . $rightMarker . '|\\\\' . $leftMarker . '|[^' . $rightMarker . '\r\n])+?)' . $rightMarker . '(?!\w)/s';
@@ -688,14 +716,17 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
      */
     protected function inlineEscapeSequence($Excerpt)
     {
+        $config = $this->config();
+
         // If math is enabled, check for any inline math delimiters that might need special handling
-        if ($this->config()->get('math')) {
-            foreach ($this->config()->get('math.inline.delimiters') as $config) {
-                $leftMarker = preg_quote($config['left'], '/');  // Escape the left delimiter for use in regex
-                $rightMarker = preg_quote($config['right'], '/'); // Escape the right delimiter for use in regex
+        if ($config->get('math')) {
+            $delimiters = $config->get('math.inline.delimiters');
+            foreach ($delimiters as $dConfig) {
+                $leftMarker = preg_quote($dConfig['left'], '/');  // Escape the left delimiter for use in regex
+                $rightMarker = preg_quote($dConfig['right'], '/'); // Escape the right delimiter for use in regex
 
                 // Create the regex pattern for matching math notation
-                if ($config['left'][0] === '\\' || strlen($config['left']) > 1) {
+                if ($dConfig['left'][0] === '\\' || strlen($dConfig['left']) > 1) {
                     $regex = '/^(?<!\S)' . $leftMarker . '(?![\r\n])((?:\\\\' . $rightMarker . '|\\\\' . $leftMarker . '|[^\r\n])+?)' . $rightMarker . '(?!\w)/s';
                 } else {
                     $regex = '/^(?<!\S)' . $leftMarker . '(?![\r\n])((?:\\\\' . $rightMarker . '|\\\\' . $leftMarker . '|[^' . $rightMarker . '\r\n])+?)' . $rightMarker . '(?!\w)/s';
@@ -736,14 +767,16 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
      */
     protected function inlineTypographer(array $Excerpt): ?array
     {
+        $config = $this->config();
+
         // Check if typographer is enabled in the configuration settings
-        if (!$this->config()->get('typographer')) {
+        if (!$config->get('typographer')) {
             return null; // Return null if the typographer is disabled
         }
 
         // Check if smartypants and smart ellipses settings are enabled
-        $ellipses = $this->config()->get('smartypants') && $this->config()->get('smartypants.smart_ellipses')
-            ? html_entity_decode($this->config()->get('smartypants.substitutions.ellipses'))
+        $ellipses = $config->get('smartypants') && $config->get('smartypants.smart_ellipses')
+            ? html_entity_decode($config->get('smartypants.substitutions.ellipses'))
             : '...'; // Use smart ellipses if enabled, otherwise use '...'
 
         // Define substitutions for various typographic symbols
@@ -789,22 +822,24 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
      */
     protected function inlineSmartypants($Excerpt)
     {
+        $config = $this->config();
+
         // Check if Smartypants is enabled in the configuration settings
-        if (!$this->config()->get('smartypants')) {
+        if (!$config->get('smartypants')) {
             return null; // Return null if Smartypants is disabled
         }
 
         // Substitutions: Load the characters to use for the specific Smartypants transformations
         $substitutions = [
-            'left_double_quote' => html_entity_decode($this->config()->get('smartypants.substitutions.left_double_quote')),
-            'right_double_quote' => html_entity_decode($this->config()->get('smartypants.substitutions.right_double_quote')),
-            'left_single_quote' => html_entity_decode($this->config()->get('smartypants.substitutions.left_single_quote')),
-            'right_single_quote' => html_entity_decode($this->config()->get('smartypants.substitutions.right_single_quote')),
-            'left_angle_quote' => html_entity_decode($this->config()->get('smartypants.substitutions.left_angle_quote')),
-            'right_angle_quote' => html_entity_decode($this->config()->get('smartypants.substitutions.right_angle_quote')),
-            'mdash' => html_entity_decode($this->config()->get('smartypants.substitutions.mdash')),
-            'ndash' => html_entity_decode($this->config()->get('smartypants.substitutions.ndash')),
-            'ellipses' => html_entity_decode($this->config()->get('smartypants.substitutions.ellipses')),
+            'left_double_quote' => html_entity_decode($config->get('smartypants.substitutions.left_double_quote')),
+            'right_double_quote' => html_entity_decode($config->get('smartypants.substitutions.right_double_quote')),
+            'left_single_quote' => html_entity_decode($config->get('smartypants.substitutions.left_single_quote')),
+            'right_single_quote' => html_entity_decode($config->get('smartypants.substitutions.right_single_quote')),
+            'left_angle_quote' => html_entity_decode($config->get('smartypants.substitutions.left_angle_quote')),
+            'right_angle_quote' => html_entity_decode($config->get('smartypants.substitutions.right_angle_quote')),
+            'mdash' => html_entity_decode($config->get('smartypants.substitutions.mdash')),
+            'ndash' => html_entity_decode($config->get('smartypants.substitutions.ndash')),
+            'ellipses' => html_entity_decode($config->get('smartypants.substitutions.ellipses')),
         ];
 
         // Define patterns for various Smartypants substitutions
@@ -907,7 +942,7 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
 
         // Iterate over each pattern and apply the corresponding callback if a match is found
         foreach ($patterns as $key => $value) {
-            if ($this->config()->get('smartypants.' . $key) && preg_match($value['pattern'], $Excerpt['text'], $matches)) {
+            if ($config->get('smartypants.' . $key) && preg_match($value['pattern'], $Excerpt['text'], $matches)) {
                 $matches = array_values(array_filter($matches)); // Filter out empty matches
                 return $value['callback']($matches); // Return the transformed text using the callback
             }
@@ -1787,17 +1822,20 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
      */
     protected function blockMathNotation($Line)
     {
+        $config = $this->config();
+
         // Check if math notation block-level parsing is enabled in the configuration settings
-        if (!$this->config()->get('math') || !$this->config()->get('math.block')) {
+        if (!$config->get('math') || !$config->get('math.block')) {
             return null; // Return null if math block parsing is disabled
         }
 
         // Iterate over each configured math block delimiter (e.g., `$$`, `\\[`)
-        foreach ($this->config()->get('math.block.delimiters') as $config) {
+        $delimiters = $config->get('math.block.delimiters');
+        foreach ($delimiters as $dConfig) {
 
             // Escape the math delimiters for regex usage
-            $leftMarker = preg_quote($config['left'], '/');
-            $rightMarker = preg_quote($config['right'], '/');
+            $leftMarker = preg_quote($dConfig['left'], '/');
+            $rightMarker = preg_quote($dConfig['right'], '/');
 
             // Build the regex pattern to match the opening delimiter, content, and optional closing delimiter
             $regex = '/^(?<!\\\\)('. $leftMarker . ')(.*?)(?:(' . $rightMarker . ')|$)/';
@@ -1808,8 +1846,8 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
                     'element' => [
                         'text' => $matches[2], // Extract and store the math content between the delimiters
                     ],
-                    'start' => $config['left'], // Store the start marker (e.g., `$$`)
-                    'end' => $config['right'], // Store the end marker (e.g., `$$`)
+                    'start' => $dConfig['left'], // Store the start marker (e.g., `$$`)
+                    'end' => $dConfig['right'], // Store the end marker (e.g., `$$`)
                 ];
             }
         }
@@ -1894,8 +1932,10 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
      */
     protected function blockFencedCode($Line)
     {
+        $config = $this->config();
+
         // Check if code block parsing is enabled in the configuration settings
-        if (!$this->config()->get('code') || !$this->config()->get('code.blocks')) {
+        if (!$config->get('code') || !$config->get('code.blocks')) {
             return null; // Return null if code block parsing is disabled
         }
 
@@ -1909,7 +1949,7 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
         $language = strtolower($parts[0]); // Convert the language identifier to lowercase
 
         // Check if diagram support is enabled in the configuration
-        if (!$this->config()->get('diagrams')) {
+        if (!$config->get('diagrams')) {
             return $Block; // Return the standard code block if diagrams are disabled
         }
 
@@ -1978,8 +2018,10 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
      */
     protected function li($lines)
     {
+        $config = $this->config();
+
         // Check if task lists are enabled in the configuration settings
-        if (!$this->config()->get('lists.tasks')) {
+        if (!$config->get('lists.tasks')) {
             return parent::li($lines); // Return the default list item if task lists are not enabled
         }
 
@@ -2068,8 +2110,10 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
      */
     protected function blockHeader($Line)
     {
+        $config = $this->config();
+
         // Check if headings are enabled in the configuration settings
-        if (!$this->config()->get('headings')) {
+        if (!$config->get('headings')) {
             return null; // Return null if headings are disabled
         }
 
@@ -2082,7 +2126,7 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
             $level = $Block['element']['name'];
 
             // Check if the header level is allowed (e.g., h1, h2, etc.)
-            if (!in_array($level, $this->config()->get('headings.allowed_levels'))) {
+            if (!in_array($level, $config->get('headings.allowed_levels'))) {
                 return null; // Return null if the heading level is not allowed
             }
 
@@ -2095,7 +2139,7 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
             $Block['element']['attributes'] = ['id' => $id];
 
             // Check if the heading level should be included in the Table of Contents (TOC)
-            if (!in_array($level, $this->config()->get('toc.levels'))) {
+            if (!in_array($level, $config->get('toc.levels'))) {
                 return $Block; // Return the block if it should not be part of the TOC
             }
 
@@ -2122,8 +2166,10 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
      */
     protected function blockSetextHeader($Line, $Block = null)
     {
+        $config = $this->config();
+
         // Check if headings are enabled in the configuration settings
-        if (!$this->config()->get('headings')) {
+        if (!$config->get('headings')) {
             return null; // Return null if headings are disabled
         }
 
@@ -2136,7 +2182,7 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
             $level = $Block['element']['name'];
 
             // Check if the header level is allowed (e.g., h1, h2, etc.)
-            if (!in_array($level, $this->config()->get('headings.allowed_levels'))) {
+            if (!in_array($level, $config->get('headings.allowed_levels'))) {
                 return null; // Return null if the heading level is not allowed
             }
 
@@ -2149,7 +2195,7 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
             $Block['element']['attributes'] = ['id' => $id];
 
             // Check if the heading level should be included in the Table of Contents (TOC)
-            if (!in_array($level, $this->config()->get('toc.levels'))) {
+            if (!in_array($level, $config->get('toc.levels'))) {
                 return $Block; // Return the block if it should not be part of the TOC
             }
 
@@ -2177,11 +2223,13 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
      */
     protected function blockAbbreviation($Line)
     {
+        $config = $this->config();
+
         // Check if abbreviation support is enabled in the configuration settings
-        if ($this->config()->get('abbreviations')) {
+        if ($config->get('abbreviations')) {
 
             // If custom abbreviations are allowed, delegate to the parent class to handle parsing
-            if ($this->config()->get('abbreviations.allow_custom')) {
+            if ($config->get('abbreviations.allow_custom')) {
                 return parent::blockAbbreviation($Line); // Parse custom abbreviation using parent method
             }
 
@@ -2472,8 +2520,10 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
      */
     protected function createAnchorID(string $text): ?string
     {
+        $config = $this->config();
+
         // Check if automatic anchor generation is enabled in the settings
-        if (!$this->config()->get('headings.auto_anchors')) {
+        if (!$config->get('headings.auto_anchors')) {
             return null; // Return null if auto anchors are disabled
         }
 
@@ -2485,7 +2535,7 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
         // Default logic for anchor ID creation
 
         // Convert text to lowercase if configured to do so
-        if ($this->config()->get('headings.auto_anchors.lowercase')) {
+        if ($config->get('headings.auto_anchors.lowercase')) {
             if (extension_loaded('mbstring')) {
                 $text = mb_strtolower($text);
             } else {
@@ -2494,15 +2544,15 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
         }
 
         // Apply replacements to the text based on the configuration settings
-        if ($this->config()->get('headings.auto_anchors.replacements')) {
-            $text = preg_replace(array_keys($this->config()->get('headings.auto_anchors.replacements')), $this->config()->get('headings.auto_anchors.replacements'), $text);
+        if ($config->get('headings.auto_anchors.replacements')) {
+            $text = preg_replace(array_keys($config->get('headings.auto_anchors.replacements')), $config->get('headings.auto_anchors.replacements'), $text);
         }
 
         // Normalize the text (ensure proper encoding)
         $text = $this->normalizeString($text);
 
         // Transliterate text if configured to do so
-        if ($this->config()->get('headings.auto_anchors.transliterate')) {
+        if ($config->get('headings.auto_anchors.transliterate')) {
             $text = $this->transliterate($text);
         }
 
@@ -2657,8 +2707,10 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
      */
     protected function sanitizeAnchor(string $text): string
     {
+        $config = $this->config();
+
         // Get the delimiter used to replace non-alphanumeric characters (e.g., '-')
-        $delimiter = $this->config()->get('headings.auto_anchors.delimiter');
+        $delimiter = $config->get('headings.auto_anchors.delimiter');
 
         // Replace any character that is not a letter or number with the delimiter
         $text = preg_replace('/[^\p{L}\p{Nd}]+/u', $delimiter, $text);
@@ -2684,7 +2736,8 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
     protected function uniquifyAnchorID(string $text): string
     {
         // Retrieve the blacklist of forbidden anchor IDs from the configuration
-        $blacklist = $this->config()->get('headings.auto_anchors.blacklist');
+        $config = $this->config();
+        $blacklist = $config->get('headings.auto_anchors.blacklist');
 
         // Store the original text to use as the base for creating unique variants
         $originalText = $text;
@@ -2733,8 +2786,9 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
      */
     protected function decodeTag(string $text): string
     {
+        $config = $this->config();
         $salt = $this->getSalt(); // Retrieve the salt used for hashing
-        $tag_origin = $this->config()->get('toc.tag'); // Get the original ToC tag
+        $tag_origin = $config->get('toc.tag'); // Get the original ToC tag
         $tag_hashed = hash('sha256', $salt . $tag_origin); // Generate the hashed version of the ToC tag
 
         // If the hashed tag is not found, return the original text
@@ -2759,8 +2813,9 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
      */
     protected function encodeTag(string $text): string
     {
+        $config = $this->config();
         $salt = $this->getSalt(); // Retrieve the salt used for hashing
-        $tag_origin = $this->config()->get('toc.tag'); // Get the original ToC tag
+        $tag_origin = $config->get('toc.tag'); // Get the original ToC tag
 
         // If the original tag is not found, return the original text
         if (strpos($text, $tag_origin) === false) {
@@ -2889,22 +2944,23 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
      */
     public function text($text): string
     {
+        $config = $this->config();
         $html = $this->body($text); // Parse the Markdown text into HTML
 
         // If ToC functionality is disabled in the config, return the parsed HTML as is
-        if (!$this->config()->get('toc')) {
+        if (!$config->get('toc')) {
             return $html;
         }
 
         // Get the original ToC tag and check if it is in the input text
-        $tag_origin = $this->config()->get('toc.tag');
+        $tag_origin = $config->get('toc.tag');
         if (strpos($text, $tag_origin) === false) {
             return $html; // Return HTML if the ToC tag is not found
         }
 
         // Replace the ToC placeholder with the actual ToC content
         $toc_data = $this->contentsList();
-        $toc_id = $this->config()->get('toc.id');
+        $toc_id = $config->get('toc.id');
         return str_replace("<p>{$tag_origin}</p>", "<div id=\"{$toc_id}\">{$toc_data}</div>", $html);
     }
 
@@ -2921,8 +2977,10 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
      */
     protected function unmarkedText($text)
     {
+        $config = $this->config();
+
         // Add predefined abbreviations to the definition data
-        foreach ($this->config()->get('abbreviations.predefined') as $abbreviation => $description) {
+        foreach ($config->get('abbreviations.predefined') as $abbreviation => $description) {
             $this->DefinitionData['Abbreviation'][$abbreviation] = $description;
         }
 
