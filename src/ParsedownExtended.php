@@ -2837,6 +2837,11 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
      */
     protected function setContentsList(array $Content): void
     {
+        // Skip processing if the Table of Contents feature is disabled
+        if (!$this->config()->get('toc')) {
+            return;
+        }
+
         // Stores content as an array
         $this->setContentsListAsArray($Content);
         // Stores content as a string in Markdown list format
@@ -3658,6 +3663,15 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
      */
     public function line($text, $nonNestables = [])
     {
+        if ($text === '') {
+            return '';
+        }
+
+        // Quickly return if the text contains no inline markers
+        if (strpbrk((string) $text, $this->inlineMarkerList) === false) {
+            return $this->unmarkedText($text);
+        }
+
         $markup = '';
 
         // Search for inline markers in the text
@@ -3747,6 +3761,25 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
      */
     protected function lineElements($text, $nonNestables = []): array
     {
+        if ($text === '') {
+            $InlineText = $this->inlineText('');
+            $element = $InlineText['element'];
+            if (!isset($element['autobreak'])) {
+                $element['autobreak'] = false;
+            }
+            return [$element];
+        }
+
+        // If the text contains no inline markers, return a single element
+        if (strpbrk($text, $this->inlineMarkerList) === false) {
+            $InlineText = $this->inlineText($text);
+            $element = $InlineText['element'];
+            if (!isset($element['autobreak'])) {
+                $element['autobreak'] = false;
+            }
+            return [$element];
+        }
+
         $Elements = [];
 
         // If non-nestable elements are provided, convert them to associative array for fast lookup
