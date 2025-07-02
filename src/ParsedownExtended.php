@@ -489,6 +489,11 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
             return null; // Return null if marking or emphasis is disabled
         }
 
+        // Early return if the excerpt does not start with two '=' characters
+        if (!isset($Excerpt['text'][1]) || $Excerpt['text'][1] !== '=') {
+            return null;
+        }
+
         // Match the double equal signs for marking (`==text==`) using regex
         if (preg_match('/^==((?:\\\\\=|[^=]|=[^=]*=)+?)==(?!=)/s', $Excerpt['text'], $matches)) {
             // Return the parsed marking element
@@ -524,6 +529,11 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
             return null; // Return null if insertions or general emphasis is disabled
         }
 
+        // Early return if the excerpt does not start with two '+' characters
+        if (!isset($Excerpt['text'][1]) || $Excerpt['text'][1] !== '+') {
+            return null;
+        }
+
         // Match the double plus signs for insertions (`++text++`) using regex
         if (preg_match('/^\+\+((?:\\\\\+|[^\+]|\+[^\+]*\+)+?)\+\+(?!\+)/s', $Excerpt['text'], $matches)) {
             // Return the parsed insertion element
@@ -557,6 +567,11 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
         // Check if keystrokes are enabled in the configuration settings
         if (!$config->get('emphasis.keystrokes') || !$config->get('emphasis')) {
             return null; // Return null if keystrokes or general emphasis is disabled
+        }
+
+        // Early return if the excerpt does not start with two '[' characters
+        if (!isset($Excerpt['text'][1]) || '[' !== $Excerpt['text'][1]) {
+            return null;
         }
 
         // Match the double square brackets for keystrokes (`[[text]]`) using regex
@@ -595,6 +610,11 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
             return null; // Return null if superscript or general emphasis is disabled
         }
 
+        // Early return if no text follows the caret
+        if (!isset($Excerpt['text'][1]) || '^' === $Excerpt['text'][1]) {
+            return null;
+        }
+
         // Match the caret symbols for superscript (`^text^`) using regex
         if (preg_match('/^\^((?:\\\\\\^|[^\^]|\^[^\^]+?\^\^)+?)\^(?!\^)/s', $Excerpt['text'], $matches)) {
             // Return the parsed superscript element
@@ -629,6 +649,11 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
         // Check if subscript is enabled in the configuration settings
         if (!$config->get('emphasis.subscript') || !$config->get('emphasis')) {
             return null; // Return null if subscript or general emphasis is disabled
+        }
+
+        // Early return if no text follows the tilde or the next character is a tilde
+        if (!isset($Excerpt['text'][1]) || '~' === $Excerpt['text'][1]) {
+            return null;
         }
 
         // Match the tilde symbols for subscript (`~text~`) using regex
@@ -975,6 +1000,11 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
         // Check if emoji processing is enabled in the configuration settings
         if (!$this->config()->get('emojis')) {
             return null; // Return null if emoji replacement is disabled
+        }
+
+        // Early return if there is no closing ':' to form an emoji code
+        if (!isset($Excerpt['text'][1]) || false === strpos($Excerpt['text'], ':', 1)) {
+            return null;
         }
 
         // Check for an emoji code before loading the large map
