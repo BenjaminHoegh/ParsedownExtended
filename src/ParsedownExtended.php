@@ -2461,6 +2461,15 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
      */
     public function body(string $text): string
     {
+        /**
+         * Reset the internal state for Table of Contents to avoid data persisting
+         * when the same instance parses multiple markdown strings.
+         */
+        $this->anchorRegister = [];
+        $this->contentsListArray = [];
+        $this->contentsListString = '';
+        $this->firstHeadLevel = 0;
+
         $text = $this->encodeTag($text); // Escapes ToC tag temporarily
         $html = parent::text($text);     // Parses the markdown text
         return $this->decodeTag($html);  // Unescapes the ToC tag
