@@ -977,6 +977,11 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
             return null; // Return null if emoji replacement is disabled
         }
 
+        // Check for an emoji code before loading the large map
+        if (!preg_match('/(?<=\s|^):([a-zA-Z0-9_]+):(?=\s|$)/', $Excerpt['text'], $matches) || !preg_match('/^(\s|)$/', $Excerpt['before'])) {
+            return null;
+        }
+
         // Lazily load emoji map only once
         if ($this->emojiMap === null) {
             $this->emojiMap = [
@@ -1460,19 +1465,16 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
             ];
         }
 
-        // Match the emoji code pattern (e.g., `:smile:`) only if it's standalone and not embedded in a word
-        if (preg_match('/(?<=\s|^):([a-zA-Z0-9_]+):(?=\s|$)/', $Excerpt['text'], $matches) && preg_match('/^(\s|)$/', $Excerpt['before'])) {
-            $emojiCode = $matches[1]; // Extract the emoji code without colons
+        $emojiCode = $matches[1]; // Extract the emoji code without colons
 
-            // Check if the emoji code exists in the map
-            if (isset($this->emojiMap[$emojiCode])) {
-                return [
-                    'extent' => strlen($matches[0]), // Length of the matched emoji code including colons
-                    'element' => [
-                        'text' => $this->emojiMap[$emojiCode], // Replace emoji code with corresponding emoji
-                    ],
-                ];
-            }
+        // Check if the emoji code exists in the map
+        if (isset($this->emojiMap[$emojiCode])) {
+            return [
+                'extent' => strlen($matches[0]), // Length of the matched emoji code including colons
+                'element' => [
+                    'text' => $this->emojiMap[$emojiCode], // Replace emoji code with corresponding emoji
+                ],
+            ];
         }
 
         // If no emoji code matches, return null
