@@ -560,7 +560,7 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
         }
 
         // Match the double square brackets for keystrokes (`[[text]]`) using regex
-        if (preg_match('/^(?<!\[)(?:\[\[([^\[\]]*|[\[\]])\]\])(?!\])/s', $Excerpt['text'], $matches)) {
+        if (preg_match('/^(?<!\[)\[\[([^\[\]]*|[\[\]])\]\](?!\])/s', $Excerpt['text'], $matches)) {
             // Return the parsed keystroke element
             return [
                 'extent' => strlen($matches[0]), // The length of the matched keystroke text
