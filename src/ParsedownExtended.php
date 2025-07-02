@@ -1582,7 +1582,7 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
      * @param array|null $CurrentBlock The current block context.
      * @return mixed The parsed list block if enabled, otherwise nothing.
      */
-    protected function blockList($Line, array $CurrentBlock = null)
+    protected function blockList($Line, ?array $CurrentBlock = null)
     {
         // Check if lists are enabled
         if ($this->config()->get('lists')) {
