@@ -851,7 +851,7 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
         // Define patterns for various Smartypants substitutions
         $patterns = [
             'smart_backticks' => [
-                'pattern' => '/^(``)(?!\s)([^"\'`]{1,})(\'\')/i',
+                'pattern' => '/^(?:``)(?!\s)([^"\'`]+)(?:\'\')/i',
                 'callback' => function ($matches) use ($substitutions, $Excerpt) {
                     if (strlen(trim($Excerpt['before'])) > 0) {
                         return null; // Skip if the backticks do not start at the beginning
@@ -867,7 +867,7 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
                 },
             ],
             'smart_quotes' => [
-                'pattern' => '/^(")(?!\s)([^"]+)(")|^(?<!\w)(\')(?!\s)([^\']+)(\')/i',
+                'pattern' => '/^(\")(?!\s)([^\"]+)(?:\")|^(?<!\w)(\')(?!\s)([^\']+)(?:\')/i',
                 'callback' => function ($matches) use ($substitutions, $Excerpt) {
                     if (strlen(trim($Excerpt['before'])) > 0) {
                         return null; // Skip if quotes are in the middle of a word
@@ -894,7 +894,7 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
                 },
             ],
             'smart_angled_quotes' => [
-                'pattern' => '/^(<{2})(?!\s)([^<>]+)(>{2})/i',
+                'pattern' => '/^(?:<{2})(?!\s)([^<>]+)(?:>{2})/i',
                 'callback' => function ($matches) use ($substitutions, $Excerpt) {
                     if (strlen(trim($Excerpt['before'])) > 0) {
                         return null; // Skip if angled quotes do not start at the beginning
@@ -910,7 +910,7 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
                 },
             ],
             'smart_dashes' => [
-                'pattern' => '/^(-{2,3})/i',
+                'pattern' => '/^(?<!\.)\.{3}(?!\.)/i',
                 'callback' => function ($matches) use ($substitutions) {
                     // Replace double dashes with ndash or triple dashes with mdash
                     if ('---' === $matches[1]) {
