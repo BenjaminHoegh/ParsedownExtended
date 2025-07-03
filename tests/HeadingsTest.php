@@ -141,7 +141,7 @@ class HeadingsTest extends TestCase
     public function testHeadingWithLimitedAllowedLevels()
     {
         $this->parsedownExtended->config()->set('headings.auto_anchors', false);
-        $this->parsedownExtended->config()->set('headings.allowed', ['h1', 'h2'], true);
+        $this->parsedownExtended->config()->set('headings.allowed_levels', ['h1', 'h2'], true);
 
         $markdown = <<<MARKDOWN
             # Heading 1
