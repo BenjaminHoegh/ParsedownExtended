@@ -237,4 +237,5 @@ class TocTest extends TestCase
 
         $this->assertStringNotContainsString('First', $secondToc);
         $this->assertStringContainsString('Second', $secondToc);
+    }
 }
