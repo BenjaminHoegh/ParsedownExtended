@@ -43,7 +43,7 @@ class TypographerTest extends TestCase
     public function testTypographerWithSmartypants(): void
     {
         $this->parsedownExtended->config()->set('typographer', true);
-        $this->parsedownExtended->config()->set('smarty', true);
+        $this->parsedownExtended->config()->set('smartypants', true);
 
         $markdown = '(c) (r) (tm) ...';
         $expected = '<p>© ® ™ …</p>';
