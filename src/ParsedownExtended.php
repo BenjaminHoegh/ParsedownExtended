@@ -51,12 +51,123 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
     /** @var array|null $emojiMap Cached emoji map for emoji replacements */
     private ?array $emojiMap = null;
 
+    /** @var array CONFIG_SCHEMA_DEFAULT Default configuration schema */
+    private const CONFIG_SCHEMA_DEFAULT = [
+        'abbreviations' => [
+            'allow_custom' => true,
+            'predefined'   => [],
+        ],
+        'code'      => ['blocks' => true, 'inline' => true],
+        'comments'  => true,
+        'definition_lists' => true,
+        'diagrams' => [
+            'enabled' => false,
+            'chartjs' => true,
+            'mermaid' => true,
+        ],
+        'emojis' => true,
+        'emphasis' => [
+            'bold'           => true,
+            'italic'         => true,
+            'strikethroughs' => true,
+            'insertions'     => true,
+            'subscript'      => false,
+            'superscript'    => false,
+            'keystrokes'     => true,
+            'mark'           => true,
+        ],
+        'footnotes' => true,
+        'headings' => [
+            'allowed_levels' => ['h1','h2','h3','h4','h5','h6'],
+            'auto_anchors' => [
+                'delimiter'     => '-',
+                'lowercase'     => true,
+                'replacements'  => [],
+                'transliterate' => false,
+                'blacklist'     => [],
+            ],
+            'special_attributes' => true,
+        ],
+        'images' => true,
+        'links' => [
+            'email_links' => true,
+            'external_links' => [
+                'nofollow'           => true,
+                'noopener'           => true,
+                'noreferrer'         => true,
+                'open_in_new_window' => true,
+                'internal_hosts'     => [],
+            ],
+        ],
+        'lists' => ['tasks' => true],
+        'allow_raw_html' => true,
+        'alerts' => [
+            'types' => ['note','tip','important','warning','caution'],
+            'class' => 'markdown-alert',
+        ],
+        'math' => [
+            'enabled' => false,
+            'inline' => [
+                'delimiters' => [['left' => '$',  'right' => '$']],
+            ],
+            'block'  => [
+                'delimiters' => [['left' => '$$', 'right' => '$$']],
+            ],
+        ],
+        'smartypants' => [
+            'enabled'             => false,
+            'smart_angled_quotes' => true,
+            'smart_backticks'     => true,
+            'smart_dashes'        => true,
+            'smart_ellipses'      => true,
+            'smart_quotes'        => true,
+            'substitutions' => [
+                'ellipses'           => '&hellip;',
+                'left_angle_quote'   => '&laquo;',
+                'left_double_quote'  => '&ldquo;',
+                'left_single_quote'  => '&lsquo;',
+                'mdash'              => '&mdash;',
+                'ndash'              => '&ndash;',
+                'right_angle_quote'  => '&raquo;',
+                'right_double_quote' => '&rdquo;',
+                'right_single_quote' => '&rsquo;',
+            ],
+        ],
+        'tables'         => ['tablespan' => true],
+        'thematic_breaks'=> true,
+        'toc' => [
+            'levels' => ['h1','h2','h3','h4','h5','h6'],
+            'tag'    => '[TOC]',
+            'id'     => 'toc',
+        ],
+        'typographer' => true,
+        'references'  => true,
+    ];
+
+    /* ------------------------------------------------------------------ */
+    /*  2. Static, expanded look‑up tables                                */
+    /* ------------------------------------------------------------------ */
+
+    private static array $PATH_TO_BIT   = [];
+    private static array $BIT_TO_PATH   = [];
+    private static array $FLAT_SCHEMA   = [];
+    private static int   $DEFAULT_BITS  = 0;   // default boolean mask
+    private static array $DEFAULT_PAYLOAD = [];
+    private static bool  $COMPILED = false;
+
+    /* ------------------------------------------------------------------ */
+    /*  3. Per‑instance state                                             */
+    /* ------------------------------------------------------------------ */
+
+    private int   $features;  // 64‑bit mask of booleans
+    private array $payload;   // non‑boolean settings
+
     /**
      * Constructor for ParsedownExtended.
      *
      * Initializes the class and performs version checks for PHP and Parsedown dependencies.
      */
-    public function __construct()
+    public function __construct(array $overrides = [])
     {
         // Check if the current PHP version meets the minimum requirement
         $this->checkVersion('PHP', PHP_VERSION, self::MIN_PHP_VERSION);
@@ -72,9 +183,18 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
 
         $this->setLegacyMode();
 
-        // Initialize settings with the provided schema
-        $this->configSchema = $this->defineConfigSchema();
-        $this->config = $this->initializeConfig($this->configSchema);
+        if (!self::$COMPILED) {
+            $this->compileSchema();
+            self::$COMPILED = true;
+        }
+
+        $this->features = self::$DEFAULT_BITS;
+        $this->payload  = self::$DEFAULT_PAYLOAD;
+
+        if ($overrides) {
+            $this->applyOverrides($overrides);
+        }
+
 
         // Add support for inline types (e.g., special formatting)
         $this->addInlineType('=', 'Marking');
@@ -3036,126 +3156,6 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
         return parent::unmarkedText($text);
     }
 
-
-    // Settings
-    // -------------------------------------------------------------------------
-
-    /**
-     * Sets a configuration setting (DEPRECATED).
-     *
-     * This method sets a configuration setting using the new configuration system.
-     * It is deprecated and will be removed in future versions. Use `$ParsedownExtended->config()->set()` instead.
-     *
-     * @since 1.2.0
-     * @deprecated 1.3.0 Use ParsedownExtended->config()->set() instead.
-     * @see ParsedownExtended->config()->set()
-     *
-     * @param string $settingName The name of the setting to set.
-     * @param mixed $value The value to set for the setting.
-     * @param bool $overwrite Whether to overwrite an existing setting (default: false).
-     * @return void
-     */
-    public function setSetting(string $settingName, $value, bool $overwrite = false)
-    {
-        // Log the use of deprecated method for future reference
-        $this->deprecated(__METHOD__, '1.3.0', '$ParsedownExtended->config()->set()');
-
-        // Use the new configuration system to set the value
-        $this->config()->set($settingName, $value);
-    }
-
-    /**
-     * Sets multiple configuration settings at once (DEPRECATED).
-     *
-     * This method sets multiple configuration settings using the new configuration system.
-     * It is deprecated and will be removed in future versions. Use `$ParsedownExtended->config()->set()` instead.
-     *
-     * @since 1.2.0
-     * @deprecated 1.3.0 Use ParsedownExtended->config()->set() instead.
-     * @see ParsedownExtended->config()->set()
-     *
-     * @param array $settings An associative array of settings to set (key-value pairs).
-     * @return $this
-     */
-    public function setSettings(array $settings)
-    {
-        // Log the use of deprecated method for future reference
-        $this->deprecated(__METHOD__, '1.3.0', '$ParsedownExtended->config()->set()');
-
-        // Set each individual setting using the existing setSetting method
-        foreach ($settings as $key => $value) {
-            $this->setSetting($key, $value);
-        }
-
-        return $this;
-    }
-
-    /**
-     * Checks if a configuration setting is enabled (DEPRECATED).
-     *
-     * This method checks if a particular setting is enabled using the new configuration system.
-     * It is deprecated and will be removed in future versions. Use `$ParsedownExtended->config()->get()` instead.
-     *
-     * @since 1.2.2
-     * @deprecated 1.3.0 Use ParsedownExtended->config()->get() instead.
-     * @see ParsedownExtended->config()->get()
-     *
-     * @param string $keyPath The key path of the setting to check.
-     * @return mixed The value of the setting (generally a boolean for 'enabled' settings).
-     */
-    public function isEnabled(string $keyPath)
-    {
-        // Log the use of deprecated method for future reference
-        $this->deprecated(__METHOD__, '1.3.0', '$ParsedownExtended->config()->get()');
-
-        // Use the new configuration system to get the value
-        return $this->config()->get($keyPath);
-    }
-
-    /**
-     * Gets the value of a configuration setting (DEPRECATED).
-     *
-     * This method retrieves a setting using the new configuration system.
-     * It is deprecated and will be removed in future versions. Use `$ParsedownExtended->config()->get()` instead.
-     *
-     * @since 1.2.0
-     * @deprecated 1.3.0 Use ParsedownExtended->config()->get() instead.
-     * @see ParsedownExtended->config()->get()
-     *
-     * @param string $key The key of the setting to retrieve.
-     * @return mixed The value of the specified setting.
-     */
-    public function getSetting(string $key)
-    {
-        // Log the use of deprecated method for future reference
-        $this->deprecated(__METHOD__, '1.3.0', '$ParsedownExtended->config()->get()');
-
-        // Use the new configuration system to get the value
-        return $this->config()->get($key);
-    }
-
-    /**
-     * Gets all configuration settings (DEPRECATED).
-     *
-     * This method retrieves all settings.
-     * It is deprecated and will be removed in future versions. Use `$ParsedownExtended->config()->get()` instead.
-     *
-     * @since 1.2.0
-     * @deprecated 1.3.0 Use ParsedownExtended->config()->get() instead.
-     * @see ParsedownExtended->config()->get()
-     *
-     * @return array An associative array of all settings.
-     */
-    public function getSettings()
-    {
-        // Log the use of deprecated method for future reference
-        $this->deprecated(__METHOD__, '1.3.0', '$ParsedownExtended->config()->get()');
-
-        // Return the current settings
-        return $this->settings;
-    }
-
-
     // Helper functions
     // -------------------------------------------------------------------------
 
@@ -3228,483 +3228,180 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
         }
     }
 
-    /**
-     * Warns users about deprecated functions.
-     *
-     * This function is used to trigger a deprecation warning when deprecated functions are called.
-     * It informs the user about the function being deprecated, the version it was deprecated in,
-     * and suggests an alternative function to use.
-     *
-     * @since 1.3.0
-     *
-     * @param string $functionName The name of the deprecated function.
-     * @param string $version The version in which the function was deprecated.
-     * @param string $alternative (Optional) The name of an alternative function to use.
-     * @return void
-     */
-    private function deprecated(string $functionName, string $version, string $alternative = ''): void
-    {
-        // Get the call stack to determine where this deprecated function was called
-        $backtrace = debug_backtrace();
-        $caller = $backtrace[1] ?? $backtrace[0];
-
-        // Create the deprecation message with the function name and version
-        $message = "Function {$functionName} is deprecated as of version {$version} and will be removed in the future. ";
-        // Append an alternative function suggestion if provided
-        $message .= $alternative ? "Use {$alternative} instead." : '';
-        // Include the file and line number where the deprecated function was called
-        $message .= " Called in {$caller['file']} on line {$caller['line']}";
-
-        // Trigger the deprecated warning
-        trigger_error($message, E_USER_DEPRECATED);
-    }
 
     // Configurations Handler
     // -------------------------------------------------------------------------
 
-    /**
-     * Initialize configuration using a given schema.
-     *
-     * This function iterates through the given schema to initialize the default configuration settings.
-     * It handles nested arrays and array types with nested defaults.
-     *
-     * @since 1.3.0
-     *
-     * @param array $schema The configuration schema to use for initialization.
-     * @return array The initialized configuration based on the given schema.
-     */
-    private function initializeConfig(array $schema)
+    public function getFlatSchema(): array
     {
-        $config = [];
-        foreach ($schema as $key => $definition) {
-            // Handle array types with nested defaults
-            if (isset($definition['type'])) {
-                if ($definition['type'] === 'array' && is_array($definition['default'])) {
-                    $config[$key] = $this->initializeConfig($definition['default']);
-                } else {
-                    $config[$key] = $definition['default'];
-                }
-            } else {
-                // Recursively initialize nested configurations
-                if (is_array($definition)) {
-                    $config[$key] = $this->initializeConfig($definition);
-                } else {
-                    $config[$key] = $definition;
-                }
-            }
-        }
-        return $config;
+        return self::$FLAT_SCHEMA;
     }
 
-    /**
-     * Define the configuration schema.
-     *
-     * This function returns a comprehensive configuration schema that defines the type,
-     * default values, and nested structures for each configuration setting.
-     *
-     * @since 1.3.0
-     *
-     * @return array The defined configuration schema.
-     */
-    private function defineConfigSchema(): array
+    public function config(): object
     {
-        return [
-            'abbreviations' => [
-                'enabled' => ['type' => 'boolean', 'default' => true],
-                'allow_custom' => ['type' => 'boolean', 'default' => true],
-                'predefined' => [
-                    'type' => 'array',
-                    'default' => [],
-                    'item_schema' => [
-                        'key_type' => 'string',
-                        'value_type' => 'string',
-                    ],
-                ],
-            ],
-            'code' => [
-                'enabled' => ['type' => 'boolean', 'default' => true],
-                'blocks' => ['type' => 'boolean', 'default' => true],
-                'inline' => ['type' => 'boolean', 'default' => true],
-            ],
-            'comments' => ['type' => 'boolean', 'default' => true],
-            'definition_lists' => ['type' => 'boolean', 'default' => true],
-            'diagrams' => [
-                'enabled' => ['type' => 'boolean', 'default' => false],
-                'chartjs' => ['type' => 'boolean', 'default' => true],
-                'mermaid' => ['type' => 'boolean', 'default' => true],
-            ],
-            'emojis' => ['type' => 'boolean', 'default' => true],
-            'emphasis' => [
-                'enabled' => ['type' => 'boolean', 'default' => true],
-                'bold' => ['type' => 'boolean', 'default' => true],
-                'italic' => ['type' => 'boolean', 'default' => true],
-                'strikethroughs' => ['type' => 'boolean', 'default' => true],
-                'insertions' => ['type' => 'boolean', 'default' => true],
-                'subscript' => ['type' => 'boolean', 'default' => false],
-                'superscript' => ['type' => 'boolean', 'default' => false],
-                'keystrokes' => ['type' => 'boolean', 'default' => true],
-                'mark' => ['type' => 'boolean', 'default' => true],
-            ],
-            'footnotes' => ['type' => 'boolean', 'default' => true],
-            'headings' => [
-                'enabled' => ['type' => 'boolean', 'default' => true],
-                'allowed_levels' => ['type' => 'array', 'default' => ['h1', 'h2', 'h3', 'h4', 'h5', 'h6']],
-                'auto_anchors' => [
-                    'enabled' => ['type' => 'boolean', 'default' => true],
-                    'delimiter' => ['type' => 'string', 'default' => '-'],
-                    'lowercase' => ['type' => 'boolean', 'default' => true],
-                    'replacements' => ['type' => 'array', 'default' => []],
-                    'transliterate' => ['type' => 'boolean', 'default' => false],
-                    'blacklist' => ['type' => 'array', 'default' => []],
-                ],
-                'special_attributes' => ['type' => 'boolean', 'default' => true],
-            ],
-            'images' => ['type' => 'boolean', 'default' => true],
-            'links' => [
-                'enabled' => ['type' => 'boolean', 'default' => true],
-                'email_links' => ['type' => 'boolean', 'default' => true],
-                'external_links' => [
-                    'enabled' => ['type' => 'boolean', 'default' => true],
-                    'nofollow' => ['type' => 'boolean', 'default' => true],
-                    'noopener' => ['type' => 'boolean', 'default' => true],
-                    'noreferrer' => ['type' => 'boolean', 'default' => true],
-                    'open_in_new_window' => ['type' => 'boolean', 'default' => true],
-                    'internal_hosts' => [
-                        'type' => 'array', 'default' => [],
-                        'item_schema' => ['type' => 'string'],
-                    ],
-                ],
-            ],
-            'lists' => [
-                'enabled' => ['type' => 'boolean', 'default' => true],
-                'tasks' => ['type' => 'boolean', 'default' => true],
-            ],
-            'allow_raw_html' => ['type' => 'boolean', 'default' => true],
-            'alerts' => [
-                'enabled' => ['type' => 'boolean', 'default' => true],
-                'types' => [
-                    'type' => 'array',
-                    'default' => ['note', 'tip', 'important', 'warning', 'caution'],
-                    'item_schema' => ['type' => 'string'],
-                ],
-                'class' => ['type' => 'string', 'default' => 'markdown-alert'],
-            ],
-            'math' => [
-                'enabled' => ['type' => 'boolean', 'default' => false],
-                'inline' => [
-                    'enabled' => ['type' => 'boolean', 'default' => true],
-                    'delimiters' => [
-                        'type' => 'array',
-                        'default' => [['left' => '$', 'right' => '$']],
-                        'item_schema' => ['type' => 'array', 'keys' => ['left' => 'string', 'right' => 'string']],
-                    ],
-                ],
-                'block' => [
-                    'enabled' => ['type' => 'boolean', 'default' => true],
-                    'delimiters' => [
-                        'type' => 'array',
-                        'default' => [
-                            ['left' => '$$', 'right' => '$$'],
-                        ],
-                        'item_schema' => ['type' => 'array', 'keys' => ['left' => 'string', 'right' => 'string']],
-                    ],
-                ],
-            ],
-            'quotes' => ['type' => 'boolean', 'default' => true],
-            'references' => ['type' => 'boolean', 'default' => true],
-            'smartypants' => [
-                'enabled' => ['type' => 'boolean', 'default' => false],
-                'smart_angled_quotes' => ['type' => 'boolean', 'default' => true],
-                'smart_backticks' => ['type' => 'boolean', 'default' => true],
-                'smart_dashes' => ['type' => 'boolean', 'default' => true],
-                'smart_ellipses' => ['type' => 'boolean', 'default' => true],
-                'smart_quotes' => ['type' => 'boolean', 'default' => true],
-                'substitutions' => [
-                    'ellipses' => ['type' => 'string', 'default' => '&hellip;'],
-                    'left_angle_quote' => ['type' => 'string', 'default' => '&laquo;'],
-                    'left_double_quote' => ['type' => 'string', 'default' => '&ldquo;'],
-                    'left_single_quote' => ['type' => 'string', 'default' => '&lsquo;'],
-                    'mdash' => ['type' => 'string', 'default' => '&mdash;'],
-                    'ndash' => ['type' => 'string', 'default' => '&ndash;'],
-                    'right_angle_quote' => ['type' => 'string', 'default' => '&raquo;'],
-                    'right_double_quote' => ['type' => 'string', 'default' => '&rdquo;'],
-                    'right_single_quote' => ['type' => 'string', 'default' => '&rsquo;'],
-                ],
-            ],
-            'tables' => [
-                'enabled' => ['type' => 'boolean', 'default' => true],
-                'tablespan' => ['type' => 'boolean', 'default' => true],
-            ],
-            'thematic_breaks' => ['type' => 'boolean', 'default' => true],
-            'toc' => [
-                'enabled' => ['type' => 'boolean', 'default' => true],
-                'levels' => [
-                    'type' => 'array',
-                    'default' => ['h1', 'h2', 'h3', 'h4', 'h5', 'h6'],
-                    'item_schema' => ['type' => 'string'],
-                ],
-                'tag' => ['type' => 'string', 'default' => '[TOC]'],
-                'id' => ['type' => 'string', 'default' => 'toc'],
-            ],
-            'typographer' => ['type' => 'boolean', 'default' => true],
-        ];
-    }
+        static $handler = null;
 
-
-    /**
-     * Retrieve the configuration schema.
-     *
-     * This function returns the complete configuration schema that defines the structure,
-     * expected data types, and default values for all configurable settings.
-     *
-     * The schema is used internally for validation and providing type safety when getting or setting configuration values.
-     *
-     * @since 1.3.0
-     *
-     * @return array The configuration schema as an associative array.
-     */
-    public function getConfigSchema(): array
-    {
-        return $this->configSchema;
-    }
-
-    /**
-     * Return a new instance of an anonymous configuration class.
-     *
-     * This function creates an instance of a class that provides methods to interact with the configuration settings.
-     * It allows getting and setting configuration values, including translating deprecated keys and validating types.
-     *
-     * @since 1.3.0
-     *
-     * @return object Anonymous configuration object with get and set methods.
-     */
-    public function config()
-    {
-        if ($this->configHandler === null) {
-            $this->configHandler = new class ($this->configSchema, $this->config) {
+        if ($handler === null) {
+            $handler = new class(self::$PATH_TO_BIT, self::$FLAT_SCHEMA) {
+                private array $p2b;
                 private array $schema;
-                private $config;
+                private int   $features;
+                private array $payload;
 
-            /**
-             * Constructor to initialize configuration schema and reference configuration array.
-             *
-             * @since 0.1.0
-             *
-             * @param array $schema The schema that defines the structure and types of config.
-             * @param array &$config A reference to the actual configuration array.
-             */
-            public function __construct(array $schema, &$config)
-            {
-                $this->schema = $schema;
-                $this->config = &$config;
-            }
-
-            /**
-             * Translate deprecated key paths to the new key paths.
-             *
-             * This function checks for deprecated configuration keys and suggests a newer version if available.
-             *
-             * @since 1.3.0
-             *
-             * @param string $keyPath The key path to be translated.
-             * @return string The translated or original key path.
-             */
-            private function translateDeprecatedKeyPath(string $keyPath): string
-            {
-                static $deprecatedMapping = [
-                    // Mapping of deprecated keys to new keys.
-                    'abbreviations.allow_custom_abbr' => 'abbreviations.allow_custom',
-                    'abbreviations.predefine' => 'abbreviations.predefined',
-                    'emphasis.marking' => 'emphasis.mark',
-                    'headings.allowed' => 'headings.allowed_levels',
-                    'smarty' => 'smartypants',
-                    'smarty.substitutions.left-angle-quote' => 'smartypants.substitutions.left_angle_quote',
-                    'toc.toc_tag' => 'toc.tag',
-                    'markup' => 'allow_raw_html',
-                    'toc.headings' => 'toc.levels',
-                ];
-
-                // If the key path is deprecated, trigger a deprecation warning.
-                if (isset($deprecatedMapping[$keyPath])) {
-                    $backtrace = debug_backtrace();
-                    $caller = $backtrace[1] ?? $backtrace[0];
-                    $message = "The config path '{$keyPath}' is deprecated. Use '{$deprecatedMapping[$keyPath]}' instead. Called in " . ($caller['file'] ?? 'unknown') . " on line " . ($caller['line'] ?? 'unknown');
-                    trigger_error($message, E_USER_DEPRECATED);
+                public function __construct(array $p2b, array $schema)
+                {
+                    $this->p2b    = $p2b;
+                    $this->schema = $schema;
+                }
+                public function bind(int &$f, array &$p): void
+                {
+                    $this->features = &$f;
+                    $this->payload  = &$p;
                 }
 
-                return $deprecatedMapping[$keyPath] ?? $keyPath;
-            }
-
-            /**
-             * Retrieves a value from a nested array or object using a dot-separated key path.
-             *
-             * @since 1.3.0
-             *
-             * @param string $keyPath Dot-separated key path indicating the config to get.
-             * @param bool $raw Whether to return the raw value without any processing.
-             * @return mixed The value of the configuration setting.
-             * @throws \InvalidArgumentException If the key path is invalid.
-             */
-            public function get(string $keyPath, bool $raw = false)
-            {
-                // Translate deprecated key paths.
-                $keyPath = $this->translateDeprecatedKeyPath($keyPath);
-
-                // Split the key path into individual keys.
-                $keys = explode('.', $keyPath);
-                $value = $this->config;
-
-                // Traverse through keys to reach the desired value.
-                foreach ($keys as $key) {
-                    if (!array_key_exists($key, $value)) {
-                        $backtrace = debug_backtrace();
-                        $caller = $backtrace[1] ?? $backtrace[0];
-                        $errorMessage = "Invalid key path '{$keyPath}' given. Called in " . ($caller['file'] ?? 'unknown') . " on line " . ($caller['line'] ?? 'unknown');
-                        throw new \InvalidArgumentException($errorMessage);
+                /* ---------------------------- GET ----------------------- */
+                public function get(string $path): mixed
+                {
+                    $path = $this->normalisePath($path);
+                    if (isset($this->p2b[$path])) {
+                        return ( ($this->features & $this->p2b[$path]) !== 0 );
                     }
-                    $value = $value[$key];
+                    return $this->payload[$path] ?? null;
                 }
 
-                if ($raw) {
-                    return $value;
-                }
+                /* ---------------------------- SET ----------------------- */
+                public function set(string|array $path, mixed $value = null): self
+                {
+                    if (is_array($path)) {
+                        foreach ($path as $k => $v) { $this->set($k, $v); }
+                        return $this;
+                    }
 
-                // If the value is an array with an 'enabled' key, return that instead.
-                return is_array($value) && isset($value['enabled']) ? $value['enabled'] : $value;
-            }
+                    $path = $this->normalisePath($path);
 
-            /**
-             * Set the configuration value for the provided key path.
-             *
-             * @since 1.3.0
-             *
-             * @param string|array $keyPath Dot-separated key path indicating the config to set or an associative array of key paths and values.
-             * @param mixed $value The value to set.
-             * @return self Returns the instance for method chaining.
-             * @throws \InvalidArgumentException If the key path is invalid or the value is of the wrong type.
-             */
-            public function set($keyPath, $value = null): self
-            {
-                if (is_array($keyPath)) {
-                    // Set multiple values if an associative array is provided.
-                    foreach ($keyPath as $key => $val) {
-                        $this->set($key, $val);
+                    if (!isset($this->schema[$path])) {
+                        throw new \InvalidArgumentException("Invalid config path: {$path}");
+                    }
+                    $this->validate($value, $this->schema[$path]['type']);
+
+                    if (isset($this->p2b[$path])) {
+                        $bit = $this->p2b[$path];
+                        $this->features = $value ? ($this->features | $bit)
+                                                  : ($this->features & ~$bit);
+                    } else {
+                        $this->payload[$path] = $value;
                     }
                     return $this;
                 }
 
-                // Translate deprecated key paths.
-                $keyPath = $this->translateDeprecatedKeyPath($keyPath);
-
-                // Split the key path into individual keys.
-                $keys = explode('.', $keyPath);
-                $lastKey = array_pop($keys);
-
-                $current = &$this->config;
-                $currentSchema = $this->schema;
-
-                // Navigate to the desired configuration section.
-                foreach ($keys as $key) {
-                    if (!isset($current[$key])) {
-                        $backtrace = debug_backtrace();
-                        $caller = $backtrace[1] ?? $backtrace[0];
-                        $errorMessage = "Invalid key path '{$keyPath}' given. Called in " . ($caller['file'] ?? 'unknown') . " on line " . ($caller['line'] ?? 'unknown');
-                        throw new \InvalidArgumentException($errorMessage);
+                public function export(): array
+                {
+                    $flat = $this->payload;
+                    foreach ($this->p2b as $p => $b) {
+                        $flat[$p] = (($this->features & $b) !== 0);
                     }
-                    $current = &$current[$key];
-                    if (!isset($currentSchema[$key])) {
-                        throw new \InvalidArgumentException("Invalid schema path: " . implode('.', $keys));
-                    }
-                    $currentSchema = $currentSchema[$key];
+                    return $flat;
                 }
 
-                // Validate and set the value for the specified key.
-                if (isset($currentSchema['default'][$lastKey])) {
-                    $expectedType = $currentSchema['default'][$lastKey]['type'];
-                    $this->validateType($value, $expectedType, $currentSchema['default'][$lastKey]);
-                    $current[$lastKey] = $value;
-                } else {
-                    if (!isset($currentSchema[$lastKey])) {
-                        $backtrace = debug_backtrace();
-                        $caller = $backtrace[1] ?? $backtrace[0];
-                        $errorMessage = "Invalid key path '{$keyPath}' given. Called in " . ($caller['file'] ?? 'unknown') . " on line " . ($caller['line'] ?? 'unknown');
-                        throw new \InvalidArgumentException($errorMessage);
+                /* -------------------- helpers --------------------------- */
+                private function normalisePath(string $p): string
+                {
+                    if (!isset($this->schema[$p]) && isset($this->schema[$p . '.enabled'])) {
+                        return $p . '.enabled';
                     }
-                    $expectedType = $currentSchema[$lastKey]['type'] ?? null;
-                    if ($expectedType) {
-                        $this->validateType($value, $expectedType, $currentSchema[$lastKey]);
-                    }
-                    // Update the 'enabled' field if applicable.
-                    if (isset($current[$lastKey]['enabled']) && is_array($current[$lastKey])) {
-
-                        /**
-                         * If the value is an array, it recursively sets each sub-value.
-                         * Otherwise, it sets the 'enabled' key of the current configuration.
-                         */
-                        if (is_array($value)) {
-                            foreach ($value as $subKey => $subValue) {
-                                $this->set($keyPath . '.' . $subKey, $subValue);
-                            }
-                        } else {
-                            $current[$lastKey]['enabled'] = $value;
-                        }
-
-                    } else {
-                        $current[$lastKey] = $value;
+                    return $p;
+                }
+                private function validate(mixed $val, string $expected): void
+                {
+                    $actual = gettype($val);
+                    if ($expected !== $actual) {
+                        throw new \InvalidArgumentException("Expected {$expected}, got {$actual}");
                     }
                 }
+            };
+        }
+        $handler->bind($this->features, $this->payload);
+        return $handler;
+    }
 
-                return $this;
-            }
+    /* ================================================================== */
+    /*  Schema compiler (one‑time)                                        */
+    /* ================================================================== */
 
-            /**
-             * Validate the type of the given value against the expected type.
-             *
-             * @since 1.3.0
-             *
-             * @param mixed $value The value to be validated.
-             * @param string $expectedType The expected type of the value.
-             * @param array|null $schema Additional schema for validation (e.g., item schema for arrays).
-             * @throws \InvalidArgumentException If the value type does not match the expected type.
-             */
-            protected function validateType($value, string $expectedType, ?array $schema = null): void
-            {
-                $type = gettype($value);
+    private function compileSchema(): void
+    {
+        $bitIndex = 0;
 
-                if ($expectedType === 'array' && $type === 'array') {
-                    if (isset($schema['item_schema'])) {
-                        if (isset($schema['item_schema']['key_type']) && isset($schema['item_schema']['value_type'])) {
-                            // Validate key-value pairs in the array.
-                            $keyType = $schema['item_schema']['key_type'];
-                            $valueType = $schema['item_schema']['value_type'];
+        $walk = function (array $node, string $prefix = '') use (&$walk, &$bitIndex): void {
+            foreach ($node as $k => $v) {
+                $path = $prefix === '' ? $k : $prefix . '.' . $k;
 
-                            foreach ($value as $key => $item) {
-                                if (gettype($key) !== $keyType || gettype($item) !== $valueType) {
-                                    $backtrace = debug_backtrace();
-                                    $caller = $backtrace[1] ?? $backtrace[0];
-                                    $errorMessage = "Array keys must be of type '$keyType' and values of type '$valueType'. Called in " . ($caller['file'] ?? 'unknown') . " on line " . ($caller['line'] ?? 'unknown');
-                                    throw new \InvalidArgumentException($errorMessage);
-                                }
-                            }
-                            return;
-                        }
+                // branch (associative => object)
+                if (is_array($v) && !array_is_list($v)) {
+                    // implicit enabled=true unless provided
+                    $enabledDefault = true;
+                    if (array_key_exists('enabled', $v)) {
+                        $enabledDefault = (bool)$v['enabled'];
                     }
-                    return;
+                    $this->registerBoolean("{$path}.enabled", $enabledDefault, $bitIndex);
+                    if (array_key_exists('enabled', $v)) {
+                        unset($v['enabled']); // don't recurse into it
+                    }
+                    $walk($v, $path);
+                    continue;
                 }
 
-                // If types do not match, throw an error with debug information.
-                if ($type !== $expectedType) {
-                    $backtrace = debug_backtrace();
-                    $caller = $backtrace[1] ?? $backtrace[0];
-                    $errorMessage = "Expected type $expectedType, got $type. Called in " . ($caller['file'] ?? 'unknown') . " on line " . ($caller['line'] ?? 'unknown');
-                    throw new \InvalidArgumentException($errorMessage);
+                // leaf boolean
+                if (is_bool($v)) {
+                    $this->registerBoolean($path, $v, $bitIndex);
+                    continue;
                 }
+
+                // leaf non‑boolean (string, int, array, …)
+                $this->registerPayload($path, $v);
             }
         };
-        }
 
-        return $this->configHandler;
+        $walk(self::CONFIG_SCHEMA_DEFAULT);
     }
+
+    private function registerBoolean(string $path, bool $default, int &$bitIndex): void
+    {
+        if ($bitIndex > 63) {
+            throw new \RuntimeException('Exceeded 64 boolean feature bits');
+        }
+        $bit = 1 << $bitIndex++;
+        self::$PATH_TO_BIT[$path] = $bit;
+        self::$BIT_TO_PATH[$bit]  = $path;
+        self::$FLAT_SCHEMA[$path] = ['type' => 'boolean', 'default' => $default];
+        if ($default) {
+            self::$DEFAULT_BITS |= $bit;
+        }
+    }
+
+    private function registerPayload(string $path, mixed $default): void
+    {
+        self::$FLAT_SCHEMA[$path]   = ['type' => gettype($default), 'default' => $default];
+        self::$DEFAULT_PAYLOAD[$path] = $default;
+    }
+
+    /* ================================================================== */
+    /*  Overrides helper                                                  */
+    /* ================================================================== */
+
+    private function applyOverrides(array $ovr, string $prefix = ''): void
+    {
+        foreach ($ovr as $k => $v) {
+            $path = $prefix === '' ? $k : $prefix . '.' . $k;
+
+            if (is_array($v) && !isset(self::$FLAT_SCHEMA[$path])) {
+                $this->applyOverrides($v, $path);
+                continue;
+            }
+            $this->config()->set($path, $v);
+        }
+    }
+
 
 
     // Overwriting core Parsedown functions
