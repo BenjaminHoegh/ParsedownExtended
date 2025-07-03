@@ -938,7 +938,7 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
             if (preg_match('/^(-{2,3})(?!-)/', $text, $matches)) {
                 if ('---' === $matches[1]) {
                     return [
-                        'extent' => 3,
+                        'extent' => strlen($matches[1]),
                         'element' => [
                             'text' => $substitutions['mdash'],
                         ],
