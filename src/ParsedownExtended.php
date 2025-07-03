@@ -873,113 +873,101 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
             'ellipses' => html_entity_decode($config->get('smartypants.substitutions.ellipses')),
         ];
 
-        // Define patterns for various Smartypants substitutions
-        $patterns = [
-            'smart_backticks' => [
-                'pattern' => '/^(?:``)(?!\s)([^"\'`]+)(?:\'\')/i',
-                'callback' => function ($matches) use ($substitutions, $Excerpt) {
-                    if (strlen(trim($Excerpt['before'])) > 0) {
-                        return null; // Skip if the backticks do not start at the beginning
-                    }
+        $text = $Excerpt['text'];
+        $first = $text[0] ?? '';
 
-                    // Return transformed text with left and right double quotes
-                    return [
-                        'extent' => strlen($matches[0]),
-                        'element' => [
-                            'text' => $substitutions['left_double_quote'] . $matches[2] . $substitutions['right_double_quote'],
-                        ],
-                    ];
-                },
-            ],
-            'smart_quotes' => [
-                'pattern' => '/^(\")(?!\s)([^\"]+)(?:\")|^(?<!\w)(\')(?!\s)([^\']+)(?:\')/i',
-                'callback' => function ($matches) use ($substitutions, $Excerpt) {
-                    if (strlen(trim($Excerpt['before'])) > 0) {
-                        return null; // Skip if quotes are in the middle of a word
-                    }
+        // ``like this''
+        if ('`' === $first && $config->get('smartypants.smart_backticks')) {
+            if (preg_match('/^(?:``)(?!\s)([^"\'`]+)(?:\'\')/i', $text, $matches)) {
+                if (strlen(trim($Excerpt['before'])) > 0) {
+                    return null;
+                }
 
-                    // Check if the match is for single or double quotes and return transformed text
-                    if ("'" === $matches[1]) {
-                        return [
-                            'extent' => strlen($matches[0]),
-                            'element' => [
-                                'text' => $substitutions['left_single_quote'] . $matches[2] . $substitutions['right_single_quote'],
-                            ],
-                        ];
-                    }
-
-                    if ('"' === $matches[1]) {
-                        return [
-                            'extent' => strlen($matches[0]),
-                            'element' => [
-                                'text' => $substitutions['left_double_quote'] . $matches[2] . $substitutions['right_double_quote'],
-                            ],
-                        ];
-                    }
-                },
-            ],
-            'smart_angled_quotes' => [
-                'pattern' => '/^(?:<{2})(?!\s)([^<>]+)(?:>{2})/i',
-                'callback' => function ($matches) use ($substitutions, $Excerpt) {
-                    if (strlen(trim($Excerpt['before'])) > 0) {
-                        return null; // Skip if angled quotes do not start at the beginning
-                    }
-
-                    // Return transformed text with left and right angle quotes
-                    return [
-                        'extent' => strlen($matches[0]),
-                        'element' => [
-                            'text' => $substitutions['left_angle_quote'] . $matches[2] . $substitutions['right_angle_quote'],
-                        ],
-                    ];
-                },
-            ],
-            'smart_dashes' => [
-                'pattern' => '/^(?<!\.)\.{3}(?!\.)/i',
-                'callback' => function ($matches) use ($substitutions) {
-                    // Replace double dashes with ndash or triple dashes with mdash
-                    if ('---' === $matches[1]) {
-                        return [
-                            'extent' => strlen($matches[0]),
-                            'element' => [
-                                'text' => $substitutions['mdash'],
-                            ],
-                        ];
-                    }
-
-                    if ('--' === $matches[1]) {
-                        return [
-                            'extent' => strlen($matches[0]),
-                            'element' => [
-                                'text' => $substitutions['ndash'],
-                            ],
-                        ];
-                    }
-                },
-            ],
-            'smart_ellipses' => [
-                'pattern' => '/^(?<!\.)(\.{3})(?!\.)/i',
-                'callback' => function ($matches) use ($substitutions) {
-                    // Replace three dots with an ellipsis
-                    return [
-                        'extent' => strlen($matches[0]),
-                        'element' => [
-                            'text' => $substitutions['ellipses'],
-                        ],
-                    ];
-                },
-            ],
-        ];
-
-        // Iterate over each pattern and apply the corresponding callback if a match is found
-        foreach ($patterns as $key => $value) {
-            if ($config->get('smartypants.' . $key) && preg_match($value['pattern'], $Excerpt['text'], $matches)) {
-                $matches = array_values(array_filter($matches)); // Filter out empty matches
-                return $value['callback']($matches); // Return the transformed text using the callback
+                return [
+                    'extent' => strlen($matches[0]),
+                    'element' => [
+                        'text' => $substitutions['left_double_quote'] . $matches[1] . $substitutions['right_double_quote'],
+                    ],
+                ];
             }
         }
 
-        // If no substitutions were made, return null
+        // "like this" or 'like this'
+        if (('"' === $first || "'" === $first) && $config->get('smartypants.smart_quotes')) {
+            if (preg_match('/^(\")(?!\s)([^\"]+)(?:\")|^(?<!\w)(\')(?!\s)([^\']+)(?:\')/i', $text, $matches)) {
+                if (strlen(trim($Excerpt['before'])) > 0) {
+                    return null;
+                }
+
+                if (isset($matches[3]) && $matches[3] === "'") {
+                    return [
+                        'extent' => strlen($matches[0]),
+                        'element' => [
+                            'text' => $substitutions['left_single_quote'] . $matches[4] . $substitutions['right_single_quote'],
+                        ],
+                    ];
+                }
+
+                return [
+                    'extent' => strlen($matches[0]),
+                    'element' => [
+                        'text' => $substitutions['left_double_quote'] . $matches[2] . $substitutions['right_double_quote'],
+                    ],
+                ];
+            }
+        }
+
+        // <<like this>>
+        if ('<' === $first && $config->get('smartypants.smart_angled_quotes')) {
+            if (preg_match('/^(?:<{2})(?!\s)([^<>]+)(?:>{2})/i', $text, $matches)) {
+                if (strlen(trim($Excerpt['before'])) > 0) {
+                    return null;
+                }
+
+                return [
+                    'extent' => strlen($matches[0]),
+                    'element' => [
+                        'text' => $substitutions['left_angle_quote'] . $matches[1] . $substitutions['right_angle_quote'],
+                    ],
+                ];
+            }
+        }
+
+        // -- or ---
+        if ('-' === $first && $config->get('smartypants.smart_dashes')) {
+            if (preg_match('/^(-{2,3})(?!-)/', $text, $matches)) {
+                if ('---' === $matches[1]) {
+                    return [
+                        'extent' => 3,
+                        'element' => [
+                            'text' => $substitutions['mdash'],
+                        ],
+                    ];
+                }
+
+                if ('--' === $matches[1]) {
+                    return [
+                        'extent' => 2,
+                        'element' => [
+                            'text' => $substitutions['ndash'],
+                        ],
+                    ];
+                }
+            }
+        }
+
+        // ...
+        if ('.' === $first && $config->get('smartypants.smart_ellipses')) {
+            if (preg_match('/^(?<!\.)(\.{3})(?!\.)/i', $text, $matches)) {
+                return [
+                    'extent' => strlen($matches[0]),
+                    'element' => [
+                        'text' => $substitutions['ellipses'],
+                    ],
+                ];
+            }
+        }
+
         return null;
     }
 
