@@ -144,22 +144,29 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
         'references'  => true,
     ];
 
-    /* ------------------------------------------------------------------ */
-    /*  2. Static, expanded look‑up tables                                */
-    /* ------------------------------------------------------------------ */
 
+    /** @var array $PATH_TO_BIT Stores a mapping of file or directory paths to their corresponding bit values. */
     private static array $PATH_TO_BIT   = [];
+
+    /** @var array $BIT_TO_PATH Stores a mapping of bit values to their corresponding file or directory paths. */
     private static array $BIT_TO_PATH   = [];
+
+    /** @var array $FLAT_SCHEMA Stores a flat schema of configuration options for easy access. */
     private static array $FLAT_SCHEMA   = [];
+
+    /** @var int $DEFAULT_BITS Stores the default boolean mask. */
     private static int   $DEFAULT_BITS  = 0;   // default boolean mask
+
+    /** @var array $DEFAULT_PAYLOAD Stores default non-boolean settings for the configuration. */
     private static array $DEFAULT_PAYLOAD = [];
+
+    /** @var bool $COMPILED Indicates whether the schema has been compiled. */
     private static bool  $COMPILED = false;
 
-    /* ------------------------------------------------------------------ */
-    /*  3. Per‑instance state                                             */
-    /* ------------------------------------------------------------------ */
-
+    /** @var int $features Stores the feature flags for the instance. */
     private int   $features;  // 64‑bit mask of booleans
+
+    /** @var array $payload Stores non-boolean settings for the instance. */
     private array $payload;   // non‑boolean settings
 
     /**
