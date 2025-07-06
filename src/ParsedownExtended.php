@@ -190,14 +190,17 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
 
         $this->setLegacyMode();
 
+        // Initialize the configuration schema
         if (!self::$COMPILED) {
             $this->compileSchema();
             self::$COMPILED = true;
         }
 
+        // Initialize features and payload
         $this->features = self::$DEFAULT_BITS;
         $this->payload  = self::$DEFAULT_PAYLOAD;
 
+        // Apply overrides if provided
         if ($overrides) {
             $this->applyOverrides($overrides);
         }
@@ -521,37 +524,36 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
      * @param string $href The URL to check.
      * @return bool Returns true if the link is external, false otherwise.
      */
-    private function isExternalLink($href)
+    private function isExternalLink(string $href): bool
     {
-        // Check if the URL is protocol-relative (e.g., starts with `//`)
-        $isProtocolRelative = preg_match('/^\/\//', $href);
+        // Determine if the link starts with a scheme or is protocol-relative
+        $isProtocolRelative = strncmp($href, '//', 2) === 0;
+        $isHttp  = stripos($href, 'http://') === 0;
+        $isHttps = stripos($href, 'https://') === 0;
 
-        // Check if the URL is an absolute URL (starts with http:// or https://)
-        $isAbsolute = preg_match('/^https?:\/\//i', $href);
-
-        if ($isProtocolRelative || $isAbsolute) {
-            // Extract the host part of the URL
-            $host = parse_url($href, PHP_URL_HOST);
-
-            // Check if the domain matches the current domain
-            if ($host && (!isset($_SERVER['HTTP_HOST']) || ($host !== $_SERVER['HTTP_HOST']))) {
-
-                // Remove 'www.' from the host to get the base domain name
-                $domain = preg_replace('/^www\\./', '', $host);
-
-                // Get the list of internal hosts from the configuration
-                $config = $this->config();
-                $internalHosts = $config->get('links.external_links.internal_hosts');
-
-                // Return false if the link is considered internal based on the configuration
-                if (in_array($domain, $internalHosts)) {
-                    return false;
-                }
-                return true; // If the link is not internal, it is external
-            }
+        if (!$isProtocolRelative && !$isHttp && !$isHttps) {
+            return false; // Relative URL
         }
 
-        return false;
+        // Extract the host part of the URL
+        $host = parse_url($href, PHP_URL_HOST);
+        if (!$host) {
+            return false;
+        }
+
+        // Check if the domain matches the current domain
+        if (isset($_SERVER['HTTP_HOST']) && $host === $_SERVER['HTTP_HOST']) {
+            return false;
+        }
+
+        // Remove 'www.' from the host to get the base domain name
+        $domain = (strpos($host, 'www.') === 0) ? substr($host, 4) : $host;
+
+        // Get the list of internal hosts from the configuration
+        $internalHosts = $this->config()->get('links.external_links.internal_hosts');
+
+        // If the link is not in the list of internal hosts, it is external
+        return !in_array($domain, $internalHosts, true);
     }
 
     /**
@@ -797,8 +799,6 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
 
         return null; // If no match is found, return null
     }
-
-
 
 
     /**
@@ -1962,6 +1962,8 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
         return $Block; // Finalize and return the alert block
     }
 
+
+    // BUG: Breaks formatting if written in a single line
 
     /**
      * Processes block-level math notation.
@@ -3227,11 +3229,31 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
     // Configurations Handler
     // -------------------------------------------------------------------------
 
+    /**
+     * Retrieves the flat schema array.
+     *
+     * @return array The flat schema defined in the class.
+     */
     public function getFlatSchema(): array
     {
         return self::$FLAT_SCHEMA;
     }
 
+    /**
+     * Returns a singleton configuration handler object for managing feature flags and payload settings.
+     *
+     * The handler provides methods to get, set, and export configuration values, supporting both bitmask-based
+     * feature toggles and arbitrary payload data. The configuration schema and path-to-bit mapping are provided
+     * statically. The handler validates types and throws exceptions for invalid paths or types.
+     *
+     * @return object Configuration handler with the following public methods:
+     *                - get(string $path): mixed
+     *                - set(string|array $path, mixed $value = null): self
+     *                - export(): array
+     *                - bind(int &$features, array &$payload): void
+     *
+     * @throws \InvalidArgumentException If an invalid config path or type is provided to set().
+     */
     public function config(): object
     {
         static $handler = null;
@@ -3319,10 +3341,17 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
         return $handler;
     }
 
-    /* ================================================================== */
-    /*  Schema compiler (one‑time)                                        */
-    /* ================================================================== */
-
+    /**
+     * Compiles the configuration schema by recursively traversing the schema definition.
+     *
+     * This method walks through the CONFIG_SCHEMA_DEFAULT array, registering boolean options
+     * and payloads for each configuration path. For associative array branches, it registers
+     * an "enabled" boolean (defaulting to true unless specified), and recurses into child nodes.
+     * For leaf nodes, it distinguishes between booleans (registered as boolean options) and
+     * other types (registered as payloads).
+     *
+     * @return void
+     */
     private function compileSchema(): void
     {
         $bitIndex = 0;
@@ -3360,6 +3389,19 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
         $walk(self::CONFIG_SCHEMA_DEFAULT);
     }
 
+    /**
+     * Registers a boolean feature flag with a unique bit index and default value.
+     *
+     * Maps the given feature path to a bit position, stores its schema, and updates
+     * the default bits if the feature is enabled by default. Throws an exception if
+     * more than 64 boolean features are registered.
+     *
+     * @param string $path      The unique path identifying the feature.
+     * @param bool   $default   The default value for the feature (enabled or disabled).
+     * @param int    &$bitIndex Reference to the current bit index, incremented after assignment.
+     *
+     * @throws \RuntimeException If more than 64 boolean features are registered.
+     */
     private function registerBoolean(string $path, bool $default, int &$bitIndex): void
     {
         if ($bitIndex > 63) {
@@ -3374,16 +3416,33 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
         }
     }
 
+    /**
+     * Registers a payload path with its default value and type in the schema.
+     *
+     * @param string $path    The unique path identifier for the payload.
+     * @param mixed  $default The default value to associate with the payload path.
+     *
+     * @return void
+     */
     private function registerPayload(string $path, mixed $default): void
     {
         self::$FLAT_SCHEMA[$path]   = ['type' => gettype($default), 'default' => $default];
         self::$DEFAULT_PAYLOAD[$path] = $default;
     }
 
-    /* ================================================================== */
-    /*  Overrides helper                                                  */
-    /* ================================================================== */
-
+    /**
+     * Recursively applies configuration overrides to the current configuration.
+     *
+     * This method traverses the provided associative array of overrides, optionally using a prefix
+     * to build dot-notated paths for nested configuration keys. If a value is an array and does not
+     * correspond to a flat schema entry, the method recurses into that array. Otherwise, it sets the
+     * configuration value at the computed path.
+     *
+     * @param array $ovr    The associative array of configuration overrides.
+     * @param string $prefix The prefix for nested configuration keys, used for dot notation (optional).
+     *
+     * @return void
+     */
     private function applyOverrides(array $ovr, string $prefix = ''): void
     {
         foreach ($ovr as $k => $v) {
