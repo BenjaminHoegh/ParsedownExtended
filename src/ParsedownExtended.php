@@ -51,6 +51,9 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
     /** @var array|null $emojiMap Cached emoji map for emoji replacements */
     private ?array $emojiMap = null;
 
+    /** @var bool $predefinedAbbreviationsAdded Tracks whether predefined abbreviations have been merged */
+    private bool $predefinedAbbreviationsAdded = false;
+
     /** @var array CONFIG_SCHEMA_DEFAULT Default configuration schema */
     private const CONFIG_SCHEMA_DEFAULT = [
         'abbreviations' => [
@@ -526,34 +529,54 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
      */
     private function isExternalLink(string $href): bool
     {
-        // Determine if the link starts with a scheme or is protocol-relative
-        $isProtocolRelative = strncmp($href, '//', 2) === 0;
-        $isHttp  = stripos($href, 'http://') === 0;
-        $isHttps = stripos($href, 'https://') === 0;
-
-        if (!$isProtocolRelative && !$isHttp && !$isHttps) {
-            return false; // Relative URL
+        // Early return for relative URLs (not starting with http(s):// or //)
+        $protocolRelative = strncmp($href, '//', 2);
+        if (
+            $protocolRelative !== 0 &&
+            stripos($href, 'http://') !== 0 &&
+            stripos($href, 'https://') !== 0
+        ) {
+            return false;
         }
 
-        // Extract the host part of the URL
-        $host = parse_url($href, PHP_URL_HOST);
+        // Normalize protocol-relative URLs for parse_url
+        $url = ($protocolRelative === 0) ? 'http:' . $href : $href;
+        $host = parse_url($url, PHP_URL_HOST);
         if (!$host) {
             return false;
         }
 
-        // Check if the domain matches the current domain
-        if (isset($_SERVER['HTTP_HOST']) && $host === $_SERVER['HTTP_HOST']) {
+        // Normalize host (lowercase, strip www.)
+        $host = strtolower($host);
+        if (strpos($host, 'www.') === 0) {
+            $host = substr($host, 4);
+        }
+
+        // Normalize current host
+        $currentHost = $_SERVER['HTTP_HOST'] ?? '';
+        $currentHost = strtolower($currentHost);
+        if (strpos($currentHost, 'www.') === 0) {
+            $currentHost = substr($currentHost, 4);
+        }
+        if ($host === $currentHost) {
             return false;
         }
 
-        // Remove 'www.' from the host to get the base domain name
-        $domain = (strpos($host, 'www.') === 0) ? substr($host, 4) : $host;
+        // Use static cache for internal hosts set
+        static $internalHostsSet = null;
+        if ($internalHostsSet === null) {
+            $internalHostsSet = [];
+            $internalHosts = $this->config()->get('links.external_links.internal_hosts');
+            foreach ($internalHosts as $h) {
+                $h = strtolower($h);
+                if (strpos($h, 'www.') === 0) {
+                    $h = substr($h, 4);
+                }
+                $internalHostsSet[$h] = true;
+            }
+        }
 
-        // Get the list of internal hosts from the configuration
-        $internalHosts = $this->config()->get('links.external_links.internal_hosts');
-
-        // If the link is not in the list of internal hosts, it is external
-        return !in_array($domain, $internalHosts, true);
+        return !isset($internalHostsSet[$host]);
     }
 
     /**
@@ -2295,7 +2318,8 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
             $Block['element']['attributes'] = ['id' => $id];
 
             // Check if the heading level should be included in the Table of Contents (TOC)
-            if (!in_array($level, $config->get('toc.levels'))) {
+            // Also ensure we skip adding it to TOC if it is disabled in the config
+            if (!$config->get('toc') || !in_array($level, $config->get('toc.levels'))) {
                 return $Block; // Return the block if it should not be part of the TOC
             }
 
@@ -2351,7 +2375,8 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
             $Block['element']['attributes'] = ['id' => $id];
 
             // Check if the heading level should be included in the Table of Contents (TOC)
-            if (!in_array($level, $config->get('toc.levels'))) {
+            // Also ensure we skip adding it to TOC if it is disabled in the config
+            if (!$config->get('toc') || !in_array($level, $config->get('toc.levels'))) {
                 return $Block; // Return the block if it should not be part of the TOC
             }
 
@@ -2622,6 +2647,7 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
         $this->contentsListArray = [];
         $this->contentsListString = '';
         $this->firstHeadLevel = 0;
+        $this->predefinedAbbreviationsAdded = false;
 
         $text = $this->encodeTag($text); // Escapes ToC tag temporarily
         $html = parent::text($text);     // Parses the markdown text
@@ -2642,6 +2668,7 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
      */
     public function contentsList(string $type_return = 'string'): string
     {
+
         switch (strtolower($type_return)) {
             case 'string':
                 return $this->contentsListString ? $this->body($this->contentsListString) : '';
@@ -3144,9 +3171,12 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
     {
         $config = $this->config();
 
-        // Add predefined abbreviations to the definition data
-        foreach ($config->get('abbreviations.predefined') as $abbreviation => $description) {
-            $this->DefinitionData['Abbreviation'][$abbreviation] = $description;
+        if (!$this->predefinedAbbreviationsAdded) {
+            // Add predefined abbreviations to the definition data once per parse
+            foreach ($config->get('abbreviations.predefined') as $abbreviation => $description) {
+                $this->DefinitionData['Abbreviation'][$abbreviation] = $description;
+            }
+            $this->predefinedAbbreviationsAdded = true;
         }
 
         // Call the parent method to handle the rest of the text processing
@@ -3500,71 +3530,75 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
     public function line($text, $nonNestables = [])
     {
         $markup = '';
+        $inlineMarkerList = $this->inlineMarkerList;
+        $InlineTypes = $this->InlineTypes;
+        $nonNestablesSet = $nonNestables ? array_flip($nonNestables) : [];
 
-        // Search for inline markers in the text
-        while ($Excerpt = strpbrk((string)$text, $this->inlineMarkerList)) {
-            $marker = $Excerpt[0];
+        while (true) {
+            $ExcerptStr = strpbrk((string)$text, $inlineMarkerList);
+            if ($ExcerptStr === false) {
+                // No more markers, process the rest and break
+                $markup .= $this->unmarkedText($text);
+                break;
+            }
+
+            $marker = $ExcerptStr[0];
             $markerPosition = strpos($text, $marker);
 
-            // Get the character before the marker
+            // Prepare excerpt context
             $before = $markerPosition > 0 ? $text[$markerPosition - 1] : '';
-
-            // Create an excerpt array with context for inline processing
             $Excerpt = [
-                'text' => $Excerpt,
+                'text' => $ExcerptStr,
                 'context' => $text,
                 'before' => $before,
                 'parent' => $this,
             ];
 
-            // Iterate through possible inline types for the marker
-            foreach ($this->InlineTypes[$marker] as $inlineType) {
-                if (!empty($nonNestables) && in_array($inlineType, $nonNestables)) {
-                    continue; // Skip non-nestable inline types in this context
+            // Try each inline type for this marker
+            foreach ($InlineTypes[$marker] as $inlineType) {
+                if (isset($nonNestablesSet[$inlineType])) {
+                    continue;
                 }
 
-                // Attempt to create an inline element using the handler
-                $Inline = $this->{'inline'.$inlineType}($Excerpt);
+                $handler = 'inline' . $inlineType;
+                $Inline = $this->$handler($Excerpt);
 
                 if (!isset($Inline)) {
-                    continue; // If no inline element was found, continue to the next type
+                    continue;
                 }
 
                 if (isset($Inline['position']) && $Inline['position'] > $markerPosition) {
-                    continue; // Ensure the inline belongs to the current marker
+                    continue;
                 }
 
-                // Set a default position if not provided
-                if (!isset($Inline['position'])) {
-                    $Inline['position'] = $markerPosition;
+                $Inline['position'] = $Inline['position'] ?? $markerPosition;
+
+                // Only add nonNestables if present
+                if ($nonNestables) {
+                    foreach ($nonNestables as $non_nestable) {
+                        $Inline['element']['nonNestables'][] = $non_nestable;
+                    }
                 }
 
-                // Add non-nestables to the inline element
-                foreach ($nonNestables as $non_nestable) {
-                    $Inline['element']['nonNestables'][] = $non_nestable;
+                // Add text before the inline element
+                if ($Inline['position'] > 0) {
+                    $markup .= $this->unmarkedText(substr($text, 0, $Inline['position']));
                 }
 
-                // Compile the text that comes before the inline element
-                $unmarkedText = substr($text, 0, $Inline['position']);
-                $markup .= $this->unmarkedText($unmarkedText);
-
-                // Compile the inline element
+                // Add the inline element
                 $markup .= $Inline['markup'] ?? $this->element($Inline['element']);
 
-                // Remove the processed text from the input
+                // Remove processed text
                 $text = substr($text, $Inline['position'] + $Inline['extent']);
 
-                continue 2; // Continue parsing the rest of the text
+                // Continue with the rest of the text
+                continue 2;
             }
 
-            // If no valid inline marker was found, add the marker to the markup
-            $unmarkedText = substr($text, 0, $markerPosition + 1);
-            $markup .= $this->unmarkedText($unmarkedText);
+            // No inline found, treat marker as plain text
+            $markup .= $this->unmarkedText(substr($text, 0, $markerPosition + 1));
             $text = substr($text, $markerPosition + 1);
         }
-
-        // Compile the remaining text
-        $markup .= $this->unmarkedText($text);
 
         return $markup;
     }
@@ -3589,85 +3623,83 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
     protected function lineElements($text, $nonNestables = []): array
     {
         $Elements = [];
+        $inlineMarkerList = $this->inlineMarkerList;
+        $InlineTypes = $this->InlineTypes;
+        $nonNestablesSet = $nonNestables ? array_flip($nonNestables) : [];
 
-        // If non-nestable elements are provided, convert them to associative array for fast lookup
-        $nonNestables = (
-            empty($nonNestables)
-            ? []
-            : array_combine($nonNestables, $nonNestables)
-        );
+        $textLen = strlen($text);
+        $offset = 0;
 
-        // $Excerpt represents the first occurrence of an inline marker in the text
-        while ($Excerpt = strpbrk($text, $this->inlineMarkerList)) {
-            $marker = $Excerpt[0]; // The detected marker
-            $markerPosition = strlen($text) - strlen($Excerpt); // Calculate the marker position in the text
+        while ($offset < $textLen) {
+            $ExcerptStr = strpbrk(substr($text, $offset), $inlineMarkerList);
+            if ($ExcerptStr === false) {
+                // No more markers, process the rest and break
+                if ($offset < $textLen) {
+                    $InlineText = $this->inlineText(substr($text, $offset));
+                    $Elements[] = $InlineText['element'];
+                }
+                break;
+            }
 
-            // Get the character before the marker (if any)
+            $marker = $ExcerptStr[0];
+            $markerPosition = strpos($text, $marker, $offset);
+
             $before = $markerPosition > 0 ? $text[$markerPosition - 1] : '';
+            $Excerpt = [
+                'text' => substr($text, $markerPosition),
+                'context' => $text,
+                'before' => $before,
+            ];
 
-            // Prepare an excerpt for further processing
-            $Excerpt = ['text' => $Excerpt, 'context' => $text, 'before' => $before];
-
-            // Process all inline types associated with this marker
-            foreach ($this->InlineTypes[$marker] as $inlineType) {
-                // Skip inline types that are non-nestable within this context
-                if (isset($nonNestables[$inlineType])) {
+            foreach ($InlineTypes[$marker] as $inlineType) {
+                if (isset($nonNestablesSet[$inlineType])) {
                     continue;
                 }
 
-                // Call the corresponding inline processing function
                 $Inline = $this->{"inline$inlineType"}($Excerpt);
 
-                // If no valid inline element was found, continue to the next inline type
                 if (!isset($Inline)) {
                     continue;
                 }
 
-                // Ensure the inline element belongs to the current marker
-                if (isset($Inline['position']) && $Inline['position'] > $markerPosition) {
+                if (isset($Inline['position']) && $Inline['position'] > ($markerPosition - $offset)) {
                     continue;
                 }
 
-                // Set default inline position if not specified
-                if (!isset($Inline['position'])) {
-                    $Inline['position'] = $markerPosition;
+                $Inline['position'] = $Inline['position'] ?? 0;
+
+                // Only add nonNestables if present
+                if ($nonNestablesSet) {
+                    $Inline['element']['nonNestables'] = isset($Inline['element']['nonNestables'])
+                        ? array_merge($Inline['element']['nonNestables'], array_keys($nonNestablesSet))
+                        : array_keys($nonNestablesSet);
                 }
 
-                // Inherit non-nestable elements from the current context
-                $Inline['element']['nonNestables'] = isset($Inline['element']['nonNestables'])
-                    ? array_merge($Inline['element']['nonNestables'], $nonNestables)
-                    : $nonNestables;
+                // Add unmarked text before the inline element
+                if ($Inline['position'] > 0) {
+                    $unmarkedText = substr($text, $offset, $Inline['position']);
+                    if ($unmarkedText !== '') {
+                        $InlineText = $this->inlineText($unmarkedText);
+                        $Elements[] = $InlineText['element'];
+                    }
+                }
 
-                // Get the text before the inline marker
-                $unmarkedText = substr($text, 0, $Inline['position']);
-
-                // Process and add the unmarked text as an element
-                $InlineText = $this->inlineText($unmarkedText);
-                $Elements[] = $InlineText['element'];
-
-                // Process and add the inline element
+                // Add the inline element
                 $Elements[] = $this->extractElement($Inline);
 
-                // Remove the processed portion from the text and continue parsing
-                $text = substr($text, $Inline['position'] + $Inline['extent']);
-
+                // Move offset past the processed inline element
+                $offset = $markerPosition + $Inline['position'] + $Inline['extent'];
                 continue 2;
             }
 
-            // If no valid inline element was found for the marker, treat it as plain text
-            $unmarkedText = substr($text, 0, $markerPosition + 1);
-
-            // Process and add the unmarked text as an element
-            $InlineText = $this->inlineText($unmarkedText);
-            $Elements[] = $InlineText['element'];
-
-            // Remove the processed portion from the text
-            $text = substr($text, $markerPosition + 1);
+            // No inline found, treat marker as plain text
+            $plainText = substr($text, $offset, $markerPosition - $offset + 1);
+            if ($plainText !== '') {
+                $InlineText = $this->inlineText($plainText);
+                $Elements[] = $InlineText['element'];
+            }
+            $offset = $markerPosition + 1;
         }
-
-        // Process any remaining text after all markers
-        $InlineText = $this->inlineText($text);
-        $Elements[] = $InlineText['element'];
 
         // Set the `autobreak` property for each element, defaulting to false if not already set
         foreach ($Elements as &$Element) {
