@@ -2215,13 +2215,23 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
             // Check if the list item starts with a checkbox (e.g., `[x]` or `[ ]`)
             if (preg_match('/^\[[x ]\]/i', $firstFourChars, $matches)) {
                 // Check if the checkbox is checked (`[x]`) or unchecked (`[ ]`)
+                $inputAttributes = [
+                    'type'     => 'checkbox',
+                    'disabled' => 'disabled',
+                ];
+
                 if (strtolower($matches[0]) === '[x]') {
-                    // Replace the checkbox marker with an actual checked input element
-                    $markup = substr_replace($markup, '<input type="checkbox" disabled="disabled" checked="checked" />', 4, 4);
-                } else {
-                    // Replace the checkbox marker with an unchecked input element
-                    $markup = substr_replace($markup, '<input type="checkbox" disabled="disabled" />', 4, 4);
+                    $inputAttributes['checked'] = 'checked';
                 }
+
+                // Build the input element using Parsedown's element structure
+                $inputElement = $this->element([
+                    'name'       => 'input',
+                    'attributes' => $inputAttributes,
+                ]);
+
+                // Replace the checkbox marker with the generated input element
+                $markup = substr_replace($markup, $inputElement, 4, 4);
             }
 
             // Trim the markup and handle paragraph tags to format correctly
@@ -2249,26 +2259,27 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
                 $Elements[0]['handler']['argument'] = substr_replace($text, '', 0, 4);
 
                 // Set the appropriate attributes based on whether the checkbox is checked or unchecked
+                // Prepare attributes for the checkbox element
+                $inputAttributes = [
+                    'type'     => 'checkbox',
+                    'disabled' => 'disabled',
+                ];
+
                 if (strtolower($matches[0]) === '[x]') {
-                    $Elements[0]['attributes'] = [
-                        'checked' => 'checked',
-                        'type' => 'checkbox',
-                        'disabled' => 'disabled',
-                    ];
-                } else {
-                    $Elements[0]['attributes'] = [
-                        'type' => 'checkbox',
-                        'disabled' => 'disabled',
-                    ];
+                    $inputAttributes['checked'] = 'checked';
                 }
 
-                // Set the element type to 'input' for the checkbox
-                $Elements[0]['name'] = 'input';
+                // Insert the checkbox element at the beginning of the list item
+                array_unshift($Elements, [
+                    'name'       => 'input',
+                    'attributes' => $inputAttributes,
+                    'autobreak'  => false,
+                ]);
             }
 
             // Remove unnecessary paragraph tags for the list item if not interrupted
-            if (isset($Elements[0]['name']) && !in_array('', $lines) && $Elements[0]['name'] === 'p') {
-                unset($Elements[0]['name']); // Remove paragraph wrapper
+            if (!in_array('', $lines) && isset($Elements[1]['name']) && $Elements[1]['name'] === 'p') {
+                unset($Elements[1]['name']); // Remove paragraph wrapper
             }
 
             return $Elements; // Return the final array of elements for the list item
@@ -3317,7 +3328,7 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
                 }
 
                 /* ---------------------------- SET ----------------------- */
-                public function set(string|array $path, mixed $value = null): self
+                public function set($path, mixed $value = null): self
                 {
                     if (is_array($path)) {
                         foreach ($path as $k => $v) { $this->set($k, $v); }
