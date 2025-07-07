@@ -16,7 +16,7 @@ class_alias(class_exists('ParsedownExtra') ? 'ParsedownExtra' : 'Parsedown', 'Pa
 // @psalm-suppress UndefinedClass
 class ParsedownExtended extends \ParsedownExtendedParentAlias
 {
-    public const VERSION = '1.5.0';
+    public const VERSION = '2.0.0';
     public const VERSION_PARSEDOWN_REQUIRED = '1.7.4';
     public const VERSION_PARSEDOWN_EXTRA_REQUIRED = '0.8.1';
     public const MIN_PHP_VERSION = '7.4';
@@ -936,42 +936,50 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
     {
         $config = $this->config();
 
-        // Check if typographer is enabled in the configuration settings
-        if (!$config->get('typographer')) {
-            return null; // Return null if the typographer is disabled
+        if (
+            !$config->get('typographer') ||
+            empty($Excerpt['text'])
+        ) {
+            return null;
         }
 
-        // Check if smartypants and smart ellipses settings are enabled
-        $ellipses = $config->get('smartypants') && $config->get('smartypants.smart_ellipses')
-            ? html_entity_decode($config->get('smartypants.substitutions.ellipses'))
-            : '...'; // Use smart ellipses if enabled, otherwise use '...'
+        static $substitutions = null;
+        static $lastEllipses = null;
+        static $lastEllipsesKey = null;
 
-        // Define substitutions for various typographic symbols
-        $substitutions = [
-            '/\(c\)/i' => html_entity_decode('&copy;'), // Replace (c) with © symbol
-            '/\(r\)/i' => html_entity_decode('&reg;'), // Replace (r) with ® symbol
-            '/\(tm\)/i' => html_entity_decode('&trade;'), // Replace (tm) with ™ symbol
-            '/\(p\)/i' => html_entity_decode('&para;'), // Replace (p) with ¶ symbol (paragraph)
-            '/\+-/i' => html_entity_decode('&plusmn;'), // Replace +- with ± symbol
-            '/\!\.{3,}/i' => '!..', // Replace more than three exclamation points with '!..'
-            '/\?\.{3,}/i' => '?..', // Replace more than three question marks with '?..'
-            '/\.{2,}/i' => $ellipses, // Replace ellipses with either smart ellipses or '...'
-        ];
+        // Only update ellipses if config changes
+        $ellipsesKey = $config->get('smartypants') && $config->get('smartypants.smart_ellipses')
+            ? $config->get('smartypants.substitutions.ellipses')
+            : '...';
 
-        // Apply substitutions using regular expressions
+        if ($substitutions === null || $ellipsesKey !== $lastEllipsesKey) {
+            $lastEllipsesKey = $ellipsesKey;
+            $ellipses = $ellipsesKey === '...' ? '...' : html_entity_decode($ellipsesKey);
+
+            $substitutions = [
+                '/\(c\)/i'      => '©',
+                '/\(r\)/i'      => '®',
+                '/\(tm\)/i'     => '™',
+                '/\(p\)/i'      => '¶',
+                '/\+-/i'        => '±',
+                '/\!\.{3,}/i'   => '!..',
+                '/\?\.{3,}/i'   => '?..',
+                '/\.{2,}/i'     => $ellipses,
+            ];
+        }
+
         $result = preg_replace(array_keys($substitutions), array_values($substitutions), $Excerpt['text'], -1, $count);
 
-        // If substitutions were made, return the modified text
-        if ($count > 0) {
+        if ($count > 0 && $result !== $Excerpt['text']) {
             return [
-                'extent' => strlen($Excerpt['text']), // The length of the original excerpt text
+                'extent' => strlen($Excerpt['text']),
                 'element' => [
-                    'text' => $result, // The modified text after applying typographic substitutions
+                    'text' => $result,
                 ],
             ];
         }
 
-        return null; // If no substitutions were made, return null
+        return null;
     }
 
 
