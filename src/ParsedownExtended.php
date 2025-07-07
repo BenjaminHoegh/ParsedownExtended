@@ -952,7 +952,6 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
         }
 
         static $substitutions = null;
-        static $lastEllipses = null;
         static $lastEllipsesKey = null;
 
         // Only update ellipses if config changes
