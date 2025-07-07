@@ -54,6 +54,9 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
     /** @var bool $predefinedAbbreviationsAdded Tracks whether predefined abbreviations have been merged */
     private bool $predefinedAbbreviationsAdded = false;
 
+    /** @var array|null $internalHostsSet Cached set of internal hosts for link processing */
+    private ?array $internalHostsSet = null;
+
     /** @var array CONFIG_SCHEMA_DEFAULT Default configuration schema */
     private const CONFIG_SCHEMA_DEFAULT = [
         'abbreviations' => [
@@ -555,20 +558,19 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
         }
 
         // Use cache for internal hosts set
-        $internalHostsSet = null;
-        if ($internalHostsSet === null) {
-            $internalHostsSet = [];
-            $internalHosts = $this->config()->get('links.external_links.internal_hosts');
-            foreach ($internalHosts as $h) {
+        if ($this->internalHostsSet === null) {
+            $this->internalHostsSet = [];
+            $this->internalHosts = $this->config()->get('links.external_links.internal_hosts');
+            foreach ($this->internalHosts as $h) {
                 $h = strtolower($h);
                 if (strpos($h, 'www.') === 0) {
                     $h = substr($h, 4);
                 }
-                $internalHostsSet[$h] = true;
+                $this->internalHostsSet[$h] = true;
             }
         }
 
-        return !isset($internalHostsSet[$host]);
+        return !isset($this->internalHostsSet[$host]);
     }
 
     /**
