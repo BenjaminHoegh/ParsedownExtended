@@ -2176,80 +2176,76 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
     {
         $config = $this->config();
 
-        // Check if task lists are enabled in the configuration settings
         if (!$config->get('lists.tasks')) {
-            return parent::li($lines); // Return the default list item if task lists are not enabled
+            // Fallback to the parent implementation when task lists are disabled
+            return parent::li($lines);
         }
 
-        // Handling for legacy mode (older versions of the parser)
+        // Check once whether the list item is interrupted by a blank line
+        $interrupted = in_array('', $lines, true);
+
         if ($this->legacyMode) {
-            // Generate markup for the list item lines
             $markup = $this->lines($lines);
 
-            // Get first 4 characters of the generated markup to check for a task checkbox
-            $firstFourChars = substr($markup, 4, 4);
+            $firstFour = substr($markup, 4, 4);
+            $checked = false;
+            if (
+                isset($firstFour[0], $firstFour[1], $firstFour[2], $firstFour[3]) &&
+                $firstFour[0] === '[' &&
+                $firstFour[2] === ']' &&
+                ($firstFour[1] === ' ' || $firstFour[1] === 'x' || $firstFour[1] === 'X')
+            ) {
+                $checked = ($firstFour[1] === 'x' || $firstFour[1] === 'X');
+                $replace = '<input type="checkbox" disabled="disabled"';
+                if ($checked) {
+                    $replace .= ' checked="checked"';
+                }
+                $replace .= ' />';
+                $markup = substr_replace($markup, $replace, 4, 4);
+            }
 
-            // Check if the list item starts with a checkbox (e.g., `[x]` or `[ ]`)
-            if (preg_match('/^\[[x ]\]/i', $firstFourChars, $matches)) {
-                // Check if the checkbox is checked (`[x]`) or unchecked (`[ ]`)
-                if (strtolower($matches[0]) === '[x]') {
-                    // Replace the checkbox marker with an actual checked input element
-                    $markup = substr_replace($markup, '<input type="checkbox" disabled="disabled" checked="checked" />', 4, 4);
-                } else {
-                    // Replace the checkbox marker with an unchecked input element
-                    $markup = substr_replace($markup, '<input type="checkbox" disabled="disabled" />', 4, 4);
+            $trimmed = trim($markup);
+            if (!$interrupted && strncmp($trimmed, '<p>', 3) === 0) {
+                $markup = $trimmed;
+                $markup = substr($markup, 3);
+                $position = strpos($markup, '</p>');
+                if ($position !== false) {
+                    $markup = substr_replace($markup, '', $position, 4);
                 }
             }
 
-            // Trim the markup and handle paragraph tags to format correctly
-            $trimmedMarkup = trim($markup);
-            if (!in_array('', $lines) && substr($trimmedMarkup, 0, 3) === '<p>') {
-                $markup = $trimmedMarkup;
-                $markup = substr($markup, 3); // Remove opening paragraph tag
-
-                $position = strpos($markup, "</p>");
-                $markup = substr_replace($markup, '', $position, 4); // Remove closing paragraph tag
-            }
-
-            return $markup; // Return the final markup for the list item
-        } else {
-            // Handling for the newer version of the parser
-            $Elements = $this->linesElements($lines);
-
-            // Extract the text of the first element to check for a task list checkbox
-            $text = $Elements[0]['handler']['argument'];
-            $firstFourChars = substr($text, 0, 4);
-
-            // Check if the list item starts with a checkbox (e.g., `[x]` or `[ ]`)
-            if (preg_match('/^\[[x ]\]/i', $firstFourChars, $matches)) {
-                // Remove the checkbox marker from the beginning of the text
-                $Elements[0]['handler']['argument'] = substr_replace($text, '', 0, 4);
-
-                // Set the appropriate attributes based on whether the checkbox is checked or unchecked
-                if (strtolower($matches[0]) === '[x]') {
-                    $Elements[0]['attributes'] = [
-                        'checked' => 'checked',
-                        'type' => 'checkbox',
-                        'disabled' => 'disabled',
-                    ];
-                } else {
-                    $Elements[0]['attributes'] = [
-                        'type' => 'checkbox',
-                        'disabled' => 'disabled',
-                    ];
-                }
-
-                // Set the element type to 'input' for the checkbox
-                $Elements[0]['name'] = 'input';
-            }
-
-            // Remove unnecessary paragraph tags for the list item if not interrupted
-            if (isset($Elements[0]['name']) && !in_array('', $lines) && $Elements[0]['name'] === 'p') {
-                unset($Elements[0]['name']); // Remove paragraph wrapper
-            }
-
-            return $Elements; // Return the final array of elements for the list item
+            return $markup;
         }
+
+        $Elements = $this->linesElements($lines);
+
+        $text =& $Elements[0]['handler']['argument'];
+        $firstFour = substr($text, 0, 4);
+        if (
+            isset($firstFour[0], $firstFour[1], $firstFour[2], $firstFour[3]) &&
+            $firstFour[0] === '[' &&
+            $firstFour[2] === ']' &&
+            ($firstFour[1] === ' ' || $firstFour[1] === 'x' || $firstFour[1] === 'X')
+        ) {
+            $checked = ($firstFour[1] === 'x' || $firstFour[1] === 'X');
+            $text = substr($text, 4);
+
+            $attributes = [
+                'type' => 'checkbox',
+                'disabled' => 'disabled',
+            ];
+            if ($checked) {
+                $attributes['checked'] = 'checked';
+            }
+            $Elements[0]['attributes'] = $attributes;
+            $Elements[0]['name'] = 'input';
+        }
+
+        if (isset($Elements[0]['name']) && !$interrupted && $Elements[0]['name'] === 'p') {
+            unset($Elements[0]['name']);
+        }
+
+        return $Elements;
     }
 
 
