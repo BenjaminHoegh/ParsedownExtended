@@ -117,6 +117,7 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
                 'delimiters' => [['left' => '$$', 'right' => '$$']],
             ],
         ],
+        'quotes' => true,
         'smartypants' => [
             'enabled'             => false,
             'smart_angled_quotes' => true,
@@ -468,11 +469,7 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
         $config = $this->config();
 
         // Fast fail for missing config or href
-        if (
-            !$config->get('links') ||
-            !$Excerpt ||
-            empty($Excerpt['element']['attributes']['href'])
-        ) {
+        if (!$config->get('links') || !$Excerpt || empty($Excerpt['element']['attributes']['href'])) {
             return null;
         }
 
@@ -480,22 +477,31 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
 
         // Only process external links if enabled
         if ($this->isExternalLink($href)) {
-            $extCfg = $config->get('links.external_links');
-            if (!$extCfg) {
+            if (!$config->get('links.external_links')) {
                 return null;
             }
 
             // Only build rel if needed
             $rel = [];
-            if (!empty($extCfg['nofollow']))   $rel[] = 'nofollow';
-            if (!empty($extCfg['noopener']))   $rel[] = 'noopener';
-            if (!empty($extCfg['noreferrer'])) $rel[] = 'noreferrer';
 
-            if (!empty($extCfg['open_in_new_window'])) {
+            if ($config->get('links.external_links.nofollow')) {
+                $rel[] = 'nofollow';
+            }
+            if ($config->get('links.external_links.noopener')) {
+                $rel[] = 'noopener';
+            }
+            if ($config->get('links.external_links.noreferrer')) {
+                $rel[] = 'noreferrer';
+            }
+
+            if ($config->get('links.external_links.open_in_new_window')) {
                 $Excerpt['element']['attributes']['target'] = '_blank';
             }
+
             if ($rel) {
-                $Excerpt['element']['attributes']['rel'] = implode(' ', $rel);
+                $existing = $Excerpt['element']['attributes']['rel'] ?? '';
+                $relString = trim($existing . ' ' . implode(' ', $rel));
+                $Excerpt['element']['attributes']['rel'] = $relString;
             }
         }
 
@@ -548,8 +554,8 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
             return false;
         }
 
-        // Use static cache for internal hosts set
-        static $internalHostsSet = null;
+        // Use cache for internal hosts set
+        $internalHostsSet = null;
         if ($internalHostsSet === null) {
             $internalHostsSet = [];
             $internalHosts = $this->config()->get('links.external_links.internal_hosts');
@@ -1866,7 +1872,7 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
     protected function blockAlert($Line): ?array
     {
         // Check if alerts are enabled in the configuration settings
-        if (!$this->config()->get('alerts.enabled')) {
+        if (!$this->config()->get('alerts')) {
             return null; // Return null if alert blocks are disabled
         }
 
@@ -3313,6 +3319,9 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
                 public function get(string $path)
                 {
                     $path = $this->normalisePath($path);
+                    if (!isset($this->schema[$path])) {
+                        throw new \InvalidArgumentException("Invalid config path: {$path}");
+                    }
                     if (isset($this->p2b[$path])) {
                         return ( ($this->features & $this->p2b[$path]) !== 0 );
                     }
@@ -3325,6 +3334,18 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
                     if (is_array($path)) {
                         foreach ($path as $k => $v) { $this->set($k, $v); }
                         return $this;
+                    }
+
+                    if (is_string($path) && is_array($value) && !isset($this->schema[$path])) {
+                        $prefix = $path . '.';
+                        $hasChild = false;
+                        foreach ($this->schema as $key => $_) {
+                            if (strpos($key, $prefix) === 0) { $hasChild = true; break; }
+                        }
+                        if ($hasChild) {
+                            foreach ($value as $k => $v) { $this->set($prefix . $k, $v); }
+                            return $this;
+                        }
                     }
 
                     $path = $this->normalisePath($path);
