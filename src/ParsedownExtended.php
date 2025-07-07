@@ -2735,8 +2735,6 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
             return call_user_func($this->createAnchorIDCallback, $text, $this->config());
         }
 
-        // Default logic for anchor ID creation
-
         // Convert text to lowercase if configured to do so
         if ($config->get('headings.auto_anchors.lowercase')) {
             if (extension_loaded('mbstring')) {
@@ -3318,7 +3316,7 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
                 }
 
                 /* ---------------------------- GET ----------------------- */
-                public function get(string $path): mixed
+                public function get(string $path)
                 {
                     $path = $this->normalisePath($path);
                     if (isset($this->p2b[$path])) {
@@ -3328,7 +3326,7 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
                 }
 
                 /* ---------------------------- SET ----------------------- */
-                public function set($path, mixed $value = null): self
+                public function set($path, $value = null): self
                 {
                     if (is_array($path)) {
                         foreach ($path as $k => $v) { $this->set($k, $v); }
@@ -3369,7 +3367,7 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
                     }
                     return $p;
                 }
-                private function validate(mixed $val, string $expected): void
+                private function validate($val, string $expected): void
                 {
                     $actual = gettype($val);
                     if ($expected !== $actual) {
@@ -3402,7 +3400,7 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
                 $path = $prefix === '' ? $k : $prefix . '.' . $k;
 
                 // branch (associative => object)
-                if (is_array($v) && !array_is_list($v)) {
+                if (is_array($v) && $v !== [] && array_keys($v) !== range(0, count($v) - 1)) {
                     // implicit enabled=true unless provided
                     $enabledDefault = true;
                     if (array_key_exists('enabled', $v)) {
@@ -3465,7 +3463,7 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
      *
      * @return void
      */
-    private function registerPayload(string $path, mixed $default): void
+    private function registerPayload(string $path, $default): void
     {
         self::$FLAT_SCHEMA[$path]   = ['type' => gettype($default), 'default' => $default];
         self::$DEFAULT_PAYLOAD[$path] = $default;
