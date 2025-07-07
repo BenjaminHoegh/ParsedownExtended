@@ -16,7 +16,7 @@ class_alias(class_exists('ParsedownExtra') ? 'ParsedownExtra' : 'Parsedown', 'Pa
 // @psalm-suppress UndefinedClass
 class ParsedownExtended extends \ParsedownExtendedParentAlias
 {
-    public const VERSION = '1.4.3';
+    public const VERSION = '2.0.0';
     public const VERSION_PARSEDOWN_REQUIRED = '1.7.4';
     public const VERSION_PARSEDOWN_EXTRA_REQUIRED = '0.8.1';
     public const MIN_PHP_VERSION = '7.4';
@@ -48,12 +48,140 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
     /** @var bool $legacyMode Flag indicating if legacy compatibility mode is enabled */
     private bool $legacyMode = false;
 
+    /** @var array|null $emojiMap Cached emoji map for emoji replacements */
+    private ?array $emojiMap = null;
+
+    /** @var bool $predefinedAbbreviationsAdded Tracks whether predefined abbreviations have been merged */
+    private bool $predefinedAbbreviationsAdded = false;
+
+    /** @var array|null $internalHostsSet Cached set of internal hosts for link processing */
+    private ?array $internalHostsSet = null;
+
+    /** @var array CONFIG_SCHEMA_DEFAULT Default configuration schema */
+    private const CONFIG_SCHEMA_DEFAULT = [
+        'abbreviations' => [
+            'allow_custom' => true,
+            'predefined'   => [],
+        ],
+        'code'      => ['blocks' => true, 'inline' => true],
+        'comments'  => true,
+        'definition_lists' => true,
+        'diagrams' => [
+            'enabled' => false,
+            'chartjs' => true,
+            'mermaid' => true,
+        ],
+        'emojis' => true,
+        'emphasis' => [
+            'bold'           => true,
+            'italic'         => true,
+            'strikethroughs' => true,
+            'insertions'     => true,
+            'subscript'      => false,
+            'superscript'    => false,
+            'keystrokes'     => true,
+            'mark'           => true,
+        ],
+        'footnotes' => true,
+        'headings' => [
+            'allowed_levels' => ['h1','h2','h3','h4','h5','h6'],
+            'auto_anchors' => [
+                'delimiter'     => '-',
+                'lowercase'     => true,
+                'replacements'  => [],
+                'transliterate' => false,
+                'blacklist'     => [],
+            ],
+            'special_attributes' => true,
+        ],
+        'images' => true,
+        'links' => [
+            'email_links' => true,
+            'external_links' => [
+                'nofollow'           => true,
+                'noopener'           => true,
+                'noreferrer'         => true,
+                'open_in_new_window' => true,
+                'internal_hosts'     => [],
+            ],
+        ],
+        'lists' => ['tasks' => true],
+        'allow_raw_html' => true,
+        'alerts' => [
+            'types' => ['note','tip','important','warning','caution'],
+            'class' => 'markdown-alert',
+        ],
+        'math' => [
+            'enabled' => false,
+            'inline' => [
+                'delimiters' => [['left' => '$',  'right' => '$']],
+            ],
+            'block'  => [
+                'delimiters' => [['left' => '$$', 'right' => '$$']],
+            ],
+        ],
+        'quotes' => true,
+        'smartypants' => [
+            'enabled'             => false,
+            'smart_angled_quotes' => true,
+            'smart_backticks'     => true,
+            'smart_dashes'        => true,
+            'smart_ellipses'      => true,
+            'smart_quotes'        => true,
+            'substitutions' => [
+                'ellipses'           => '&hellip;',
+                'left_angle_quote'   => '&laquo;',
+                'left_double_quote'  => '&ldquo;',
+                'left_single_quote'  => '&lsquo;',
+                'mdash'              => '&mdash;',
+                'ndash'              => '&ndash;',
+                'right_angle_quote'  => '&raquo;',
+                'right_double_quote' => '&rdquo;',
+                'right_single_quote' => '&rsquo;',
+            ],
+        ],
+        'tables'         => ['tablespan' => true],
+        'thematic_breaks'=> true,
+        'toc' => [
+            'levels' => ['h1','h2','h3','h4','h5','h6'],
+            'tag'    => '[TOC]',
+            'id'     => 'toc',
+        ],
+        'typographer' => true,
+        'references'  => true,
+    ];
+
+
+    /** @var array $PATH_TO_BIT Stores a mapping of file or directory paths to their corresponding bit values. */
+    private static array $PATH_TO_BIT   = [];
+
+    /** @var array $BIT_TO_PATH Stores a mapping of bit values to their corresponding file or directory paths. */
+    private static array $BIT_TO_PATH   = [];
+
+    /** @var array $FLAT_SCHEMA Stores a flat schema of configuration options for easy access. */
+    private static array $FLAT_SCHEMA   = [];
+
+    /** @var int $DEFAULT_BITS Stores the default boolean mask. */
+    private static int   $DEFAULT_BITS  = 0;   // default boolean mask
+
+    /** @var array $DEFAULT_PAYLOAD Stores default non-boolean settings for the configuration. */
+    private static array $DEFAULT_PAYLOAD = [];
+
+    /** @var bool $COMPILED Indicates whether the schema has been compiled. */
+    private static bool  $COMPILED = false;
+
+    /** @var int $features Stores the feature flags for the instance. */
+    private int   $features;  // 64‑bit mask of booleans
+
+    /** @var array $payload Stores non-boolean settings for the instance. */
+    private array $payload;   // non‑boolean settings
+
     /**
      * Constructor for ParsedownExtended.
      *
      * Initializes the class and performs version checks for PHP and Parsedown dependencies.
      */
-    public function __construct()
+    public function __construct(array $overrides = [])
     {
         // Check if the current PHP version meets the minimum requirement
         $this->checkVersion('PHP', PHP_VERSION, self::MIN_PHP_VERSION);
@@ -69,9 +197,21 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
 
         $this->setLegacyMode();
 
-        // Initialize settings with the provided schema
-        $this->configSchema = $this->defineConfigSchema();
-        $this->config = $this->initializeConfig($this->configSchema);
+        // Initialize the configuration schema
+        if (!self::$COMPILED) {
+            $this->compileSchema();
+            self::$COMPILED = true;
+        }
+
+        // Initialize features and payload
+        $this->features = self::$DEFAULT_BITS;
+        $this->payload  = self::$DEFAULT_PAYLOAD;
+
+        // Apply overrides if provided
+        if ($overrides) {
+            $this->applyOverrides($overrides);
+        }
+
 
         // Add support for inline types (e.g., special formatting)
         $this->addInlineType('=', 'Marking');
@@ -331,49 +471,40 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
     {
         $config = $this->config();
 
-        if (!$config->get('links') || !$Excerpt || !isset($Excerpt['element']['attributes']['href'])) {
+        // Fast fail for missing config or href
+        if (!$config->get('links') || !$Excerpt || empty($Excerpt['element']['attributes']['href'])) {
             return null;
         }
 
-        if (isset($Excerpt['element']['attributes']['href'])) {
-            // Get the href attribute
-            $href = $Excerpt['element']['attributes']['href'];
+        $href = $Excerpt['element']['attributes']['href'];
 
-            // Check if link is an external link
-            $isExternal = $this->isExternalLink($href);
+        // Only process external links if enabled
+        if ($this->isExternalLink($href)) {
+            if (!$config->get('links.external_links')) {
+                return null;
+            }
 
-            if ($isExternal === true) {
-                // Check if external links are disabled
-                if (!$config->get('links.external_links')) {
-                    return null;
-                }
+            // Only build rel if needed
+            $rel = [];
 
-                $rel = [];
+            if ($config->get('links.external_links.nofollow')) {
+                $rel[] = 'nofollow';
+            }
+            if ($config->get('links.external_links.noopener')) {
+                $rel[] = 'noopener';
+            }
+            if ($config->get('links.external_links.noreferrer')) {
+                $rel[] = 'noreferrer';
+            }
 
-                // Add nofollow attribute if specified in the configuration
-                if ($config->get('links.external_links.nofollow')) {
-                    $rel[] = 'nofollow';
-                }
+            if ($config->get('links.external_links.open_in_new_window')) {
+                $Excerpt['element']['attributes']['target'] = '_blank';
+            }
 
-                // Add noopener attribute if specified in the configuration
-                if ($config->get('links.external_links.noopener')) {
-                    $rel[] = 'noopener';
-                }
-
-                // Add noreferrer attribute if specified in the configuration
-                if ($config->get('links.external_links.noreferrer')) {
-                    $rel[] = 'noreferrer';
-                }
-
-                // Add target attribute with '_blank' value
-                if ($config->get('links.external_links.open_in_new_window')) {
-                    $Excerpt['element']['attributes']['target'] = '_blank';
-                }
-
-                // Add rel attribute with values from the $rel array
-                if (!empty($rel)) {
-                    $Excerpt['element']['attributes']['rel'] = implode(' ', $rel);
-                }
+            if ($rel) {
+                $existing = $Excerpt['element']['attributes']['rel'] ?? '';
+                $relString = trim($existing . ' ' . implode(' ', $rel));
+                $Excerpt['element']['attributes']['rel'] = $relString;
             }
         }
 
@@ -391,37 +522,55 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
      * @param string $href The URL to check.
      * @return bool Returns true if the link is external, false otherwise.
      */
-    private function isExternalLink($href)
+    private function isExternalLink(string $href): bool
     {
-        // Check if the URL is protocol-relative (e.g., starts with `//`)
-        $isProtocolRelative = preg_match('/^\/\//', $href);
+        // Early return for relative URLs (not starting with http(s):// or //)
+        $protocolRelative = strncmp($href, '//', 2);
+        if (
+            $protocolRelative !== 0 &&
+            stripos($href, 'http://') !== 0 &&
+            stripos($href, 'https://') !== 0
+        ) {
+            return false;
+        }
 
-        // Check if the URL is an absolute URL (starts with http:// or https://)
-        $isAbsolute = preg_match('/^https?:\/\//i', $href);
+        // Normalize protocol-relative URLs for parse_url
+        $url = ($protocolRelative === 0) ? 'http:' . $href : $href;
+        $host = parse_url($url, PHP_URL_HOST);
+        if (!$host) {
+            return false;
+        }
 
-        if ($isProtocolRelative || $isAbsolute) {
-            // Extract the host part of the URL
-            $host = parse_url($href, PHP_URL_HOST);
+        // Normalize host (lowercase, strip www.)
+        $host = strtolower($host);
+        if (strpos($host, 'www.') === 0) {
+            $host = substr($host, 4);
+        }
 
-            // Check if the domain matches the current domain
-            if ($host && (!isset($_SERVER['HTTP_HOST']) || ($host !== $_SERVER['HTTP_HOST']))) {
+        // Normalize current host
+        $currentHost = $_SERVER['HTTP_HOST'] ?? '';
+        $currentHost = strtolower($currentHost);
+        if (strpos($currentHost, 'www.') === 0) {
+            $currentHost = substr($currentHost, 4);
+        }
+        if ($host === $currentHost) {
+            return false;
+        }
 
-                // Remove 'www.' from the host to get the base domain name
-                $domain = preg_replace('/^www\\./', '', $host);
-
-                // Get the list of internal hosts from the configuration
-                $config = $this->config();
-                $internalHosts = $config->get('links.external_links.internal_hosts');
-
-                // Return false if the link is considered internal based on the configuration
-                if (in_array($domain, $internalHosts)) {
-                    return false;
+        // Use cache for internal hosts set
+        if ($this->internalHostsSet === null) {
+            $this->internalHostsSet = [];
+            $this->internalHosts = $this->config()->get('links.external_links.internal_hosts');
+            foreach ($this->internalHosts as $h) {
+                $h = strtolower($h);
+                if (strpos($h, 'www.') === 0) {
+                    $h = substr($h, 4);
                 }
-                return true; // If the link is not internal, it is external
+                $this->internalHostsSet[$h] = true;
             }
         }
 
-        return false;
+        return !isset($this->internalHostsSet[$host]);
     }
 
     /**
@@ -486,6 +635,11 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
             return null; // Return null if marking or emphasis is disabled
         }
 
+        // Early return if the excerpt does not start with two '=' characters
+        if (!isset($Excerpt['text'][1]) || $Excerpt['text'][1] !== '=') {
+            return null;
+        }
+
         // Match the double equal signs for marking (`==text==`) using regex
         if (preg_match('/^==((?:\\\\\=|[^=]|=[^=]*=)+?)==(?!=)/s', $Excerpt['text'], $matches)) {
             // Return the parsed marking element
@@ -519,6 +673,11 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
         // Check if insertions are enabled in the configuration settings
         if (!$config->get('emphasis.insertions') || !$config->get('emphasis')) {
             return null; // Return null if insertions or general emphasis is disabled
+        }
+
+        // Early return if the excerpt does not start with two '+' characters
+        if (!isset($Excerpt['text'][1]) || $Excerpt['text'][1] !== '+') {
+            return null;
         }
 
         // Match the double plus signs for insertions (`++text++`) using regex
@@ -556,8 +715,13 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
             return null; // Return null if keystrokes or general emphasis is disabled
         }
 
+        // Early return if the excerpt does not start with two '[' characters
+        if (!isset($Excerpt['text'][1]) || '[' !== $Excerpt['text'][1]) {
+            return null;
+        }
+
         // Match the double square brackets for keystrokes (`[[text]]`) using regex
-        if (preg_match('/^(?<!\[)(?:\[\[([^\[\]]*|[\[\]])\]\])(?!\])/s', $Excerpt['text'], $matches)) {
+        if (preg_match('/^(?<!\[)\[\[([^\[\]]*|[\[\]])\]\](?!\])/s', $Excerpt['text'], $matches)) {
             // Return the parsed keystroke element
             return [
                 'extent' => strlen($matches[0]), // The length of the matched keystroke text
@@ -590,6 +754,11 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
         // Check if superscript is enabled in the configuration settings
         if (!$config->get('emphasis.superscript') || !$config->get('emphasis')) {
             return null; // Return null if superscript or general emphasis is disabled
+        }
+
+        // Early return if no text follows the caret
+        if (!isset($Excerpt['text'][1]) || '^' === $Excerpt['text'][1]) {
+            return null;
         }
 
         // Match the caret symbols for superscript (`^text^`) using regex
@@ -628,6 +797,11 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
             return null; // Return null if subscript or general emphasis is disabled
         }
 
+        // Early return if no text follows the tilde or the next character is a tilde
+        if (!isset($Excerpt['text'][1]) || '~' === $Excerpt['text'][1]) {
+            return null;
+        }
+
         // Match the tilde symbols for subscript (`~text~`) using regex
         if (preg_match('/^~((?:\\\\~|[^~]|~~[^~]*~~)+?)~(?!~)/s', $Excerpt['text'], $matches)) {
             // Return the parsed subscript element
@@ -642,8 +816,6 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
 
         return null; // If no match is found, return null
     }
-
-
 
 
     /**
@@ -772,42 +944,49 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
     {
         $config = $this->config();
 
-        // Check if typographer is enabled in the configuration settings
-        if (!$config->get('typographer')) {
-            return null; // Return null if the typographer is disabled
+        if (
+            !$config->get('typographer') ||
+            empty($Excerpt['text'])
+        ) {
+            return null;
         }
 
-        // Check if smartypants and smart ellipses settings are enabled
-        $ellipses = $config->get('smartypants') && $config->get('smartypants.smart_ellipses')
-            ? html_entity_decode($config->get('smartypants.substitutions.ellipses'))
-            : '...'; // Use smart ellipses if enabled, otherwise use '...'
+        static $substitutions = null;
+        static $lastEllipsesKey = null;
 
-        // Define substitutions for various typographic symbols
-        $substitutions = [
-            '/\(c\)/i' => html_entity_decode('&copy;'), // Replace (c) with © symbol
-            '/\(r\)/i' => html_entity_decode('&reg;'), // Replace (r) with ® symbol
-            '/\(tm\)/i' => html_entity_decode('&trade;'), // Replace (tm) with ™ symbol
-            '/\(p\)/i' => html_entity_decode('&para;'), // Replace (p) with ¶ symbol (paragraph)
-            '/\+-/i' => html_entity_decode('&plusmn;'), // Replace +- with ± symbol
-            '/\!\.{3,}/i' => '!..', // Replace more than three exclamation points with '!..'
-            '/\?\.{3,}/i' => '?..', // Replace more than three question marks with '?..'
-            '/\.{2,}/i' => $ellipses, // Replace ellipses with either smart ellipses or '...'
-        ];
+        // Only update ellipses if config changes
+        $ellipsesKey = $config->get('smartypants') && $config->get('smartypants.smart_ellipses')
+            ? $config->get('smartypants.substitutions.ellipses')
+            : '...';
 
-        // Apply substitutions using regular expressions
+        if ($substitutions === null || $ellipsesKey !== $lastEllipsesKey) {
+            $lastEllipsesKey = $ellipsesKey;
+            $ellipses = $ellipsesKey === '...' ? '...' : html_entity_decode($ellipsesKey);
+
+            $substitutions = [
+                '/\(c\)/i'      => '©',
+                '/\(r\)/i'      => '®',
+                '/\(tm\)/i'     => '™',
+                '/\(p\)/i'      => '¶',
+                '/\+-/i'        => '±',
+                '/\!\.{3,}/i'   => '!..',
+                '/\?\.{3,}/i'   => '?..',
+                '/\.{2,}/i'     => $ellipses,
+            ];
+        }
+
         $result = preg_replace(array_keys($substitutions), array_values($substitutions), $Excerpt['text'], -1, $count);
 
-        // If substitutions were made, return the modified text
-        if ($count > 0) {
+        if ($count > 0 && $result !== $Excerpt['text']) {
             return [
-                'extent' => strlen($Excerpt['text']), // The length of the original excerpt text
+                'extent' => strlen($Excerpt['text']),
                 'element' => [
-                    'text' => $result, // The modified text after applying typographic substitutions
+                    'text' => $result,
                 ],
             ];
         }
 
-        return null; // If no substitutions were made, return null
+        return null;
     }
 
 
@@ -845,113 +1024,101 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
             'ellipses' => html_entity_decode($config->get('smartypants.substitutions.ellipses')),
         ];
 
-        // Define patterns for various Smartypants substitutions
-        $patterns = [
-            'smart_backticks' => [
-                'pattern' => '/^(``)(?!\s)([^"\'`]{1,})(\'\')/i',
-                'callback' => function ($matches) use ($substitutions, $Excerpt) {
-                    if (strlen(trim($Excerpt['before'])) > 0) {
-                        return null; // Skip if the backticks do not start at the beginning
-                    }
+        $text = $Excerpt['text'];
+        $first = $text[0] ?? '';
 
-                    // Return transformed text with left and right double quotes
-                    return [
-                        'extent' => strlen($matches[0]),
-                        'element' => [
-                            'text' => $substitutions['left_double_quote'] . $matches[2] . $substitutions['right_double_quote'],
-                        ],
-                    ];
-                },
-            ],
-            'smart_quotes' => [
-                'pattern' => '/^(")(?!\s)([^"]+)(")|^(?<!\w)(\')(?!\s)([^\']+)(\')/i',
-                'callback' => function ($matches) use ($substitutions, $Excerpt) {
-                    if (strlen(trim($Excerpt['before'])) > 0) {
-                        return null; // Skip if quotes are in the middle of a word
-                    }
+        // ``like this''
+        if ('`' === $first && $config->get('smartypants.smart_backticks')) {
+            if (preg_match('/^``(?!\s)([^"\'`]+)\'\'/i', $text, $matches)) {
+                if (strlen(trim($Excerpt['before'])) > 0) {
+                    return null;
+                }
 
-                    // Check if the match is for single or double quotes and return transformed text
-                    if ("'" === $matches[1]) {
-                        return [
-                            'extent' => strlen($matches[0]),
-                            'element' => [
-                                'text' => $substitutions['left_single_quote'] . $matches[2] . $substitutions['right_single_quote'],
-                            ],
-                        ];
-                    }
-
-                    if ('"' === $matches[1]) {
-                        return [
-                            'extent' => strlen($matches[0]),
-                            'element' => [
-                                'text' => $substitutions['left_double_quote'] . $matches[2] . $substitutions['right_double_quote'],
-                            ],
-                        ];
-                    }
-                },
-            ],
-            'smart_angled_quotes' => [
-                'pattern' => '/^(<{2})(?!\s)([^<>]+)(>{2})/i',
-                'callback' => function ($matches) use ($substitutions, $Excerpt) {
-                    if (strlen(trim($Excerpt['before'])) > 0) {
-                        return null; // Skip if angled quotes do not start at the beginning
-                    }
-
-                    // Return transformed text with left and right angle quotes
-                    return [
-                        'extent' => strlen($matches[0]),
-                        'element' => [
-                            'text' => $substitutions['left_angle_quote'] . $matches[2] . $substitutions['right_angle_quote'],
-                        ],
-                    ];
-                },
-            ],
-            'smart_dashes' => [
-                'pattern' => '/^(-{2,3})/i',
-                'callback' => function ($matches) use ($substitutions) {
-                    // Replace double dashes with ndash or triple dashes with mdash
-                    if ('---' === $matches[1]) {
-                        return [
-                            'extent' => strlen($matches[0]),
-                            'element' => [
-                                'text' => $substitutions['mdash'],
-                            ],
-                        ];
-                    }
-
-                    if ('--' === $matches[1]) {
-                        return [
-                            'extent' => strlen($matches[0]),
-                            'element' => [
-                                'text' => $substitutions['ndash'],
-                            ],
-                        ];
-                    }
-                },
-            ],
-            'smart_ellipses' => [
-                'pattern' => '/^(?<!\.)(\.{3})(?!\.)/i',
-                'callback' => function ($matches) use ($substitutions) {
-                    // Replace three dots with an ellipsis
-                    return [
-                        'extent' => strlen($matches[0]),
-                        'element' => [
-                            'text' => $substitutions['ellipses'],
-                        ],
-                    ];
-                },
-            ],
-        ];
-
-        // Iterate over each pattern and apply the corresponding callback if a match is found
-        foreach ($patterns as $key => $value) {
-            if ($config->get('smartypants.' . $key) && preg_match($value['pattern'], $Excerpt['text'], $matches)) {
-                $matches = array_values(array_filter($matches)); // Filter out empty matches
-                return $value['callback']($matches); // Return the transformed text using the callback
+                return [
+                    'extent' => strlen($matches[0]),
+                    'element' => [
+                        'text' => $substitutions['left_double_quote'] . $matches[1] . $substitutions['right_double_quote'],
+                    ],
+                ];
             }
         }
 
-        // If no substitutions were made, return null
+        // "like this" or 'like this'
+        if (('"' === $first || "'" === $first) && $config->get('smartypants.smart_quotes')) {
+            if (preg_match('/^(\")(?!\s)([^\"]+)\"|^(?<!\w)(\')(?!\s)([^\']+)\'/i', $text, $matches)) {
+                if (strlen(trim($Excerpt['before'])) > 0) {
+                    return null;
+                }
+
+                if (isset($matches[3]) && $matches[3] === "'") {
+                    return [
+                        'extent' => strlen($matches[0]),
+                        'element' => [
+                            'text' => $substitutions['left_single_quote'] . $matches[4] . $substitutions['right_single_quote'],
+                        ],
+                    ];
+                }
+
+                return [
+                    'extent' => strlen($matches[0]),
+                    'element' => [
+                        'text' => $substitutions['left_double_quote'] . $matches[2] . $substitutions['right_double_quote'],
+                    ],
+                ];
+            }
+        }
+
+        // <<like this>>
+        if ('<' === $first && $config->get('smartypants.smart_angled_quotes')) {
+            if (preg_match('/^<{2}(?!\s)([^<>]+)>{2}/i', $text, $matches)) {
+                if (strlen(trim($Excerpt['before'])) > 0) {
+                    return null;
+                }
+
+                return [
+                    'extent' => strlen($matches[0]),
+                    'element' => [
+                        'text' => $substitutions['left_angle_quote'] . $matches[1] . $substitutions['right_angle_quote'],
+                    ],
+                ];
+            }
+        }
+
+        // -- or ---
+        if ('-' === $first && $config->get('smartypants.smart_dashes')) {
+            if (preg_match('/^(-{2,3})(?!-)/', $text, $matches)) {
+                if ('---' === $matches[1]) {
+                    return [
+                        'extent' => strlen($matches[1]),
+                        'element' => [
+                            'text' => $substitutions['mdash'],
+                        ],
+                    ];
+                }
+
+                if ('--' === $matches[1]) {
+                    return [
+                        'extent' => 2,
+                        'element' => [
+                            'text' => $substitutions['ndash'],
+                        ],
+                    ];
+                }
+            }
+        }
+
+        // ...
+        if ('.' === $first && $config->get('smartypants.smart_ellipses')) {
+            if (preg_match('/^(?<!\.)(\.{3})(?!\.)/i', $text, $matches)) {
+                return [
+                    'extent' => strlen($matches[0]),
+                    'element' => [
+                        'text' => $substitutions['ellipses'],
+                    ],
+                ];
+            }
+        }
+
         return null;
     }
 
@@ -974,501 +1141,509 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
             return null; // Return null if emoji replacement is disabled
         }
 
-        // Define a mapping of emoji codes to their corresponding Unicode characters
-        $emojiMap = [
-            "grinning_face" => "😀", "grinning_face_with_big_eyes" => "😃", "grinning_face_with_smiling_eyes" => "😄", "beaming_face_with_smiling_eyes" => "😁",
-            "grinning_squinting_face" => "😆", "grinning_face_with_sweat" => "😅", "rolling_on_the_floor_laughing" => "🤣", "face_with_tears_of_joy" => "😂",
-            "slightly_smiling_face" => "🙂", "upside_down_face" => "🙃", "melting_face" => "🫠", "winking_face" => "😉",
-            "smiling_face_with_smiling_eyes" => "😊", "smiling_face_with_halo" => "😇", "smiling_face_with_hearts" => "🥰", "smiling_face_with_heart_eyes" => "😍",
-            "star_struck" => "🤩", "face_blowing_a_kiss" => "😘", "kissing_face" => "😗", "smiling_face" => "☺️",
-            "kissing_face_with_closed_eyes" => "😚", "kissing_face_with_smiling_eyes" => "😙", "smiling_face_with_tear" => "🥲", "face_savoring_food" => "😋",
-            "face_with_tongue" => "😛", "winking_face_with_tongue" => "😜", "zany_face" => "🤪", "squinting_face_with_tongue" => "😝",
-            "money_mouth_face" => "🤑", "smiling_face_with_open_hands" => "🤗", "face_with_hand_over_mouth" => "🤭", "face_with_open_eyes_and_hand_over_mouth" => "🫢",
-            "face_with_peeking_eye" => "🫣", "shushing_face" => "🤫", "thinking_face" => "🤔", "saluting_face" => "🫡",
-            "zipper_mouth_face" => "🤐", "face_with_raised_eyebrow" => "🤨", "neutral_face" => "😐", "expressionless_face" => "😑",
-            "face_without_mouth" => "😶", "dotted_line_face" => "🫥", "face_in_clouds" => "😶‍🌫️", "smirking_face" => "😏",
-            "unamused_face" => "😒", "face_with_rolling_eyes" => "🙄", "grimacing_face" => "😬", "face_exhaling" => "😮‍💨",
-            "lying_face" => "🤥", "shaking_face" => "🫨", "head_shaking_horizontally" => "🙂‍↔️", "head_shaking_vertically" => "🙂‍↕️",
-            "relieved_face" => "😌", "pensive_face" => "😔", "sleepy_face" => "😪", "drooling_face" => "🤤",
-            "sleeping_face" => "😴", "face_with_bags_under_eyes" => "🫩", "face_with_medical_mask" => "😷", "face_with_thermometer" => "🤒",
-            "face_with_head_bandage" => "🤕", "nauseated_face" => "🤢", "face_vomiting" => "🤮", "sneezing_face" => "🤧",
-            "hot_face" => "🥵", "cold_face" => "🥶", "woozy_face" => "🥴", "face_with_crossed_out_eyes" => "😵",
-            "face_with_spiral_eyes" => "😵‍💫", "exploding_head" => "🤯", "cowboy_hat_face" => "🤠", "partying_face" => "🥳",
-            "disguised_face" => "🥸", "smiling_face_with_sunglasses" => "😎", "nerd_face" => "🤓", "face_with_monocle" => "🧐",
-            "confused_face" => "😕", "face_with_diagonal_mouth" => "🫤", "worried_face" => "😟", "slightly_frowning_face" => "🙁",
-            "frowning_face" => "☹️", "face_with_open_mouth" => "😮", "hushed_face" => "😯", "astonished_face" => "😲",
-            "flushed_face" => "😳", "pleading_face" => "🥺", "face_holding_back_tears" => "🥹", "frowning_face_with_open_mouth" => "😦",
-            "anguished_face" => "😧", "fearful_face" => "😨", "anxious_face_with_sweat" => "😰", "sad_but_relieved_face" => "😥",
-            "crying_face" => "😢", "loudly_crying_face" => "😭", "face_screaming_in_fear" => "😱", "confounded_face" => "😖",
-            "persevering_face" => "😣", "disappointed_face" => "😞", "downcast_face_with_sweat" => "😓", "weary_face" => "😩",
-            "tired_face" => "😫", "yawning_face" => "🥱", "face_with_steam_from_nose" => "😤", "enraged_face" => "😡",
-            "angry_face" => "😠", "face_with_symbols_on_mouth" => "🤬", "smiling_face_with_horns" => "😈", "angry_face_with_horns" => "👿",
-            "skull" => "💀", "skull_and_crossbones" => "☠️", "pile_of_poo" => "💩", "clown_face" => "🤡",
-            "ogre" => "👹", "goblin" => "👺", "ghost" => "👻", "alien" => "👽",
-            "alien_monster" => "👾", "robot" => "🤖", "grinning_cat" => "😺", "grinning_cat_with_smiling_eyes" => "😸",
-            "cat_with_tears_of_joy" => "😹", "smiling_cat_with_heart_eyes" => "😻", "cat_with_wry_smile" => "😼", "kissing_cat" => "😽",
-            "weary_cat" => "🙀", "crying_cat" => "😿", "pouting_cat" => "😾", "see_no_evil_monkey" => "🙈",
-            "hear_no_evil_monkey" => "🙉", "speak_no_evil_monkey" => "🙊", "love_letter" => "💌", "heart_with_arrow" => "💘",
-            "heart_with_ribbon" => "💝", "sparkling_heart" => "💖", "growing_heart" => "💗", "beating_heart" => "💓",
-            "revolving_hearts" => "💞", "two_hearts" => "💕", "heart_decoration" => "💟", "heart_exclamation" => "❣️",
-            "broken_heart" => "💔", "heart_on_fire" => "❤️‍🔥", "mending_heart" => "❤️‍🩹", "red_heart" => "❤️",
-            "pink_heart" => "🩷", "orange_heart" => "🧡", "yellow_heart" => "💛", "green_heart" => "💚",
-            "blue_heart" => "💙", "light_blue_heart" => "🩵", "purple_heart" => "💜", "brown_heart" => "🤎",
-            "black_heart" => "🖤", "grey_heart" => "🩶", "white_heart" => "🤍", "kiss_mark" => "💋",
-            "hundred_points" => "💯", "anger_symbol" => "💢", "collision" => "💥", "dizzy" => "💫",
-            "sweat_droplets" => "💦", "dashing_away" => "💨", "hole" => "🕳️", "speech_balloon" => "💬",
-            "eye_in_speech_bubble" => "👁️‍🗨️", "left_speech_bubble" => "🗨️", "right_anger_bubble" => "🗯️", "thought_balloon" => "💭",
-            "zzz" => "💤", "waving_hand" => "👋", "raised_back_of_hand" => "🤚", "hand_with_fingers_splayed" => "🖐️",
-            "raised_hand" => "✋", "vulcan_salute" => "🖖", "rightwards_hand" => "🫱", "leftwards_hand" => "🫲",
-            "palm_down_hand" => "🫳", "palm_up_hand" => "🫴", "leftwards_pushing_hand" => "🫷", "rightwards_pushing_hand" => "🫸",
-            "ok_hand" => "👌", "pinched_fingers" => "🤌", "pinching_hand" => "🤏", "victory_hand" => "✌️",
-            "crossed_fingers" => "🤞", "hand_with_index_finger_and_thumb_crossed" => "🫰", "love_you_gesture" => "🤟", "sign_of_the_horns" => "🤘",
-            "call_me_hand" => "🤙", "backhand_index_pointing_left" => "👈", "backhand_index_pointing_right" => "👉", "backhand_index_pointing_up" => "👆",
-            "middle_finger" => "🖕", "backhand_index_pointing_down" => "👇", "index_pointing_up" => "☝️", "index_pointing_at_the_viewer" => "🫵",
-            "thumbs_up" => "👍", "thumbs_down" => "👎", "raised_fist" => "✊", "oncoming_fist" => "👊",
-            "left_facing_fist" => "🤛", "right_facing_fist" => "🤜", "clapping_hands" => "👏", "raising_hands" => "🙌",
-            "heart_hands" => "🫶", "open_hands" => "👐", "palms_up_together" => "🤲", "handshake" => "🤝",
-            "folded_hands" => "🙏", "writing_hand" => "✍️", "nail_polish" => "💅", "selfie" => "🤳",
-            "flexed_biceps" => "💪", "mechanical_arm" => "🦾", "mechanical_leg" => "🦿", "leg" => "🦵",
-            "foot" => "🦶", "ear" => "👂", "ear_with_hearing_aid" => "🦻", "nose" => "👃",
-            "brain" => "🧠", "anatomical_heart" => "🫀", "lungs" => "🫁", "tooth" => "🦷",
-            "bone" => "🦴", "eyes" => "👀", "eye" => "👁️", "tongue" => "👅",
-            "mouth" => "👄", "biting_lip" => "🫦", "baby" => "👶", "child" => "🧒",
-            "boy" => "👦", "girl" => "👧", "person" => "🧑", "person_blond_hair" => "👱",
-            "man" => "👨", "person_beard" => "🧔", "man_beard" => "🧔‍♂️", "woman_beard" => "🧔‍♀️",
-            "man_red_hair" => "👨‍🦰", "man_curly_hair" => "👨‍🦱", "man_white_hair" => "👨‍🦳", "man_bald" => "👨‍🦲",
-            "woman" => "👩", "woman_red_hair" => "👩‍🦰", "person_red_hair" => "🧑‍🦰", "woman_curly_hair" => "👩‍🦱",
-            "person_curly_hair" => "🧑‍🦱", "woman_white_hair" => "👩‍🦳", "person_white_hair" => "🧑‍🦳", "woman_bald" => "👩‍🦲",
-            "person_bald" => "🧑‍🦲", "woman_blond_hair" => "👱‍♀️", "man_blond_hair" => "👱‍♂️", "older_person" => "🧓",
-            "old_man" => "👴", "old_woman" => "👵", "person_frowning" => "🙍", "man_frowning" => "🙍‍♂️",
-            "woman_frowning" => "🙍‍♀️", "person_pouting" => "🙎", "man_pouting" => "🙎‍♂️", "woman_pouting" => "🙎‍♀️",
-            "person_gesturing_no" => "🙅", "man_gesturing_no" => "🙅‍♂️", "woman_gesturing_no" => "🙅‍♀️", "person_gesturing_ok" => "🙆",
-            "man_gesturing_ok" => "🙆‍♂️", "woman_gesturing_ok" => "🙆‍♀️", "person_tipping_hand" => "💁", "man_tipping_hand" => "💁‍♂️",
-            "woman_tipping_hand" => "💁‍♀️", "person_raising_hand" => "🙋", "man_raising_hand" => "🙋‍♂️", "woman_raising_hand" => "🙋‍♀️",
-            "deaf_person" => "🧏", "deaf_man" => "🧏‍♂️", "deaf_woman" => "🧏‍♀️", "person_bowing" => "🙇",
-            "man_bowing" => "🙇‍♂️", "woman_bowing" => "🙇‍♀️", "person_facepalming" => "🤦", "man_facepalming" => "🤦‍♂️",
-            "woman_facepalming" => "🤦‍♀️", "person_shrugging" => "🤷", "man_shrugging" => "🤷‍♂️", "woman_shrugging" => "🤷‍♀️",
-            "health_worker" => "🧑‍⚕️", "man_health_worker" => "👨‍⚕️", "woman_health_worker" => "👩‍⚕️", "student" => "🧑‍🎓",
-            "man_student" => "👨‍🎓", "woman_student" => "👩‍🎓", "teacher" => "🧑‍🏫", "man_teacher" => "👨‍🏫",
-            "woman_teacher" => "👩‍🏫", "judge" => "🧑‍⚖️", "man_judge" => "👨‍⚖️", "woman_judge" => "👩‍⚖️",
-            "farmer" => "🧑‍🌾", "man_farmer" => "👨‍🌾", "woman_farmer" => "👩‍🌾", "cook" => "🧑‍🍳",
-            "man_cook" => "👨‍🍳", "woman_cook" => "👩‍🍳", "mechanic" => "🧑‍🔧", "man_mechanic" => "👨‍🔧",
-            "woman_mechanic" => "👩‍🔧", "factory_worker" => "🧑‍🏭", "man_factory_worker" => "👨‍🏭", "woman_factory_worker" => "👩‍🏭",
-            "office_worker" => "🧑‍💼", "man_office_worker" => "👨‍💼", "woman_office_worker" => "👩‍💼", "scientist" => "🧑‍🔬",
-            "man_scientist" => "👨‍🔬", "woman_scientist" => "👩‍🔬", "technologist" => "🧑‍💻", "man_technologist" => "👨‍💻",
-            "woman_technologist" => "👩‍💻", "singer" => "🧑‍🎤", "man_singer" => "👨‍🎤", "woman_singer" => "👩‍🎤",
-            "artist" => "🧑‍🎨", "man_artist" => "👨‍🎨", "woman_artist" => "👩‍🎨", "pilot" => "🧑‍✈️",
-            "man_pilot" => "👨‍✈️", "woman_pilot" => "👩‍✈️", "astronaut" => "🧑‍🚀", "man_astronaut" => "👨‍🚀",
-            "woman_astronaut" => "👩‍🚀", "firefighter" => "🧑‍🚒", "man_firefighter" => "👨‍🚒", "woman_firefighter" => "👩‍🚒",
-            "police_officer" => "👮", "man_police_officer" => "👮‍♂️", "woman_police_officer" => "👮‍♀️", "detective" => "🕵️",
-            "man_detective" => "🕵️‍♂️", "woman_detective" => "🕵️‍♀️", "guard" => "💂", "man_guard" => "💂‍♂️",
-            "woman_guard" => "💂‍♀️", "ninja" => "🥷", "construction_worker" => "👷", "man_construction_worker" => "👷‍♂️",
-            "woman_construction_worker" => "👷‍♀️", "person_with_crown" => "🫅", "prince" => "🤴", "princess" => "👸",
-            "person_wearing_turban" => "👳", "man_wearing_turban" => "👳‍♂️", "woman_wearing_turban" => "👳‍♀️", "person_with_skullcap" => "👲",
-            "woman_with_headscarf" => "🧕", "person_in_tuxedo" => "🤵", "man_in_tuxedo" => "🤵‍♂️", "woman_in_tuxedo" => "🤵‍♀️",
-            "person_with_veil" => "👰", "man_with_veil" => "👰‍♂️", "woman_with_veil" => "👰‍♀️", "pregnant_woman" => "🤰",
-            "pregnant_man" => "🫃", "pregnant_person" => "🫄", "breast_feeding" => "🤱", "woman_feeding_baby" => "👩‍🍼",
-            "man_feeding_baby" => "👨‍🍼", "person_feeding_baby" => "🧑‍🍼", "baby_angel" => "👼", "santa_claus" => "🎅",
-            "mrs_claus" => "🤶", "mx_claus" => "🧑‍🎄", "superhero" => "🦸", "man_superhero" => "🦸‍♂️",
-            "woman_superhero" => "🦸‍♀️", "supervillain" => "🦹", "man_supervillain" => "🦹‍♂️", "woman_supervillain" => "🦹‍♀️",
-            "mage" => "🧙", "man_mage" => "🧙‍♂️", "woman_mage" => "🧙‍♀️", "fairy" => "🧚",
-            "man_fairy" => "🧚‍♂️", "woman_fairy" => "🧚‍♀️", "vampire" => "🧛", "man_vampire" => "🧛‍♂️",
-            "woman_vampire" => "🧛‍♀️", "merperson" => "🧜", "merman" => "🧜‍♂️", "mermaid" => "🧜‍♀️",
-            "elf" => "🧝", "man_elf" => "🧝‍♂️", "woman_elf" => "🧝‍♀️", "genie" => "🧞",
-            "man_genie" => "🧞‍♂️", "woman_genie" => "🧞‍♀️", "zombie" => "🧟", "man_zombie" => "🧟‍♂️",
-            "woman_zombie" => "🧟‍♀️", "troll" => "🧌", "person_getting_massage" => "💆", "man_getting_massage" => "💆‍♂️",
-            "woman_getting_massage" => "💆‍♀️", "person_getting_haircut" => "💇", "man_getting_haircut" => "💇‍♂️", "woman_getting_haircut" => "💇‍♀️",
-            "person_walking" => "🚶", "man_walking" => "🚶‍♂️", "woman_walking" => "🚶‍♀️", "person_walking_facing_right" => "🚶‍➡️",
-            "woman_walking_facing_right" => "🚶‍♀️‍➡️", "man_walking_facing_right" => "🚶‍♂️‍➡️", "person_standing" => "🧍", "man_standing" => "🧍‍♂️",
-            "woman_standing" => "🧍‍♀️", "person_kneeling" => "🧎", "man_kneeling" => "🧎‍♂️", "woman_kneeling" => "🧎‍♀️",
-            "person_kneeling_facing_right" => "🧎‍➡️", "woman_kneeling_facing_right" => "🧎‍♀️‍➡️", "man_kneeling_facing_right" => "🧎‍♂️‍➡️", "person_with_white_cane" => "🧑‍🦯",
-            "person_with_white_cane_facing_right" => "🧑‍🦯‍➡️", "man_with_white_cane" => "👨‍🦯", "man_with_white_cane_facing_right" => "👨‍🦯‍➡️", "woman_with_white_cane" => "👩‍🦯",
-            "woman_with_white_cane_facing_right" => "👩‍🦯‍➡️", "person_in_motorized_wheelchair" => "🧑‍🦼", "person_in_motorized_wheelchair_facing_right" => "🧑‍🦼‍➡️", "man_in_motorized_wheelchair" => "👨‍🦼",
-            "man_in_motorized_wheelchair_facing_right" => "👨‍🦼‍➡️", "woman_in_motorized_wheelchair" => "👩‍🦼", "woman_in_motorized_wheelchair_facing_right" => "👩‍🦼‍➡️", "person_in_manual_wheelchair" => "🧑‍🦽",
-            "person_in_manual_wheelchair_facing_right" => "🧑‍🦽‍➡️", "man_in_manual_wheelchair" => "👨‍🦽", "man_in_manual_wheelchair_facing_right" => "👨‍🦽‍➡️", "woman_in_manual_wheelchair" => "👩‍🦽",
-            "woman_in_manual_wheelchair_facing_right" => "👩‍🦽‍➡️", "person_running" => "🏃", "man_running" => "🏃‍♂️", "woman_running" => "🏃‍♀️",
-            "person_running_facing_right" => "🏃‍➡️", "woman_running_facing_right" => "🏃‍♀️‍➡️", "man_running_facing_right" => "🏃‍♂️‍➡️", "woman_dancing" => "💃",
-            "man_dancing" => "🕺", "person_in_suit_levitating" => "🕴️", "people_with_bunny_ears" => "👯", "men_with_bunny_ears" => "👯‍♂️",
-            "women_with_bunny_ears" => "👯‍♀️", "person_in_steamy_room" => "🧖", "man_in_steamy_room" => "🧖‍♂️", "woman_in_steamy_room" => "🧖‍♀️",
-            "person_climbing" => "🧗", "man_climbing" => "🧗‍♂️", "woman_climbing" => "🧗‍♀️", "person_fencing" => "🤺",
-            "horse_racing" => "🏇", "skier" => "⛷️", "snowboarder" => "🏂", "person_golfing" => "🏌️",
-            "man_golfing" => "🏌️‍♂️", "woman_golfing" => "🏌️‍♀️", "person_surfing" => "🏄", "man_surfing" => "🏄‍♂️",
-            "woman_surfing" => "🏄‍♀️", "person_rowing_boat" => "🚣", "man_rowing_boat" => "🚣‍♂️", "woman_rowing_boat" => "🚣‍♀️",
-            "person_swimming" => "🏊", "man_swimming" => "🏊‍♂️", "woman_swimming" => "🏊‍♀️", "person_bouncing_ball" => "⛹️",
-            "man_bouncing_ball" => "⛹️‍♂️", "woman_bouncing_ball" => "⛹️‍♀️", "person_lifting_weights" => "🏋️", "man_lifting_weights" => "🏋️‍♂️",
-            "woman_lifting_weights" => "🏋️‍♀️", "person_biking" => "🚴", "man_biking" => "🚴‍♂️", "woman_biking" => "🚴‍♀️",
-            "person_mountain_biking" => "🚵", "man_mountain_biking" => "🚵‍♂️", "woman_mountain_biking" => "🚵‍♀️", "person_cartwheeling" => "🤸",
-            "man_cartwheeling" => "🤸‍♂️", "woman_cartwheeling" => "🤸‍♀️", "people_wrestling" => "🤼", "men_wrestling" => "🤼‍♂️",
-            "women_wrestling" => "🤼‍♀️", "person_playing_water_polo" => "🤽", "man_playing_water_polo" => "🤽‍♂️", "woman_playing_water_polo" => "🤽‍♀️",
-            "person_playing_handball" => "🤾", "man_playing_handball" => "🤾‍♂️", "woman_playing_handball" => "🤾‍♀️", "person_juggling" => "🤹",
-            "man_juggling" => "🤹‍♂️", "woman_juggling" => "🤹‍♀️", "person_in_lotus_position" => "🧘", "man_in_lotus_position" => "🧘‍♂️",
-            "woman_in_lotus_position" => "🧘‍♀️", "person_taking_bath" => "🛀", "person_in_bed" => "🛌", "people_holding_hands" => "🧑‍🤝‍🧑",
-            "women_holding_hands" => "👭", "woman_and_man_holding_hands" => "👫", "men_holding_hands" => "👬", "kiss" => "💏",
-            "kiss_woman_man" => "👩‍❤️‍💋‍👨", "kiss_man_man" => "👨‍❤️‍💋‍👨", "kiss_woman_woman" => "👩‍❤️‍💋‍👩", "couple_with_heart" => "💑",
-            "couple_with_heart_woman_man" => "👩‍❤️‍👨", "couple_with_heart_man_man" => "👨‍❤️‍👨", "couple_with_heart_woman_woman" => "👩‍❤️‍👩", "family_man_woman_boy" => "👨‍👩‍👦",
-            "family_man_woman_girl" => "👨‍👩‍👧", "family_man_woman_girl_boy" => "👨‍👩‍👧‍👦", "family_man_woman_boy_boy" => "👨‍👩‍👦‍👦", "family_man_woman_girl_girl" => "👨‍👩‍👧‍👧",
-            "family_man_man_boy" => "👨‍👨‍👦", "family_man_man_girl" => "👨‍👨‍👧", "family_man_man_girl_boy" => "👨‍👨‍👧‍👦", "family_man_man_boy_boy" => "👨‍👨‍👦‍👦",
-            "family_man_man_girl_girl" => "👨‍👨‍👧‍👧", "family_woman_woman_boy" => "👩‍👩‍👦", "family_woman_woman_girl" => "👩‍👩‍👧", "family_woman_woman_girl_boy" => "👩‍👩‍👧‍👦",
-            "family_woman_woman_boy_boy" => "👩‍👩‍👦‍👦", "family_woman_woman_girl_girl" => "👩‍👩‍👧‍👧", "family_man_boy" => "👨‍👦", "family_man_boy_boy" => "👨‍👦‍👦",
-            "family_man_girl" => "👨‍👧", "family_man_girl_boy" => "👨‍👧‍👦", "family_man_girl_girl" => "👨‍👧‍👧", "family_woman_boy" => "👩‍👦",
-            "family_woman_boy_boy" => "👩‍👦‍👦", "family_woman_girl" => "👩‍👧", "family_woman_girl_boy" => "👩‍👧‍👦", "family_woman_girl_girl" => "👩‍👧‍👧",
-            "speaking_head" => "🗣️", "bust_in_silhouette" => "👤", "busts_in_silhouette" => "👥", "people_hugging" => "🫂",
-            "family" => "👪", "family_adult_adult_child" => "🧑‍🧑‍🧒", "family_adult_adult_child_child" => "🧑‍🧑‍🧒‍🧒", "family_adult_child" => "🧑‍🧒",
-            "family_adult_child_child" => "🧑‍🧒‍🧒", "footprints" => "👣", "fingerprint" => "🫆", "monkey_face" => "🐵",
-            "monkey" => "🐒", "gorilla" => "🦍", "orangutan" => "🦧", "dog_face" => "🐶",
-            "dog" => "🐕", "guide_dog" => "🦮", "service_dog" => "🐕‍🦺", "poodle" => "🐩",
-            "wolf" => "🐺", "fox" => "🦊", "raccoon" => "🦝", "cat_face" => "🐱",
-            "cat" => "🐈", "black_cat" => "🐈‍⬛", "lion" => "🦁", "tiger_face" => "🐯",
-            "tiger" => "🐅", "leopard" => "🐆", "horse_face" => "🐴", "moose" => "🫎",
-            "donkey" => "🫏", "horse" => "🐎", "unicorn" => "🦄", "zebra" => "🦓",
-            "deer" => "🦌", "bison" => "🦬", "cow_face" => "🐮", "ox" => "🐂",
-            "water_buffalo" => "🐃", "cow" => "🐄", "pig_face" => "🐷", "pig" => "🐖",
-            "boar" => "🐗", "pig_nose" => "🐽", "ram" => "🐏", "ewe" => "🐑",
-            "goat" => "🐐", "camel" => "🐪", "two_hump_camel" => "🐫", "llama" => "🦙",
-            "giraffe" => "🦒", "elephant" => "🐘", "mammoth" => "🦣", "rhinoceros" => "🦏",
-            "hippopotamus" => "🦛", "mouse_face" => "🐭", "mouse" => "🐁", "rat" => "🐀",
-            "hamster" => "🐹", "rabbit_face" => "🐰", "rabbit" => "🐇", "chipmunk" => "🐿️",
-            "beaver" => "🦫", "hedgehog" => "🦔", "bat" => "🦇", "bear" => "🐻",
-            "polar_bear" => "🐻‍❄️", "koala" => "🐨", "panda" => "🐼", "sloth" => "🦥",
-            "otter" => "🦦", "skunk" => "🦨", "kangaroo" => "🦘", "badger" => "🦡",
-            "paw_prints" => "🐾", "turkey" => "🦃", "chicken" => "🐔", "rooster" => "🐓",
-            "hatching_chick" => "🐣", "baby_chick" => "🐤", "front_facing_baby_chick" => "🐥", "bird" => "🐦",
-            "penguin" => "🐧", "dove" => "🕊️", "eagle" => "🦅", "duck" => "🦆",
-            "swan" => "🦢", "owl" => "🦉", "dodo" => "🦤", "feather" => "🪶",
-            "flamingo" => "🦩", "peacock" => "🦚", "parrot" => "🦜", "wing" => "🪽",
-            "black_bird" => "🐦‍⬛", "goose" => "🪿", "phoenix" => "🐦‍🔥", "frog" => "🐸",
-            "crocodile" => "🐊", "turtle" => "🐢", "lizard" => "🦎", "snake" => "🐍",
-            "dragon_face" => "🐲", "dragon" => "🐉", "sauropod" => "🦕", "t_rex" => "🦖",
-            "spouting_whale" => "🐳", "whale" => "🐋", "dolphin" => "🐬", "seal" => "🦭",
-            "fish" => "🐟", "tropical_fish" => "🐠", "blowfish" => "🐡", "shark" => "🦈",
-            "octopus" => "🐙", "spiral_shell" => "🐚", "coral" => "🪸", "jellyfish" => "🪼",
-            "crab" => "🦀", "lobster" => "🦞", "shrimp" => "🦐", "squid" => "🦑",
-            "oyster" => "🦪", "snail" => "🐌", "butterfly" => "🦋", "bug" => "🐛",
-            "ant" => "🐜", "honeybee" => "🐝", "beetle" => "🪲", "lady_beetle" => "🐞",
-            "cricket" => "🦗", "cockroach" => "🪳", "spider" => "🕷️", "spider_web" => "🕸️",
-            "scorpion" => "🦂", "mosquito" => "🦟", "fly" => "🪰", "worm" => "🪱",
-            "microbe" => "🦠", "bouquet" => "💐", "cherry_blossom" => "🌸", "white_flower" => "💮",
-            "lotus" => "🪷", "rosette" => "🏵️", "rose" => "🌹", "wilted_flower" => "🥀",
-            "hibiscus" => "🌺", "sunflower" => "🌻", "blossom" => "🌼", "tulip" => "🌷",
-            "hyacinth" => "🪻", "seedling" => "🌱", "potted_plant" => "🪴", "evergreen_tree" => "🌲",
-            "deciduous_tree" => "🌳", "palm_tree" => "🌴", "cactus" => "🌵", "sheaf_of_rice" => "🌾",
-            "herb" => "🌿", "shamrock" => "☘️", "four_leaf_clover" => "🍀", "maple_leaf" => "🍁",
-            "fallen_leaf" => "🍂", "leaf_fluttering_in_wind" => "🍃", "empty_nest" => "🪹", "nest_with_eggs" => "🪺",
-            "mushroom" => "🍄", "leafless_tree" => "🪾", "grapes" => "🍇", "melon" => "🍈",
-            "watermelon" => "🍉", "tangerine" => "🍊", "lemon" => "🍋", "lime" => "🍋‍🟩",
-            "banana" => "🍌", "pineapple" => "🍍", "mango" => "🥭", "red_apple" => "🍎",
-            "green_apple" => "🍏", "pear" => "🍐", "peach" => "🍑", "cherries" => "🍒",
-            "strawberry" => "🍓", "blueberries" => "🫐", "kiwi_fruit" => "🥝", "tomato" => "🍅",
-            "olive" => "🫒", "coconut" => "🥥", "avocado" => "🥑", "eggplant" => "🍆",
-            "potato" => "🥔", "carrot" => "🥕", "ear_of_corn" => "🌽", "hot_pepper" => "🌶️",
-            "bell_pepper" => "🫑", "cucumber" => "🥒", "leafy_green" => "🥬", "broccoli" => "🥦",
-            "garlic" => "🧄", "onion" => "🧅", "peanuts" => "🥜", "beans" => "🫘",
-            "chestnut" => "🌰", "ginger_root" => "🫚", "pea_pod" => "🫛", "brown_mushroom" => "🍄‍🟫",
-            "root_vegetable" => "🫜", "bread" => "🍞", "croissant" => "🥐", "baguette_bread" => "🥖",
-            "flatbread" => "🫓", "pretzel" => "🥨", "bagel" => "🥯", "pancakes" => "🥞",
-            "waffle" => "🧇", "cheese_wedge" => "🧀", "meat_on_bone" => "🍖", "poultry_leg" => "🍗",
-            "cut_of_meat" => "🥩", "bacon" => "🥓", "hamburger" => "🍔", "french_fries" => "🍟",
-            "pizza" => "🍕", "hot_dog" => "🌭", "sandwich" => "🥪", "taco" => "🌮",
-            "burrito" => "🌯", "tamale" => "🫔", "stuffed_flatbread" => "🥙", "falafel" => "🧆",
-            "egg" => "🥚", "cooking" => "🍳", "shallow_pan_of_food" => "🥘", "pot_of_food" => "🍲",
-            "fondue" => "🫕", "bowl_with_spoon" => "🥣", "green_salad" => "🥗", "popcorn" => "🍿",
-            "butter" => "🧈", "salt" => "🧂", "canned_food" => "🥫", "bento_box" => "🍱",
-            "rice_cracker" => "🍘", "rice_ball" => "🍙", "cooked_rice" => "🍚", "curry_rice" => "🍛",
-            "steaming_bowl" => "🍜", "spaghetti" => "🍝", "roasted_sweet_potato" => "🍠", "oden" => "🍢",
-            "sushi" => "🍣", "fried_shrimp" => "🍤", "fish_cake_with_swirl" => "🍥", "moon_cake" => "🥮",
-            "dango" => "🍡", "dumpling" => "🥟", "fortune_cookie" => "🥠", "takeout_box" => "🥡",
-            "soft_ice_cream" => "🍦", "shaved_ice" => "🍧", "ice_cream" => "🍨", "doughnut" => "🍩",
-            "cookie" => "🍪", "birthday_cake" => "🎂", "shortcake" => "🍰", "cupcake" => "🧁",
-            "pie" => "🥧", "chocolate_bar" => "🍫", "candy" => "🍬", "lollipop" => "🍭",
-            "custard" => "🍮", "honey_pot" => "🍯", "baby_bottle" => "🍼", "glass_of_milk" => "🥛",
-            "hot_beverage" => "☕", "teapot" => "🫖", "teacup_without_handle" => "🍵", "sake" => "🍶",
-            "bottle_with_popping_cork" => "🍾", "wine_glass" => "🍷", "cocktail_glass" => "🍸", "tropical_drink" => "🍹",
-            "beer_mug" => "🍺", "clinking_beer_mugs" => "🍻", "clinking_glasses" => "🥂", "tumbler_glass" => "🥃",
-            "pouring_liquid" => "🫗", "cup_with_straw" => "🥤", "bubble_tea" => "🧋", "beverage_box" => "🧃",
-            "mate" => "🧉", "ice" => "🧊", "chopsticks" => "🥢", "fork_and_knife_with_plate" => "🍽️",
-            "fork_and_knife" => "🍴", "spoon" => "🥄", "kitchen_knife" => "🔪", "jar" => "🫙",
-            "amphora" => "🏺", "globe_showing_europe_africa" => "🌍", "globe_showing_americas" => "🌎", "globe_showing_asia_australia" => "🌏",
-            "globe_with_meridians" => "🌐", "world_map" => "🗺️", "map_of_japan" => "🗾", "compass" => "🧭",
-            "snow_capped_mountain" => "🏔️", "mountain" => "⛰️", "volcano" => "🌋", "mount_fuji" => "🗻",
-            "camping" => "🏕️", "beach_with_umbrella" => "🏖️", "desert" => "🏜️", "desert_island" => "🏝️",
-            "national_park" => "🏞️", "stadium" => "🏟️", "classical_building" => "🏛️", "building_construction" => "🏗️",
-            "brick" => "🧱", "rock" => "🪨", "wood" => "🪵", "hut" => "🛖",
-            "houses" => "🏘️", "derelict_house" => "🏚️", "house" => "🏠", "house_with_garden" => "🏡",
-            "office_building" => "🏢", "japanese_post_office" => "🏣", "post_office" => "🏤", "hospital" => "🏥",
-            "bank" => "🏦", "hotel" => "🏨", "love_hotel" => "🏩", "convenience_store" => "🏪",
-            "school" => "🏫", "department_store" => "🏬", "factory" => "🏭", "japanese_castle" => "🏯",
-            "castle" => "🏰", "wedding" => "💒", "tokyo_tower" => "🗼", "statue_of_liberty" => "🗽",
-            "church" => "⛪", "mosque" => "🕌", "hindu_temple" => "🛕", "synagogue" => "🕍",
-            "shinto_shrine" => "⛩️", "kaaba" => "🕋", "fountain" => "⛲", "tent" => "⛺",
-            "foggy" => "🌁", "night_with_stars" => "🌃", "cityscape" => "🏙️", "sunrise_over_mountains" => "🌄",
-            "sunrise" => "🌅", "cityscape_at_dusk" => "🌆", "sunset" => "🌇", "bridge_at_night" => "🌉",
-            "hot_springs" => "♨️", "carousel_horse" => "🎠", "playground_slide" => "🛝", "ferris_wheel" => "🎡",
-            "roller_coaster" => "🎢", "barber_pole" => "💈", "circus_tent" => "🎪", "locomotive" => "🚂",
-            "railway_car" => "🚃", "high_speed_train" => "🚄", "bullet_train" => "🚅", "train" => "🚆",
-            "metro" => "🚇", "light_rail" => "🚈", "station" => "🚉", "tram" => "🚊",
-            "monorail" => "🚝", "mountain_railway" => "🚞", "tram_car" => "🚋", "bus" => "🚌",
-            "oncoming_bus" => "🚍", "trolleybus" => "🚎", "minibus" => "🚐", "ambulance" => "🚑",
-            "fire_engine" => "🚒", "police_car" => "🚓", "oncoming_police_car" => "🚔", "taxi" => "🚕",
-            "oncoming_taxi" => "🚖", "automobile" => "🚗", "oncoming_automobile" => "🚘", "sport_utility_vehicle" => "🚙",
-            "pickup_truck" => "🛻", "delivery_truck" => "🚚", "articulated_lorry" => "🚛", "tractor" => "🚜",
-            "racing_car" => "🏎️", "motorcycle" => "🏍️", "motor_scooter" => "🛵", "manual_wheelchair" => "🦽",
-            "motorized_wheelchair" => "🦼", "auto_rickshaw" => "🛺", "bicycle" => "🚲", "kick_scooter" => "🛴",
-            "skateboard" => "🛹", "roller_skate" => "🛼", "bus_stop" => "🚏", "motorway" => "🛣️",
-            "railway_track" => "🛤️", "oil_drum" => "🛢️", "fuel_pump" => "⛽", "wheel" => "🛞",
-            "police_car_light" => "🚨", "horizontal_traffic_light" => "🚥", "vertical_traffic_light" => "🚦", "stop_sign" => "🛑",
-            "construction" => "🚧", "anchor" => "⚓", "ring_buoy" => "🛟", "sailboat" => "⛵",
-            "canoe" => "🛶", "speedboat" => "🚤", "passenger_ship" => "🛳️", "ferry" => "⛴️",
-            "motor_boat" => "🛥️", "ship" => "🚢", "airplane" => "✈️", "small_airplane" => "🛩️",
-            "airplane_departure" => "🛫", "airplane_arrival" => "🛬", "parachute" => "🪂", "seat" => "💺",
-            "helicopter" => "🚁", "suspension_railway" => "🚟", "mountain_cableway" => "🚠", "aerial_tramway" => "🚡",
-            "satellite" => "🛰️", "rocket" => "🚀", "flying_saucer" => "🛸", "bellhop_bell" => "🛎️",
-            "luggage" => "🧳", "hourglass_done" => "⌛", "hourglass_not_done" => "⏳", "watch" => "⌚",
-            "alarm_clock" => "⏰", "stopwatch" => "⏱️", "timer_clock" => "⏲️", "mantelpiece_clock" => "🕰️",
-            "twelve_o_clock" => "🕛", "twelve_thirty" => "🕧", "one_o_clock" => "🕐", "one_thirty" => "🕜",
-            "two_o_clock" => "🕑", "two_thirty" => "🕝", "three_o_clock" => "🕒", "three_thirty" => "🕞",
-            "four_o_clock" => "🕓", "four_thirty" => "🕟", "five_o_clock" => "🕔", "five_thirty" => "🕠",
-            "six_o_clock" => "🕕", "six_thirty" => "🕡", "seven_o_clock" => "🕖", "seven_thirty" => "🕢",
-            "eight_o_clock" => "🕗", "eight_thirty" => "🕣", "nine_o_clock" => "🕘", "nine_thirty" => "🕤",
-            "ten_o_clock" => "🕙", "ten_thirty" => "🕥", "eleven_o_clock" => "🕚", "eleven_thirty" => "🕦",
-            "new_moon" => "🌑", "waxing_crescent_moon" => "🌒", "first_quarter_moon" => "🌓", "waxing_gibbous_moon" => "🌔",
-            "full_moon" => "🌕", "waning_gibbous_moon" => "🌖", "last_quarter_moon" => "🌗", "waning_crescent_moon" => "🌘",
-            "crescent_moon" => "🌙", "new_moon_face" => "🌚", "first_quarter_moon_face" => "🌛", "last_quarter_moon_face" => "🌜",
-            "thermometer" => "🌡️", "sun" => "☀️", "full_moon_face" => "🌝", "sun_with_face" => "🌞",
-            "ringed_planet" => "🪐", "star" => "⭐", "glowing_star" => "🌟", "shooting_star" => "🌠",
-            "milky_way" => "🌌", "cloud" => "☁️", "sun_behind_cloud" => "⛅", "cloud_with_lightning_and_rain" => "⛈️",
-            "sun_behind_small_cloud" => "🌤️", "sun_behind_large_cloud" => "🌥️", "sun_behind_rain_cloud" => "🌦️", "cloud_with_rain" => "🌧️",
-            "cloud_with_snow" => "🌨️", "cloud_with_lightning" => "🌩️", "tornado" => "🌪️", "fog" => "🌫️",
-            "wind_face" => "🌬️", "cyclone" => "🌀", "rainbow" => "🌈", "closed_umbrella" => "🌂",
-            "umbrella" => "☂️", "umbrella_with_rain_drops" => "☔", "umbrella_on_ground" => "⛱️", "high_voltage" => "⚡",
-            "snowflake" => "❄️", "snowman" => "☃️", "snowman_without_snow" => "⛄", "comet" => "☄️",
-            "fire" => "🔥", "droplet" => "💧", "water_wave" => "🌊", "jack_o_lantern" => "🎃",
-            "christmas_tree" => "🎄", "fireworks" => "🎆", "sparkler" => "🎇", "firecracker" => "🧨",
-            "sparkles" => "✨", "balloon" => "🎈", "party_popper" => "🎉", "confetti_ball" => "🎊",
-            "tanabata_tree" => "🎋", "pine_decoration" => "🎍", "japanese_dolls" => "🎎", "carp_streamer" => "🎏",
-            "wind_chime" => "🎐", "moon_viewing_ceremony" => "🎑", "red_envelope" => "🧧", "ribbon" => "🎀",
-            "wrapped_gift" => "🎁", "reminder_ribbon" => "🎗️", "admission_tickets" => "🎟️", "ticket" => "🎫",
-            "military_medal" => "🎖️", "trophy" => "🏆", "sports_medal" => "🏅", "1st_place_medal" => "🥇",
-            "2nd_place_medal" => "🥈", "3rd_place_medal" => "🥉", "soccer_ball" => "⚽", "baseball" => "⚾",
-            "softball" => "🥎", "basketball" => "🏀", "volleyball" => "🏐", "american_football" => "🏈",
-            "rugby_football" => "🏉", "tennis" => "🎾", "flying_disc" => "🥏", "bowling" => "🎳",
-            "cricket_game" => "🏏", "field_hockey" => "🏑", "ice_hockey" => "🏒", "lacrosse" => "🥍",
-            "ping_pong" => "🏓", "badminton" => "🏸", "boxing_glove" => "🥊", "martial_arts_uniform" => "🥋",
-            "goal_net" => "🥅", "flag_in_hole" => "⛳", "ice_skate" => "⛸️", "fishing_pole" => "🎣",
-            "diving_mask" => "🤿", "running_shirt" => "🎽", "skis" => "🎿", "sled" => "🛷",
-            "curling_stone" => "🥌", "bullseye" => "🎯", "yo_yo" => "🪀", "kite" => "🪁",
-            "water_pistol" => "🔫", "pool_8_ball" => "🎱", "crystal_ball" => "🔮", "magic_wand" => "🪄",
-            "video_game" => "🎮", "joystick" => "🕹️", "slot_machine" => "🎰", "game_die" => "🎲",
-            "puzzle_piece" => "🧩", "teddy_bear" => "🧸", "pinata" => "🪅", "mirror_ball" => "🪩",
-            "nesting_dolls" => "🪆", "spade_suit" => "♠️", "heart_suit" => "♥️", "diamond_suit" => "♦️",
-            "club_suit" => "♣️", "chess_pawn" => "♟️", "joker" => "🃏", "mahjong_red_dragon" => "🀄",
-            "flower_playing_cards" => "🎴", "performing_arts" => "🎭", "framed_picture" => "🖼️", "artist_palette" => "🎨",
-            "thread" => "🧵", "sewing_needle" => "🪡", "yarn" => "🧶", "knot" => "🪢",
-            "glasses" => "👓", "sunglasses" => "🕶️", "goggles" => "🥽", "lab_coat" => "🥼",
-            "safety_vest" => "🦺", "necktie" => "👔", "t_shirt" => "👕", "jeans" => "👖",
-            "scarf" => "🧣", "gloves" => "🧤", "coat" => "🧥", "socks" => "🧦",
-            "dress" => "👗", "kimono" => "👘", "sari" => "🥻", "one_piece_swimsuit" => "🩱",
-            "briefs" => "🩲", "shorts" => "🩳", "bikini" => "👙", "woman_s_clothes" => "👚",
-            "folding_hand_fan" => "🪭", "purse" => "👛", "handbag" => "👜", "clutch_bag" => "👝",
-            "shopping_bags" => "🛍️", "backpack" => "🎒", "thong_sandal" => "🩴", "man_s_shoe" => "👞",
-            "running_shoe" => "👟", "hiking_boot" => "🥾", "flat_shoe" => "🥿", "high_heeled_shoe" => "👠",
-            "woman_s_sandal" => "👡", "ballet_shoes" => "🩰", "woman_s_boot" => "👢", "hair_pick" => "🪮",
-            "crown" => "👑", "woman_s_hat" => "👒", "top_hat" => "🎩", "graduation_cap" => "🎓",
-            "billed_cap" => "🧢", "military_helmet" => "🪖", "rescue_worker_s_helmet" => "⛑️", "prayer_beads" => "📿",
-            "lipstick" => "💄", "ring" => "💍", "gem_stone" => "💎", "muted_speaker" => "🔇",
-            "speaker_low_volume" => "🔈", "speaker_medium_volume" => "🔉", "speaker_high_volume" => "🔊", "loudspeaker" => "📢",
-            "megaphone" => "📣", "postal_horn" => "📯", "bell" => "🔔", "bell_with_slash" => "🔕",
-            "musical_score" => "🎼", "musical_note" => "🎵", "musical_notes" => "🎶", "studio_microphone" => "🎙️",
-            "level_slider" => "🎚️", "control_knobs" => "🎛️", "microphone" => "🎤", "headphone" => "🎧",
-            "radio" => "📻", "saxophone" => "🎷", "accordion" => "🪗", "guitar" => "🎸",
-            "musical_keyboard" => "🎹", "trumpet" => "🎺", "violin" => "🎻", "banjo" => "🪕",
-            "drum" => "🥁", "long_drum" => "🪘", "maracas" => "🪇", "flute" => "🪈",
-            "harp" => "🪉", "mobile_phone" => "📱", "mobile_phone_with_arrow" => "📲", "telephone" => "☎️",
-            "telephone_receiver" => "📞", "pager" => "📟", "fax_machine" => "📠", "battery" => "🔋",
-            "low_battery" => "🪫", "electric_plug" => "🔌", "laptop" => "💻", "desktop_computer" => "🖥️",
-            "printer" => "🖨️", "keyboard" => "⌨️", "computer_mouse" => "🖱️", "trackball" => "🖲️",
-            "computer_disk" => "💽", "floppy_disk" => "💾", "optical_disk" => "💿", "dvd" => "📀",
-            "abacus" => "🧮", "movie_camera" => "🎥", "film_frames" => "🎞️", "film_projector" => "📽️",
-            "clapper_board" => "🎬", "television" => "📺", "camera" => "📷", "camera_with_flash" => "📸",
-            "video_camera" => "📹", "videocassette" => "📼", "magnifying_glass_tilted_left" => "🔍", "magnifying_glass_tilted_right" => "🔎",
-            "candle" => "🕯️", "light_bulb" => "💡", "flashlight" => "🔦", "red_paper_lantern" => "🏮",
-            "diya_lamp" => "🪔", "notebook_with_decorative_cover" => "📔", "closed_book" => "📕", "open_book" => "📖",
-            "green_book" => "📗", "blue_book" => "📘", "orange_book" => "📙", "books" => "📚",
-            "notebook" => "📓", "ledger" => "📒", "page_with_curl" => "📃", "scroll" => "📜",
-            "page_facing_up" => "📄", "newspaper" => "📰", "rolled_up_newspaper" => "🗞️", "bookmark_tabs" => "📑",
-            "bookmark" => "🔖", "label" => "🏷️", "money_bag" => "💰", "coin" => "🪙",
-            "yen_banknote" => "💴", "dollar_banknote" => "💵", "euro_banknote" => "💶", "pound_banknote" => "💷",
-            "money_with_wings" => "💸", "credit_card" => "💳", "receipt" => "🧾", "chart_increasing_with_yen" => "💹",
-            "envelope" => "✉️", "e_mail" => "📧", "incoming_envelope" => "📨", "envelope_with_arrow" => "📩",
-            "outbox_tray" => "📤", "inbox_tray" => "📥", "package" => "📦", "closed_mailbox_with_raised_flag" => "📫",
-            "closed_mailbox_with_lowered_flag" => "📪", "open_mailbox_with_raised_flag" => "📬", "open_mailbox_with_lowered_flag" => "📭", "postbox" => "📮",
-            "ballot_box_with_ballot" => "🗳️", "pencil" => "✏️", "black_nib" => "✒️", "fountain_pen" => "🖋️",
-            "pen" => "🖊️", "paintbrush" => "🖌️", "crayon" => "🖍️", "memo" => "📝",
-            "briefcase" => "💼", "file_folder" => "📁", "open_file_folder" => "📂", "card_index_dividers" => "🗂️",
-            "calendar" => "📅", "tear_off_calendar" => "📆", "spiral_notepad" => "🗒️", "spiral_calendar" => "🗓️",
-            "card_index" => "📇", "chart_increasing" => "📈", "chart_decreasing" => "📉", "bar_chart" => "📊",
-            "clipboard" => "📋", "pushpin" => "📌", "round_pushpin" => "📍", "paperclip" => "📎",
-            "linked_paperclips" => "🖇️", "straight_ruler" => "📏", "triangular_ruler" => "📐", "scissors" => "✂️",
-            "card_file_box" => "🗃️", "file_cabinet" => "🗄️", "wastebasket" => "🗑️", "locked" => "🔒",
-            "unlocked" => "🔓", "locked_with_pen" => "🔏", "locked_with_key" => "🔐", "key" => "🔑",
-            "old_key" => "🗝️", "hammer" => "🔨", "axe" => "🪓", "pick" => "⛏️",
-            "hammer_and_pick" => "⚒️", "hammer_and_wrench" => "🛠️", "dagger" => "🗡️", "crossed_swords" => "⚔️",
-            "bomb" => "💣", "boomerang" => "🪃", "bow_and_arrow" => "🏹", "shield" => "🛡️",
-            "carpentry_saw" => "🪚", "wrench" => "🔧", "screwdriver" => "🪛", "nut_and_bolt" => "🔩",
-            "gear" => "⚙️", "clamp" => "🗜️", "balance_scale" => "⚖️", "white_cane" => "🦯",
-            "link" => "🔗", "broken_chain" => "⛓️‍💥", "chains" => "⛓️", "hook" => "🪝",
-            "toolbox" => "🧰", "magnet" => "🧲", "ladder" => "🪜", "shovel" => "🪏",
-            "alembic" => "⚗️", "test_tube" => "🧪", "petri_dish" => "🧫", "dna" => "🧬",
-            "microscope" => "🔬", "telescope" => "🔭", "satellite_antenna" => "📡", "syringe" => "💉",
-            "drop_of_blood" => "🩸", "pill" => "💊", "adhesive_bandage" => "🩹", "crutch" => "🩼",
-            "stethoscope" => "🩺", "x_ray" => "🩻", "door" => "🚪", "elevator" => "🛗",
-            "mirror" => "🪞", "window" => "🪟", "bed" => "🛏️", "couch_and_lamp" => "🛋️",
-            "chair" => "🪑", "toilet" => "🚽", "plunger" => "🪠", "shower" => "🚿",
-            "bathtub" => "🛁", "mouse_trap" => "🪤", "razor" => "🪒", "lotion_bottle" => "🧴",
-            "safety_pin" => "🧷", "broom" => "🧹", "basket" => "🧺", "roll_of_paper" => "🧻",
-            "bucket" => "🪣", "soap" => "🧼", "bubbles" => "🫧", "toothbrush" => "🪥",
-            "sponge" => "🧽", "fire_extinguisher" => "🧯", "shopping_cart" => "🛒", "cigarette" => "🚬",
-            "coffin" => "⚰️", "headstone" => "🪦", "funeral_urn" => "⚱️", "nazar_amulet" => "🧿",
-            "hamsa" => "🪬", "moai" => "🗿", "placard" => "🪧", "identification_card" => "🪪",
-            "atm_sign" => "🏧", "litter_in_bin_sign" => "🚮", "potable_water" => "🚰", "wheelchair_symbol" => "♿",
-            "men_s_room" => "🚹", "women_s_room" => "🚺", "restroom" => "🚻", "baby_symbol" => "🚼",
-            "water_closet" => "🚾", "passport_control" => "🛂", "customs" => "🛃", "baggage_claim" => "🛄",
-            "left_luggage" => "🛅", "warning" => "⚠️", "children_crossing" => "🚸", "no_entry" => "⛔",
-            "prohibited" => "🚫", "no_bicycles" => "🚳", "no_smoking" => "🚭", "no_littering" => "🚯",
-            "non_potable_water" => "🚱", "no_pedestrians" => "🚷", "no_mobile_phones" => "📵", "no_one_under_eighteen" => "🔞",
-            "radioactive" => "☢️", "biohazard" => "☣️", "up_arrow" => "⬆️", "up_right_arrow" => "↗️",
-            "right_arrow" => "➡️", "down_right_arrow" => "↘️", "down_arrow" => "⬇️", "down_left_arrow" => "↙️",
-            "left_arrow" => "⬅️", "up_left_arrow" => "↖️", "up_down_arrow" => "↕️", "left_right_arrow" => "↔️",
-            "right_arrow_curving_left" => "↩️", "left_arrow_curving_right" => "↪️", "right_arrow_curving_up" => "⤴️", "right_arrow_curving_down" => "⤵️",
-            "clockwise_vertical_arrows" => "🔃", "counterclockwise_arrows_button" => "🔄", "back_arrow" => "🔙", "end_arrow" => "🔚",
-            "on_arrow" => "🔛", "soon_arrow" => "🔜", "top_arrow" => "🔝", "place_of_worship" => "🛐",
-            "atom_symbol" => "⚛️", "om" => "🕉️", "star_of_david" => "✡️", "wheel_of_dharma" => "☸️",
-            "yin_yang" => "☯️", "latin_cross" => "✝️", "orthodox_cross" => "☦️", "star_and_crescent" => "☪️",
-            "peace_symbol" => "☮️", "menorah" => "🕎", "dotted_six_pointed_star" => "🔯", "khanda" => "🪯",
-            "aries" => "♈", "taurus" => "♉", "gemini" => "♊", "cancer" => "♋",
-            "leo" => "♌", "virgo" => "♍", "libra" => "♎", "scorpio" => "♏",
-            "sagittarius" => "♐", "capricorn" => "♑", "aquarius" => "♒", "pisces" => "♓",
-            "ophiuchus" => "⛎", "shuffle_tracks_button" => "🔀", "repeat_button" => "🔁", "repeat_single_button" => "🔂",
-            "play_button" => "▶️", "fast_forward_button" => "⏩", "next_track_button" => "⏭️", "play_or_pause_button" => "⏯️",
-            "reverse_button" => "◀️", "fast_reverse_button" => "⏪", "last_track_button" => "⏮️", "upwards_button" => "🔼",
-            "fast_up_button" => "⏫", "downwards_button" => "🔽", "fast_down_button" => "⏬", "pause_button" => "⏸️",
-            "stop_button" => "⏹️", "record_button" => "⏺️", "eject_button" => "⏏️", "cinema" => "🎦",
-            "dim_button" => "🔅", "bright_button" => "🔆", "antenna_bars" => "📶", "wireless" => "🛜",
-            "vibration_mode" => "📳", "mobile_phone_off" => "📴", "female_sign" => "♀️", "male_sign" => "♂️",
-            "transgender_symbol" => "⚧️", "multiply" => "✖️", "plus" => "➕", "minus" => "➖",
-            "divide" => "➗", "heavy_equals_sign" => "🟰", "infinity" => "♾️", "double_exclamation_mark" => "‼️",
-            "exclamation_question_mark" => "⁉️", "red_question_mark" => "❓", "white_question_mark" => "❔", "white_exclamation_mark" => "❕",
-            "red_exclamation_mark" => "❗", "wavy_dash" => "〰️", "currency_exchange" => "💱", "heavy_dollar_sign" => "💲",
-            "medical_symbol" => "⚕️", "recycling_symbol" => "♻️", "fleur_de_lis" => "⚜️", "trident_emblem" => "🔱",
-            "name_badge" => "📛", "japanese_symbol_for_beginner" => "🔰", "hollow_red_circle" => "⭕", "check_mark_button" => "✅",
-            "check_box_with_check" => "☑️", "check_mark" => "✔️", "cross_mark" => "❌", "cross_mark_button" => "❎",
-            "curly_loop" => "➰", "double_curly_loop" => "➿", "part_alternation_mark" => "〽️", "eight_spoked_asterisk" => "✳️",
-            "eight_pointed_star" => "✴️", "sparkle" => "❇️", "copyright" => "©️", "registered" => "®️",
-            "trade_mark" => "™️", "splatter" => "🫟", "keycap_number_sign" => "#️⃣", "keycap_asterisk" => "*️⃣",
-            "keycap_0" => "0️⃣", "keycap_1" => "1️⃣", "keycap_2" => "2️⃣", "keycap_3" => "3️⃣",
-            "keycap_4" => "4️⃣", "keycap_5" => "5️⃣", "keycap_6" => "6️⃣", "keycap_7" => "7️⃣",
-            "keycap_8" => "8️⃣", "keycap_9" => "9️⃣", "keycap_10" => "🔟", "input_latin_uppercase" => "🔠",
-            "input_latin_lowercase" => "🔡", "input_numbers" => "🔢", "input_symbols" => "🔣", "input_latin_letters" => "🔤",
-            "a_button" => "🅰️", "ab_button" => "🆎", "b_button" => "🅱️", "cl_button" => "🆑",
-            "cool_button" => "🆒", "free_button" => "🆓", "information" => "ℹ️", "id_button" => "🆔",
-            "circled_m" => "Ⓜ️", "new_button" => "🆕", "ng_button" => "🆖", "o_button" => "🅾️",
-            "ok_button" => "🆗", "p_button" => "🅿️", "sos_button" => "🆘", "up_button" => "🆙",
-            "vs_button" => "🆚", "japanese_here_button" => "🈁", "japanese_service_charge_button" => "🈂️", "japanese_monthly_amount_button" => "🈷️",
-            "japanese_not_free_of_charge_button" => "🈶", "japanese_reserved_button" => "🈯", "japanese_bargain_button" => "🉐", "japanese_discount_button" => "🈹",
-            "japanese_free_of_charge_button" => "🈚", "japanese_prohibited_button" => "🈲", "japanese_acceptable_button" => "🉑", "japanese_application_button" => "🈸",
-            "japanese_passing_grade_button" => "🈴", "japanese_vacancy_button" => "🈳", "japanese_congratulations_button" => "㊗️", "japanese_secret_button" => "㊙️",
-            "japanese_open_for_business_button" => "🈺", "japanese_no_vacancy_button" => "🈵", "red_circle" => "🔴", "orange_circle" => "🟠",
-            "yellow_circle" => "🟡", "green_circle" => "🟢", "blue_circle" => "🔵", "purple_circle" => "🟣",
-            "brown_circle" => "🟤", "black_circle" => "⚫", "white_circle" => "⚪", "red_square" => "🟥",
-            "orange_square" => "🟧", "yellow_square" => "🟨", "green_square" => "🟩", "blue_square" => "🟦",
-            "purple_square" => "🟪", "brown_square" => "🟫", "black_large_square" => "⬛", "white_large_square" => "⬜",
-            "black_medium_square" => "◼️", "white_medium_square" => "◻️", "black_medium_small_square" => "◾", "white_medium_small_square" => "◽",
-            "black_small_square" => "▪️", "white_small_square" => "▫️", "large_orange_diamond" => "🔶", "large_blue_diamond" => "🔷",
-            "small_orange_diamond" => "🔸", "small_blue_diamond" => "🔹", "red_triangle_pointed_up" => "🔺", "red_triangle_pointed_down" => "🔻",
-            "diamond_with_a_dot" => "💠", "radio_button" => "🔘", "white_square_button" => "🔳", "black_square_button" => "🔲",
-            "chequered_flag" => "🏁", "triangular_flag" => "🚩", "crossed_flags" => "🎌", "black_flag" => "🏴",
-            "white_flag" => "🏳️", "rainbow_flag" => "🏳️‍🌈", "transgender_flag" => "🏳️‍⚧️", "pirate_flag" => "🏴‍☠️",
-            "flag_ascension_island" => "🇦🇨", "flag_andorra" => "🇦🇩", "flag_united_arab_emirates" => "🇦🇪", "flag_afghanistan" => "🇦🇫",
-            "flag_antigua_barbuda" => "🇦🇬", "flag_anguilla" => "🇦🇮", "flag_albania" => "🇦🇱", "flag_armenia" => "🇦🇲",
-            "flag_angola" => "🇦🇴", "flag_antarctica" => "🇦🇶", "flag_argentina" => "🇦🇷", "flag_american_samoa" => "🇦🇸",
-            "flag_austria" => "🇦🇹", "flag_australia" => "🇦🇺", "flag_aruba" => "🇦🇼", "flag_aland_islands" => "🇦🇽",
-            "flag_azerbaijan" => "🇦🇿", "flag_bosnia_herzegovina" => "🇧🇦", "flag_barbados" => "🇧🇧", "flag_bangladesh" => "🇧🇩",
-            "flag_belgium" => "🇧🇪", "flag_burkina_faso" => "🇧🇫", "flag_bulgaria" => "🇧🇬", "flag_bahrain" => "🇧🇭",
-            "flag_burundi" => "🇧🇮", "flag_benin" => "🇧🇯", "flag_st_barthelemy" => "🇧🇱", "flag_bermuda" => "🇧🇲",
-            "flag_brunei" => "🇧🇳", "flag_bolivia" => "🇧🇴", "flag_caribbean_netherlands" => "🇧🇶", "flag_brazil" => "🇧🇷",
-            "flag_bahamas" => "🇧🇸", "flag_bhutan" => "🇧🇹", "flag_bouvet_island" => "🇧🇻", "flag_botswana" => "🇧🇼",
-            "flag_belarus" => "🇧🇾", "flag_belize" => "🇧🇿", "flag_canada" => "🇨🇦", "flag_cocos_islands" => "🇨🇨",
-            "flag_congo_kinshasa" => "🇨🇩", "flag_central_african_republic" => "🇨🇫", "flag_congo_brazzaville" => "🇨🇬", "flag_switzerland" => "🇨🇭",
-            "flag_cote_d_ivoire" => "🇨🇮", "flag_cook_islands" => "🇨🇰", "flag_chile" => "🇨🇱", "flag_cameroon" => "🇨🇲",
-            "flag_china" => "🇨🇳", "flag_colombia" => "🇨🇴", "flag_clipperton_island" => "🇨🇵", "flag_sark" => "🇨🇶",
-            "flag_costa_rica" => "🇨🇷", "flag_cuba" => "🇨🇺", "flag_cape_verde" => "🇨🇻", "flag_curacao" => "🇨🇼",
-            "flag_christmas_island" => "🇨🇽", "flag_cyprus" => "🇨🇾", "flag_czechia" => "🇨🇿", "flag_germany" => "🇩🇪",
-            "flag_diego_garcia" => "🇩🇬", "flag_djibouti" => "🇩🇯", "flag_denmark" => "🇩🇰", "flag_dominica" => "🇩🇲",
-            "flag_dominican_republic" => "🇩🇴", "flag_algeria" => "🇩🇿", "flag_ceuta_melilla" => "🇪🇦", "flag_ecuador" => "🇪🇨",
-            "flag_estonia" => "🇪🇪", "flag_egypt" => "🇪🇬", "flag_western_sahara" => "🇪🇭", "flag_eritrea" => "🇪🇷",
-            "flag_spain" => "🇪🇸", "flag_ethiopia" => "🇪🇹", "flag_european_union" => "🇪🇺", "flag_finland" => "🇫🇮",
-            "flag_fiji" => "🇫🇯", "flag_falkland_islands" => "🇫🇰", "flag_micronesia" => "🇫🇲", "flag_faroe_islands" => "🇫🇴",
-            "flag_france" => "🇫🇷", "flag_gabon" => "🇬🇦", "flag_united_kingdom" => "🇬🇧", "flag_grenada" => "🇬🇩",
-            "flag_georgia" => "🇬🇪", "flag_french_guiana" => "🇬🇫", "flag_guernsey" => "🇬🇬", "flag_ghana" => "🇬🇭",
-            "flag_gibraltar" => "🇬🇮", "flag_greenland" => "🇬🇱", "flag_gambia" => "🇬🇲", "flag_guinea" => "🇬🇳",
-            "flag_guadeloupe" => "🇬🇵", "flag_equatorial_guinea" => "🇬🇶", "flag_greece" => "🇬🇷", "flag_south_georgia_south_sandwich_islands" => "🇬🇸",
-            "flag_guatemala" => "🇬🇹", "flag_guam" => "🇬🇺", "flag_guinea_bissau" => "🇬🇼", "flag_guyana" => "🇬🇾",
-            "flag_hong_kong_sar_china" => "🇭🇰", "flag_heard_mcdonald_islands" => "🇭🇲", "flag_honduras" => "🇭🇳", "flag_croatia" => "🇭🇷",
-            "flag_haiti" => "🇭🇹", "flag_hungary" => "🇭🇺", "flag_canary_islands" => "🇮🇨", "flag_indonesia" => "🇮🇩",
-            "flag_ireland" => "🇮🇪", "flag_israel" => "🇮🇱", "flag_isle_of_man" => "🇮🇲", "flag_india" => "🇮🇳",
-            "flag_british_indian_ocean_territory" => "🇮🇴", "flag_iraq" => "🇮🇶", "flag_iran" => "🇮🇷", "flag_iceland" => "🇮🇸",
-            "flag_italy" => "🇮🇹", "flag_jersey" => "🇯🇪", "flag_jamaica" => "🇯🇲", "flag_jordan" => "🇯🇴",
-            "flag_japan" => "🇯🇵", "flag_kenya" => "🇰🇪", "flag_kyrgyzstan" => "🇰🇬", "flag_cambodia" => "🇰🇭",
-            "flag_kiribati" => "🇰🇮", "flag_comoros" => "🇰🇲", "flag_st_kitts_nevis" => "🇰🇳", "flag_north_korea" => "🇰🇵",
-            "flag_south_korea" => "🇰🇷", "flag_kuwait" => "🇰🇼", "flag_cayman_islands" => "🇰🇾", "flag_kazakhstan" => "🇰🇿",
-            "flag_laos" => "🇱🇦", "flag_lebanon" => "🇱🇧", "flag_st_lucia" => "🇱🇨", "flag_liechtenstein" => "🇱🇮",
-            "flag_sri_lanka" => "🇱🇰", "flag_liberia" => "🇱🇷", "flag_lesotho" => "🇱🇸", "flag_lithuania" => "🇱🇹",
-            "flag_luxembourg" => "🇱🇺", "flag_latvia" => "🇱🇻", "flag_libya" => "🇱🇾", "flag_morocco" => "🇲🇦",
-            "flag_monaco" => "🇲🇨", "flag_moldova" => "🇲🇩", "flag_montenegro" => "🇲🇪", "flag_st_martin" => "🇲🇫",
-            "flag_madagascar" => "🇲🇬", "flag_marshall_islands" => "🇲🇭", "flag_north_macedonia" => "🇲🇰", "flag_mali" => "🇲🇱",
-            "flag_myanmar" => "🇲🇲", "flag_mongolia" => "🇲🇳", "flag_macao_sar_china" => "🇲🇴", "flag_northern_mariana_islands" => "🇲🇵",
-            "flag_martinique" => "🇲🇶", "flag_mauritania" => "🇲🇷", "flag_montserrat" => "🇲🇸", "flag_malta" => "🇲🇹",
-            "flag_mauritius" => "🇲🇺", "flag_maldives" => "🇲🇻", "flag_malawi" => "🇲🇼", "flag_mexico" => "🇲🇽",
-            "flag_malaysia" => "🇲🇾", "flag_mozambique" => "🇲🇿", "flag_namibia" => "🇳🇦", "flag_new_caledonia" => "🇳🇨",
-            "flag_niger" => "🇳🇪", "flag_norfolk_island" => "🇳🇫", "flag_nigeria" => "🇳🇬", "flag_nicaragua" => "🇳🇮",
-            "flag_netherlands" => "🇳🇱", "flag_norway" => "🇳🇴", "flag_nepal" => "🇳🇵", "flag_nauru" => "🇳🇷",
-            "flag_niue" => "🇳🇺", "flag_new_zealand" => "🇳🇿", "flag_oman" => "🇴🇲", "flag_panama" => "🇵🇦",
-            "flag_peru" => "🇵🇪", "flag_french_polynesia" => "🇵🇫", "flag_papua_new_guinea" => "🇵🇬", "flag_philippines" => "🇵🇭",
-            "flag_pakistan" => "🇵🇰", "flag_poland" => "🇵🇱", "flag_st_pierre_miquelon" => "🇵🇲", "flag_pitcairn_islands" => "🇵🇳",
-            "flag_puerto_rico" => "🇵🇷", "flag_palestinian_territories" => "🇵🇸", "flag_portugal" => "🇵🇹", "flag_palau" => "🇵🇼",
-            "flag_paraguay" => "🇵🇾", "flag_qatar" => "🇶🇦", "flag_reunion" => "🇷🇪", "flag_romania" => "🇷🇴",
-            "flag_serbia" => "🇷🇸", "flag_russia" => "🇷🇺", "flag_rwanda" => "🇷🇼", "flag_saudi_arabia" => "🇸🇦",
-            "flag_solomon_islands" => "🇸🇧", "flag_seychelles" => "🇸🇨", "flag_sudan" => "🇸🇩", "flag_sweden" => "🇸🇪",
-            "flag_singapore" => "🇸🇬", "flag_st_helena" => "🇸🇭", "flag_slovenia" => "🇸🇮", "flag_svalbard_jan_mayen" => "🇸🇯",
-            "flag_slovakia" => "🇸🇰", "flag_sierra_leone" => "🇸🇱", "flag_san_marino" => "🇸🇲", "flag_senegal" => "🇸🇳",
-            "flag_somalia" => "🇸🇴", "flag_suriname" => "🇸🇷", "flag_south_sudan" => "🇸🇸", "flag_sao_tome_principe" => "🇸🇹",
-            "flag_el_salvador" => "🇸🇻", "flag_sint_maarten" => "🇸🇽", "flag_syria" => "🇸🇾", "flag_eswatini" => "🇸🇿",
-            "flag_tristan_da_cunha" => "🇹🇦", "flag_turks_caicos_islands" => "🇹🇨", "flag_chad" => "🇹🇩", "flag_french_southern_territories" => "🇹🇫",
-            "flag_togo" => "🇹🇬", "flag_thailand" => "🇹🇭", "flag_tajikistan" => "🇹🇯", "flag_tokelau" => "🇹🇰",
-            "flag_timor_leste" => "🇹🇱", "flag_turkmenistan" => "🇹🇲", "flag_tunisia" => "🇹🇳", "flag_tonga" => "🇹🇴",
-            "flag_turkiye" => "🇹🇷", "flag_trinidad_tobago" => "🇹🇹", "flag_tuvalu" => "🇹🇻", "flag_taiwan" => "🇹🇼",
-            "flag_tanzania" => "🇹🇿", "flag_ukraine" => "🇺🇦", "flag_uganda" => "🇺🇬", "flag_u_s_outlying_islands" => "🇺🇲",
-            "flag_united_nations" => "🇺🇳", "flag_united_states" => "🇺🇸", "flag_uruguay" => "🇺🇾", "flag_uzbekistan" => "🇺🇿",
-            "flag_vatican_city" => "🇻🇦", "flag_st_vincent_grenadines" => "🇻🇨", "flag_venezuela" => "🇻🇪", "flag_british_virgin_islands" => "🇻🇬",
-            "flag_u_s_virgin_islands" => "🇻🇮", "flag_vietnam" => "🇻🇳", "flag_vanuatu" => "🇻🇺", "flag_wallis_futuna" => "🇼🇫",
-            "flag_samoa" => "🇼🇸", "flag_kosovo" => "🇽🇰", "flag_yemen" => "🇾🇪", "flag_mayotte" => "🇾🇹",
-            "flag_south_africa" => "🇿🇦", "flag_zambia" => "🇿🇲", "flag_zimbabwe" => "🇿🇼", "flag_england" => "🏴󠁧󠁢󠁥󠁮󠁧󠁿",
-            "flag_scotland" => "🏴󠁧󠁢󠁳󠁣󠁴󠁿", "flag_wales" => "🏴󠁧󠁢󠁷󠁬󠁳󠁿",
-        ];
+        // Early return if there is no closing ':' to form an emoji code
+        if (!isset($Excerpt['text'][1]) || false === strpos($Excerpt['text'], ':', 1)) {
+            return null;
+        }
 
+        // Check for an emoji code before loading the large map
+        if (!preg_match('/(?<=\s|^):([a-zA-Z0-9_]+):(?=\s|$)/', $Excerpt['text'], $matches) || !preg_match('/^(\s|)$/', $Excerpt['before'])) {
+            return null;
+        }
 
-        // Match the emoji code pattern (e.g., `:smile:`) only if it's standalone and not embedded in a word
-        if (preg_match('/(?<=\s|^):([a-zA-Z0-9_]+):(?=\s|$)/', $Excerpt['text'], $matches) && preg_match('/^(\s|)$/', $Excerpt['before'])) {
-            $emojiCode = $matches[1]; // Extract the emoji code without colons
+        // Lazily load emoji map only once
+        if ($this->emojiMap === null) {
+            $this->emojiMap = [
+                "grinning_face" => "😀", "grinning_face_with_big_eyes" => "😃", "grinning_face_with_smiling_eyes" => "😄", "beaming_face_with_smiling_eyes" => "😁",
+                "grinning_squinting_face" => "😆", "grinning_face_with_sweat" => "😅", "rolling_on_the_floor_laughing" => "🤣", "face_with_tears_of_joy" => "😂",
+                "slightly_smiling_face" => "🙂", "upside_down_face" => "🙃", "melting_face" => "🫠", "winking_face" => "😉",
+                "smiling_face_with_smiling_eyes" => "😊", "smiling_face_with_halo" => "😇", "smiling_face_with_hearts" => "🥰", "smiling_face_with_heart_eyes" => "😍",
+                "star_struck" => "🤩", "face_blowing_a_kiss" => "😘", "kissing_face" => "😗", "smiling_face" => "☺️",
+                "kissing_face_with_closed_eyes" => "😚", "kissing_face_with_smiling_eyes" => "😙", "smiling_face_with_tear" => "🥲", "face_savoring_food" => "😋",
+                "face_with_tongue" => "😛", "winking_face_with_tongue" => "😜", "zany_face" => "🤪", "squinting_face_with_tongue" => "😝",
+                "money_mouth_face" => "🤑", "smiling_face_with_open_hands" => "🤗", "face_with_hand_over_mouth" => "🤭", "face_with_open_eyes_and_hand_over_mouth" => "🫢",
+                "face_with_peeking_eye" => "🫣", "shushing_face" => "🤫", "thinking_face" => "🤔", "saluting_face" => "🫡",
+                "zipper_mouth_face" => "🤐", "face_with_raised_eyebrow" => "🤨", "neutral_face" => "😐", "expressionless_face" => "😑",
+                "face_without_mouth" => "😶", "dotted_line_face" => "🫥", "face_in_clouds" => "😶‍🌫️", "smirking_face" => "😏",
+                "unamused_face" => "😒", "face_with_rolling_eyes" => "🙄", "grimacing_face" => "😬", "face_exhaling" => "😮‍💨",
+                "lying_face" => "🤥", "shaking_face" => "🫨", "head_shaking_horizontally" => "🙂‍↔️", "head_shaking_vertically" => "🙂‍↕️",
+                "relieved_face" => "😌", "pensive_face" => "😔", "sleepy_face" => "😪", "drooling_face" => "🤤",
+                "sleeping_face" => "😴", "face_with_bags_under_eyes" => "🫩", "face_with_medical_mask" => "😷", "face_with_thermometer" => "🤒",
+                "face_with_head_bandage" => "🤕", "nauseated_face" => "🤢", "face_vomiting" => "🤮", "sneezing_face" => "🤧",
+                "hot_face" => "🥵", "cold_face" => "🥶", "woozy_face" => "🥴", "face_with_crossed_out_eyes" => "😵",
+                "face_with_spiral_eyes" => "😵‍💫", "exploding_head" => "🤯", "cowboy_hat_face" => "🤠", "partying_face" => "🥳",
+                "disguised_face" => "🥸", "smiling_face_with_sunglasses" => "😎", "nerd_face" => "🤓", "face_with_monocle" => "🧐",
+                "confused_face" => "😕", "face_with_diagonal_mouth" => "🫤", "worried_face" => "😟", "slightly_frowning_face" => "🙁",
+                "frowning_face" => "☹️", "face_with_open_mouth" => "😮", "hushed_face" => "😯", "astonished_face" => "😲",
+                "flushed_face" => "😳", "pleading_face" => "🥺", "face_holding_back_tears" => "🥹", "frowning_face_with_open_mouth" => "😦",
+                "anguished_face" => "😧", "fearful_face" => "😨", "anxious_face_with_sweat" => "😰", "sad_but_relieved_face" => "😥",
+                "crying_face" => "😢", "loudly_crying_face" => "😭", "face_screaming_in_fear" => "😱", "confounded_face" => "😖",
+                "persevering_face" => "😣", "disappointed_face" => "😞", "downcast_face_with_sweat" => "😓", "weary_face" => "😩",
+                "tired_face" => "😫", "yawning_face" => "🥱", "face_with_steam_from_nose" => "😤", "enraged_face" => "😡",
+                "angry_face" => "😠", "face_with_symbols_on_mouth" => "🤬", "smiling_face_with_horns" => "😈", "angry_face_with_horns" => "👿",
+                "skull" => "💀", "skull_and_crossbones" => "☠️", "pile_of_poo" => "💩", "clown_face" => "🤡",
+                "ogre" => "👹", "goblin" => "👺", "ghost" => "👻", "alien" => "👽",
+                "alien_monster" => "👾", "robot" => "🤖", "grinning_cat" => "😺", "grinning_cat_with_smiling_eyes" => "😸",
+                "cat_with_tears_of_joy" => "😹", "smiling_cat_with_heart_eyes" => "😻", "cat_with_wry_smile" => "😼", "kissing_cat" => "😽",
+                "weary_cat" => "🙀", "crying_cat" => "😿", "pouting_cat" => "😾", "see_no_evil_monkey" => "🙈",
+                "hear_no_evil_monkey" => "🙉", "speak_no_evil_monkey" => "🙊", "love_letter" => "💌", "heart_with_arrow" => "💘",
+                "heart_with_ribbon" => "💝", "sparkling_heart" => "💖", "growing_heart" => "💗", "beating_heart" => "💓",
+                "revolving_hearts" => "💞", "two_hearts" => "💕", "heart_decoration" => "💟", "heart_exclamation" => "❣️",
+                "broken_heart" => "💔", "heart_on_fire" => "❤️‍🔥", "mending_heart" => "❤️‍🩹", "red_heart" => "❤️",
+                "pink_heart" => "🩷", "orange_heart" => "🧡", "yellow_heart" => "💛", "green_heart" => "💚",
+                "blue_heart" => "💙", "light_blue_heart" => "🩵", "purple_heart" => "💜", "brown_heart" => "🤎",
+                "black_heart" => "🖤", "grey_heart" => "🩶", "white_heart" => "🤍", "kiss_mark" => "💋",
+                "hundred_points" => "💯", "anger_symbol" => "💢", "collision" => "💥", "dizzy" => "💫",
+                "sweat_droplets" => "💦", "dashing_away" => "💨", "hole" => "🕳️", "speech_balloon" => "💬",
+                "eye_in_speech_bubble" => "👁️‍🗨️", "left_speech_bubble" => "🗨️", "right_anger_bubble" => "🗯️", "thought_balloon" => "💭",
+                "zzz" => "💤", "waving_hand" => "👋", "raised_back_of_hand" => "🤚", "hand_with_fingers_splayed" => "🖐️",
+                "raised_hand" => "✋", "vulcan_salute" => "🖖", "rightwards_hand" => "🫱", "leftwards_hand" => "🫲",
+                "palm_down_hand" => "🫳", "palm_up_hand" => "🫴", "leftwards_pushing_hand" => "🫷", "rightwards_pushing_hand" => "🫸",
+                "ok_hand" => "👌", "pinched_fingers" => "🤌", "pinching_hand" => "🤏", "victory_hand" => "✌️",
+                "crossed_fingers" => "🤞", "hand_with_index_finger_and_thumb_crossed" => "🫰", "love_you_gesture" => "🤟", "sign_of_the_horns" => "🤘",
+                "call_me_hand" => "🤙", "backhand_index_pointing_left" => "👈", "backhand_index_pointing_right" => "👉", "backhand_index_pointing_up" => "👆",
+                "middle_finger" => "🖕", "backhand_index_pointing_down" => "👇", "index_pointing_up" => "☝️", "index_pointing_at_the_viewer" => "🫵",
+                "thumbs_up" => "👍", "thumbs_down" => "👎", "raised_fist" => "✊", "oncoming_fist" => "👊",
+                "left_facing_fist" => "🤛", "right_facing_fist" => "🤜", "clapping_hands" => "👏", "raising_hands" => "🙌",
+                "heart_hands" => "🫶", "open_hands" => "👐", "palms_up_together" => "🤲", "handshake" => "🤝",
+                "folded_hands" => "🙏", "writing_hand" => "✍️", "nail_polish" => "💅", "selfie" => "🤳",
+                "flexed_biceps" => "💪", "mechanical_arm" => "🦾", "mechanical_leg" => "🦿", "leg" => "🦵",
+                "foot" => "🦶", "ear" => "👂", "ear_with_hearing_aid" => "🦻", "nose" => "👃",
+                "brain" => "🧠", "anatomical_heart" => "🫀", "lungs" => "🫁", "tooth" => "🦷",
+                "bone" => "🦴", "eyes" => "👀", "eye" => "👁️", "tongue" => "👅",
+                "mouth" => "👄", "biting_lip" => "🫦", "baby" => "👶", "child" => "🧒",
+                "boy" => "👦", "girl" => "👧", "person" => "🧑", "person_blond_hair" => "👱",
+                "man" => "👨", "person_beard" => "🧔", "man_beard" => "🧔‍♂️", "woman_beard" => "🧔‍♀️",
+                "man_red_hair" => "👨‍🦰", "man_curly_hair" => "👨‍🦱", "man_white_hair" => "👨‍🦳", "man_bald" => "👨‍🦲",
+                "woman" => "👩", "woman_red_hair" => "👩‍🦰", "person_red_hair" => "🧑‍🦰", "woman_curly_hair" => "👩‍🦱",
+                "person_curly_hair" => "🧑‍🦱", "woman_white_hair" => "👩‍🦳", "person_white_hair" => "🧑‍🦳", "woman_bald" => "👩‍🦲",
+                "person_bald" => "🧑‍🦲", "woman_blond_hair" => "👱‍♀️", "man_blond_hair" => "👱‍♂️", "older_person" => "🧓",
+                "old_man" => "👴", "old_woman" => "👵", "person_frowning" => "🙍", "man_frowning" => "🙍‍♂️",
+                "woman_frowning" => "🙍‍♀️", "person_pouting" => "🙎", "man_pouting" => "🙎‍♂️", "woman_pouting" => "🙎‍♀️",
+                "person_gesturing_no" => "🙅", "man_gesturing_no" => "🙅‍♂️", "woman_gesturing_no" => "🙅‍♀️", "person_gesturing_ok" => "🙆",
+                "man_gesturing_ok" => "🙆‍♂️", "woman_gesturing_ok" => "🙆‍♀️", "person_tipping_hand" => "💁", "man_tipping_hand" => "💁‍♂️",
+                "woman_tipping_hand" => "💁‍♀️", "person_raising_hand" => "🙋", "man_raising_hand" => "🙋‍♂️", "woman_raising_hand" => "🙋‍♀️",
+                "deaf_person" => "🧏", "deaf_man" => "🧏‍♂️", "deaf_woman" => "🧏‍♀️", "person_bowing" => "🙇",
+                "man_bowing" => "🙇‍♂️", "woman_bowing" => "🙇‍♀️", "person_facepalming" => "🤦", "man_facepalming" => "🤦‍♂️",
+                "woman_facepalming" => "🤦‍♀️", "person_shrugging" => "🤷", "man_shrugging" => "🤷‍♂️", "woman_shrugging" => "🤷‍♀️",
+                "health_worker" => "🧑‍⚕️", "man_health_worker" => "👨‍⚕️", "woman_health_worker" => "👩‍⚕️", "student" => "🧑‍🎓",
+                "man_student" => "👨‍🎓", "woman_student" => "👩‍🎓", "teacher" => "🧑‍🏫", "man_teacher" => "👨‍🏫",
+                "woman_teacher" => "👩‍🏫", "judge" => "🧑‍⚖️", "man_judge" => "👨‍⚖️", "woman_judge" => "👩‍⚖️",
+                "farmer" => "🧑‍🌾", "man_farmer" => "👨‍🌾", "woman_farmer" => "👩‍🌾", "cook" => "🧑‍🍳",
+                "man_cook" => "👨‍🍳", "woman_cook" => "👩‍🍳", "mechanic" => "🧑‍🔧", "man_mechanic" => "👨‍🔧",
+                "woman_mechanic" => "👩‍🔧", "factory_worker" => "🧑‍🏭", "man_factory_worker" => "👨‍🏭", "woman_factory_worker" => "👩‍🏭",
+                "office_worker" => "🧑‍💼", "man_office_worker" => "👨‍💼", "woman_office_worker" => "👩‍💼", "scientist" => "🧑‍🔬",
+                "man_scientist" => "👨‍🔬", "woman_scientist" => "👩‍🔬", "technologist" => "🧑‍💻", "man_technologist" => "👨‍💻",
+                "woman_technologist" => "👩‍💻", "singer" => "🧑‍🎤", "man_singer" => "👨‍🎤", "woman_singer" => "👩‍🎤",
+                "artist" => "🧑‍🎨", "man_artist" => "👨‍🎨", "woman_artist" => "👩‍🎨", "pilot" => "🧑‍✈️",
+                "man_pilot" => "👨‍✈️", "woman_pilot" => "👩‍✈️", "astronaut" => "🧑‍🚀", "man_astronaut" => "👨‍🚀",
+                "woman_astronaut" => "👩‍🚀", "firefighter" => "🧑‍🚒", "man_firefighter" => "👨‍🚒", "woman_firefighter" => "👩‍🚒",
+                "police_officer" => "👮", "man_police_officer" => "👮‍♂️", "woman_police_officer" => "👮‍♀️", "detective" => "🕵️",
+                "man_detective" => "🕵️‍♂️", "woman_detective" => "🕵️‍♀️", "guard" => "💂", "man_guard" => "💂‍♂️",
+                "woman_guard" => "💂‍♀️", "ninja" => "🥷", "construction_worker" => "👷", "man_construction_worker" => "👷‍♂️",
+                "woman_construction_worker" => "👷‍♀️", "person_with_crown" => "🫅", "prince" => "🤴", "princess" => "👸",
+                "person_wearing_turban" => "👳", "man_wearing_turban" => "👳‍♂️", "woman_wearing_turban" => "👳‍♀️", "person_with_skullcap" => "👲",
+                "woman_with_headscarf" => "🧕", "person_in_tuxedo" => "🤵", "man_in_tuxedo" => "🤵‍♂️", "woman_in_tuxedo" => "🤵‍♀️",
+                "person_with_veil" => "👰", "man_with_veil" => "👰‍♂️", "woman_with_veil" => "👰‍♀️", "pregnant_woman" => "🤰",
+                "pregnant_man" => "🫃", "pregnant_person" => "🫄", "breast_feeding" => "🤱", "woman_feeding_baby" => "👩‍🍼",
+                "man_feeding_baby" => "👨‍🍼", "person_feeding_baby" => "🧑‍🍼", "baby_angel" => "👼", "santa_claus" => "🎅",
+                "mrs_claus" => "🤶", "mx_claus" => "🧑‍🎄", "superhero" => "🦸", "man_superhero" => "🦸‍♂️",
+                "woman_superhero" => "🦸‍♀️", "supervillain" => "🦹", "man_supervillain" => "🦹‍♂️", "woman_supervillain" => "🦹‍♀️",
+                "mage" => "🧙", "man_mage" => "🧙‍♂️", "woman_mage" => "🧙‍♀️", "fairy" => "🧚",
+                "man_fairy" => "🧚‍♂️", "woman_fairy" => "🧚‍♀️", "vampire" => "🧛", "man_vampire" => "🧛‍♂️",
+                "woman_vampire" => "🧛‍♀️", "merperson" => "🧜", "merman" => "🧜‍♂️", "mermaid" => "🧜‍♀️",
+                "elf" => "🧝", "man_elf" => "🧝‍♂️", "woman_elf" => "🧝‍♀️", "genie" => "🧞",
+                "man_genie" => "🧞‍♂️", "woman_genie" => "🧞‍♀️", "zombie" => "🧟", "man_zombie" => "🧟‍♂️",
+                "woman_zombie" => "🧟‍♀️", "troll" => "🧌", "person_getting_massage" => "💆", "man_getting_massage" => "💆‍♂️",
+                "woman_getting_massage" => "💆‍♀️", "person_getting_haircut" => "💇", "man_getting_haircut" => "💇‍♂️", "woman_getting_haircut" => "💇‍♀️",
+                "person_walking" => "🚶", "man_walking" => "🚶‍♂️", "woman_walking" => "🚶‍♀️", "person_walking_facing_right" => "🚶‍➡️",
+                "woman_walking_facing_right" => "🚶‍♀️‍➡️", "man_walking_facing_right" => "🚶‍♂️‍➡️", "person_standing" => "🧍", "man_standing" => "🧍‍♂️",
+                "woman_standing" => "🧍‍♀️", "person_kneeling" => "🧎", "man_kneeling" => "🧎‍♂️", "woman_kneeling" => "🧎‍♀️",
+                "person_kneeling_facing_right" => "🧎‍➡️", "woman_kneeling_facing_right" => "🧎‍♀️‍➡️", "man_kneeling_facing_right" => "🧎‍♂️‍➡️", "person_with_white_cane" => "🧑‍🦯",
+                "person_with_white_cane_facing_right" => "🧑‍🦯‍➡️", "man_with_white_cane" => "👨‍🦯", "man_with_white_cane_facing_right" => "👨‍🦯‍➡️", "woman_with_white_cane" => "👩‍🦯",
+                "woman_with_white_cane_facing_right" => "👩‍🦯‍➡️", "person_in_motorized_wheelchair" => "🧑‍🦼", "person_in_motorized_wheelchair_facing_right" => "🧑‍🦼‍➡️", "man_in_motorized_wheelchair" => "👨‍🦼",
+                "man_in_motorized_wheelchair_facing_right" => "👨‍🦼‍➡️", "woman_in_motorized_wheelchair" => "👩‍🦼", "woman_in_motorized_wheelchair_facing_right" => "👩‍🦼‍➡️", "person_in_manual_wheelchair" => "🧑‍🦽",
+                "person_in_manual_wheelchair_facing_right" => "🧑‍🦽‍➡️", "man_in_manual_wheelchair" => "👨‍🦽", "man_in_manual_wheelchair_facing_right" => "👨‍🦽‍➡️", "woman_in_manual_wheelchair" => "👩‍🦽",
+                "woman_in_manual_wheelchair_facing_right" => "👩‍🦽‍➡️", "person_running" => "🏃", "man_running" => "🏃‍♂️", "woman_running" => "🏃‍♀️",
+                "person_running_facing_right" => "🏃‍➡️", "woman_running_facing_right" => "🏃‍♀️‍➡️", "man_running_facing_right" => "🏃‍♂️‍➡️", "woman_dancing" => "💃",
+                "man_dancing" => "🕺", "person_in_suit_levitating" => "🕴️", "people_with_bunny_ears" => "👯", "men_with_bunny_ears" => "👯‍♂️",
+                "women_with_bunny_ears" => "👯‍♀️", "person_in_steamy_room" => "🧖", "man_in_steamy_room" => "🧖‍♂️", "woman_in_steamy_room" => "🧖‍♀️",
+                "person_climbing" => "🧗", "man_climbing" => "🧗‍♂️", "woman_climbing" => "🧗‍♀️", "person_fencing" => "🤺",
+                "horse_racing" => "🏇", "skier" => "⛷️", "snowboarder" => "🏂", "person_golfing" => "🏌️",
+                "man_golfing" => "🏌️‍♂️", "woman_golfing" => "🏌️‍♀️", "person_surfing" => "🏄", "man_surfing" => "🏄‍♂️",
+                "woman_surfing" => "🏄‍♀️", "person_rowing_boat" => "🚣", "man_rowing_boat" => "🚣‍♂️", "woman_rowing_boat" => "🚣‍♀️",
+                "person_swimming" => "🏊", "man_swimming" => "🏊‍♂️", "woman_swimming" => "🏊‍♀️", "person_bouncing_ball" => "⛹️",
+                "man_bouncing_ball" => "⛹️‍♂️", "woman_bouncing_ball" => "⛹️‍♀️", "person_lifting_weights" => "🏋️", "man_lifting_weights" => "🏋️‍♂️",
+                "woman_lifting_weights" => "🏋️‍♀️", "person_biking" => "🚴", "man_biking" => "🚴‍♂️", "woman_biking" => "🚴‍♀️",
+                "person_mountain_biking" => "🚵", "man_mountain_biking" => "🚵‍♂️", "woman_mountain_biking" => "🚵‍♀️", "person_cartwheeling" => "🤸",
+                "man_cartwheeling" => "🤸‍♂️", "woman_cartwheeling" => "🤸‍♀️", "people_wrestling" => "🤼", "men_wrestling" => "🤼‍♂️",
+                "women_wrestling" => "🤼‍♀️", "person_playing_water_polo" => "🤽", "man_playing_water_polo" => "🤽‍♂️", "woman_playing_water_polo" => "🤽‍♀️",
+                "person_playing_handball" => "🤾", "man_playing_handball" => "🤾‍♂️", "woman_playing_handball" => "🤾‍♀️", "person_juggling" => "🤹",
+                "man_juggling" => "🤹‍♂️", "woman_juggling" => "🤹‍♀️", "person_in_lotus_position" => "🧘", "man_in_lotus_position" => "🧘‍♂️",
+                "woman_in_lotus_position" => "🧘‍♀️", "person_taking_bath" => "🛀", "person_in_bed" => "🛌", "people_holding_hands" => "🧑‍🤝‍🧑",
+                "women_holding_hands" => "👭", "woman_and_man_holding_hands" => "👫", "men_holding_hands" => "👬", "kiss" => "💏",
+                "kiss_woman_man" => "👩‍❤️‍💋‍👨", "kiss_man_man" => "👨‍❤️‍💋‍👨", "kiss_woman_woman" => "👩‍❤️‍💋‍👩", "couple_with_heart" => "💑",
+                "couple_with_heart_woman_man" => "👩‍❤️‍👨", "couple_with_heart_man_man" => "👨‍❤️‍👨", "couple_with_heart_woman_woman" => "👩‍❤️‍👩", "family_man_woman_boy" => "👨‍👩‍👦",
+                "family_man_woman_girl" => "👨‍👩‍👧", "family_man_woman_girl_boy" => "👨‍👩‍👧‍👦", "family_man_woman_boy_boy" => "👨‍👩‍👦‍👦", "family_man_woman_girl_girl" => "👨‍👩‍👧‍👧",
+                "family_man_man_boy" => "👨‍👨‍👦", "family_man_man_girl" => "👨‍👨‍👧", "family_man_man_girl_boy" => "👨‍👨‍👧‍👦", "family_man_man_boy_boy" => "👨‍👨‍👦‍👦",
+                "family_man_man_girl_girl" => "👨‍👨‍👧‍👧", "family_woman_woman_boy" => "👩‍👩‍👦", "family_woman_woman_girl" => "👩‍👩‍👧", "family_woman_woman_girl_boy" => "👩‍👩‍👧‍👦",
+                "family_woman_woman_boy_boy" => "👩‍👩‍👦‍👦", "family_woman_woman_girl_girl" => "👩‍👩‍👧‍👧", "family_man_boy" => "👨‍👦", "family_man_boy_boy" => "👨‍👦‍👦",
+                "family_man_girl" => "👨‍👧", "family_man_girl_boy" => "👨‍👧‍👦", "family_man_girl_girl" => "👨‍👧‍👧", "family_woman_boy" => "👩‍👦",
+                "family_woman_boy_boy" => "👩‍👦‍👦", "family_woman_girl" => "👩‍👧", "family_woman_girl_boy" => "👩‍👧‍👦", "family_woman_girl_girl" => "👩‍👧‍👧",
+                "speaking_head" => "🗣️", "bust_in_silhouette" => "👤", "busts_in_silhouette" => "👥", "people_hugging" => "🫂",
+                "family" => "👪", "family_adult_adult_child" => "🧑‍🧑‍🧒", "family_adult_adult_child_child" => "🧑‍🧑‍🧒‍🧒", "family_adult_child" => "🧑‍🧒",
+                "family_adult_child_child" => "🧑‍🧒‍🧒", "footprints" => "👣", "fingerprint" => "🫆", "monkey_face" => "🐵",
+                "monkey" => "🐒", "gorilla" => "🦍", "orangutan" => "🦧", "dog_face" => "🐶",
+                "dog" => "🐕", "guide_dog" => "🦮", "service_dog" => "🐕‍🦺", "poodle" => "🐩",
+                "wolf" => "🐺", "fox" => "🦊", "raccoon" => "🦝", "cat_face" => "🐱",
+                "cat" => "🐈", "black_cat" => "🐈‍⬛", "lion" => "🦁", "tiger_face" => "🐯",
+                "tiger" => "🐅", "leopard" => "🐆", "horse_face" => "🐴", "moose" => "🫎",
+                "donkey" => "🫏", "horse" => "🐎", "unicorn" => "🦄", "zebra" => "🦓",
+                "deer" => "🦌", "bison" => "🦬", "cow_face" => "🐮", "ox" => "🐂",
+                "water_buffalo" => "🐃", "cow" => "🐄", "pig_face" => "🐷", "pig" => "🐖",
+                "boar" => "🐗", "pig_nose" => "🐽", "ram" => "🐏", "ewe" => "🐑",
+                "goat" => "🐐", "camel" => "🐪", "two_hump_camel" => "🐫", "llama" => "🦙",
+                "giraffe" => "🦒", "elephant" => "🐘", "mammoth" => "🦣", "rhinoceros" => "🦏",
+                "hippopotamus" => "🦛", "mouse_face" => "🐭", "mouse" => "🐁", "rat" => "🐀",
+                "hamster" => "🐹", "rabbit_face" => "🐰", "rabbit" => "🐇", "chipmunk" => "🐿️",
+                "beaver" => "🦫", "hedgehog" => "🦔", "bat" => "🦇", "bear" => "🐻",
+                "polar_bear" => "🐻‍❄️", "koala" => "🐨", "panda" => "🐼", "sloth" => "🦥",
+                "otter" => "🦦", "skunk" => "🦨", "kangaroo" => "🦘", "badger" => "🦡",
+                "paw_prints" => "🐾", "turkey" => "🦃", "chicken" => "🐔", "rooster" => "🐓",
+                "hatching_chick" => "🐣", "baby_chick" => "🐤", "front_facing_baby_chick" => "🐥", "bird" => "🐦",
+                "penguin" => "🐧", "dove" => "🕊️", "eagle" => "🦅", "duck" => "🦆",
+                "swan" => "🦢", "owl" => "🦉", "dodo" => "🦤", "feather" => "🪶",
+                "flamingo" => "🦩", "peacock" => "🦚", "parrot" => "🦜", "wing" => "🪽",
+                "black_bird" => "🐦‍⬛", "goose" => "🪿", "phoenix" => "🐦‍🔥", "frog" => "🐸",
+                "crocodile" => "🐊", "turtle" => "🐢", "lizard" => "🦎", "snake" => "🐍",
+                "dragon_face" => "🐲", "dragon" => "🐉", "sauropod" => "🦕", "t_rex" => "🦖",
+                "spouting_whale" => "🐳", "whale" => "🐋", "dolphin" => "🐬", "seal" => "🦭",
+                "fish" => "🐟", "tropical_fish" => "🐠", "blowfish" => "🐡", "shark" => "🦈",
+                "octopus" => "🐙", "spiral_shell" => "🐚", "coral" => "🪸", "jellyfish" => "🪼",
+                "crab" => "🦀", "lobster" => "🦞", "shrimp" => "🦐", "squid" => "🦑",
+                "oyster" => "🦪", "snail" => "🐌", "butterfly" => "🦋", "bug" => "🐛",
+                "ant" => "🐜", "honeybee" => "🐝", "beetle" => "🪲", "lady_beetle" => "🐞",
+                "cricket" => "🦗", "cockroach" => "🪳", "spider" => "🕷️", "spider_web" => "🕸️",
+                "scorpion" => "🦂", "mosquito" => "🦟", "fly" => "🪰", "worm" => "🪱",
+                "microbe" => "🦠", "bouquet" => "💐", "cherry_blossom" => "🌸", "white_flower" => "💮",
+                "lotus" => "🪷", "rosette" => "🏵️", "rose" => "🌹", "wilted_flower" => "🥀",
+                "hibiscus" => "🌺", "sunflower" => "🌻", "blossom" => "🌼", "tulip" => "🌷",
+                "hyacinth" => "🪻", "seedling" => "🌱", "potted_plant" => "🪴", "evergreen_tree" => "🌲",
+                "deciduous_tree" => "🌳", "palm_tree" => "🌴", "cactus" => "🌵", "sheaf_of_rice" => "🌾",
+                "herb" => "🌿", "shamrock" => "☘️", "four_leaf_clover" => "🍀", "maple_leaf" => "🍁",
+                "fallen_leaf" => "🍂", "leaf_fluttering_in_wind" => "🍃", "empty_nest" => "🪹", "nest_with_eggs" => "🪺",
+                "mushroom" => "🍄", "leafless_tree" => "🪾", "grapes" => "🍇", "melon" => "🍈",
+                "watermelon" => "🍉", "tangerine" => "🍊", "lemon" => "🍋", "lime" => "🍋‍🟩",
+                "banana" => "🍌", "pineapple" => "🍍", "mango" => "🥭", "red_apple" => "🍎",
+                "green_apple" => "🍏", "pear" => "🍐", "peach" => "🍑", "cherries" => "🍒",
+                "strawberry" => "🍓", "blueberries" => "🫐", "kiwi_fruit" => "🥝", "tomato" => "🍅",
+                "olive" => "🫒", "coconut" => "🥥", "avocado" => "🥑", "eggplant" => "🍆",
+                "potato" => "🥔", "carrot" => "🥕", "ear_of_corn" => "🌽", "hot_pepper" => "🌶️",
+                "bell_pepper" => "🫑", "cucumber" => "🥒", "leafy_green" => "🥬", "broccoli" => "🥦",
+                "garlic" => "🧄", "onion" => "🧅", "peanuts" => "🥜", "beans" => "🫘",
+                "chestnut" => "🌰", "ginger_root" => "🫚", "pea_pod" => "🫛", "brown_mushroom" => "🍄‍🟫",
+                "root_vegetable" => "🫜", "bread" => "🍞", "croissant" => "🥐", "baguette_bread" => "🥖",
+                "flatbread" => "🫓", "pretzel" => "🥨", "bagel" => "🥯", "pancakes" => "🥞",
+                "waffle" => "🧇", "cheese_wedge" => "🧀", "meat_on_bone" => "🍖", "poultry_leg" => "🍗",
+                "cut_of_meat" => "🥩", "bacon" => "🥓", "hamburger" => "🍔", "french_fries" => "🍟",
+                "pizza" => "🍕", "hot_dog" => "🌭", "sandwich" => "🥪", "taco" => "🌮",
+                "burrito" => "🌯", "tamale" => "🫔", "stuffed_flatbread" => "🥙", "falafel" => "🧆",
+                "egg" => "🥚", "cooking" => "🍳", "shallow_pan_of_food" => "🥘", "pot_of_food" => "🍲",
+                "fondue" => "🫕", "bowl_with_spoon" => "🥣", "green_salad" => "🥗", "popcorn" => "🍿",
+                "butter" => "🧈", "salt" => "🧂", "canned_food" => "🥫", "bento_box" => "🍱",
+                "rice_cracker" => "🍘", "rice_ball" => "🍙", "cooked_rice" => "🍚", "curry_rice" => "🍛",
+                "steaming_bowl" => "🍜", "spaghetti" => "🍝", "roasted_sweet_potato" => "🍠", "oden" => "🍢",
+                "sushi" => "🍣", "fried_shrimp" => "🍤", "fish_cake_with_swirl" => "🍥", "moon_cake" => "🥮",
+                "dango" => "🍡", "dumpling" => "🥟", "fortune_cookie" => "🥠", "takeout_box" => "🥡",
+                "soft_ice_cream" => "🍦", "shaved_ice" => "🍧", "ice_cream" => "🍨", "doughnut" => "🍩",
+                "cookie" => "🍪", "birthday_cake" => "🎂", "shortcake" => "🍰", "cupcake" => "🧁",
+                "pie" => "🥧", "chocolate_bar" => "🍫", "candy" => "🍬", "lollipop" => "🍭",
+                "custard" => "🍮", "honey_pot" => "🍯", "baby_bottle" => "🍼", "glass_of_milk" => "🥛",
+                "hot_beverage" => "☕", "teapot" => "🫖", "teacup_without_handle" => "🍵", "sake" => "🍶",
+                "bottle_with_popping_cork" => "🍾", "wine_glass" => "🍷", "cocktail_glass" => "🍸", "tropical_drink" => "🍹",
+                "beer_mug" => "🍺", "clinking_beer_mugs" => "🍻", "clinking_glasses" => "🥂", "tumbler_glass" => "🥃",
+                "pouring_liquid" => "🫗", "cup_with_straw" => "🥤", "bubble_tea" => "🧋", "beverage_box" => "🧃",
+                "mate" => "🧉", "ice" => "🧊", "chopsticks" => "🥢", "fork_and_knife_with_plate" => "🍽️",
+                "fork_and_knife" => "🍴", "spoon" => "🥄", "kitchen_knife" => "🔪", "jar" => "🫙",
+                "amphora" => "🏺", "globe_showing_europe_africa" => "🌍", "globe_showing_americas" => "🌎", "globe_showing_asia_australia" => "🌏",
+                "globe_with_meridians" => "🌐", "world_map" => "🗺️", "map_of_japan" => "🗾", "compass" => "🧭",
+                "snow_capped_mountain" => "🏔️", "mountain" => "⛰️", "volcano" => "🌋", "mount_fuji" => "🗻",
+                "camping" => "🏕️", "beach_with_umbrella" => "🏖️", "desert" => "🏜️", "desert_island" => "🏝️",
+                "national_park" => "🏞️", "stadium" => "🏟️", "classical_building" => "🏛️", "building_construction" => "🏗️",
+                "brick" => "🧱", "rock" => "🪨", "wood" => "🪵", "hut" => "🛖",
+                "houses" => "🏘️", "derelict_house" => "🏚️", "house" => "🏠", "house_with_garden" => "🏡",
+                "office_building" => "🏢", "japanese_post_office" => "🏣", "post_office" => "🏤", "hospital" => "🏥",
+                "bank" => "🏦", "hotel" => "🏨", "love_hotel" => "🏩", "convenience_store" => "🏪",
+                "school" => "🏫", "department_store" => "🏬", "factory" => "🏭", "japanese_castle" => "🏯",
+                "castle" => "🏰", "wedding" => "💒", "tokyo_tower" => "🗼", "statue_of_liberty" => "🗽",
+                "church" => "⛪", "mosque" => "🕌", "hindu_temple" => "🛕", "synagogue" => "🕍",
+                "shinto_shrine" => "⛩️", "kaaba" => "🕋", "fountain" => "⛲", "tent" => "⛺",
+                "foggy" => "🌁", "night_with_stars" => "🌃", "cityscape" => "🏙️", "sunrise_over_mountains" => "🌄",
+                "sunrise" => "🌅", "cityscape_at_dusk" => "🌆", "sunset" => "🌇", "bridge_at_night" => "🌉",
+                "hot_springs" => "♨️", "carousel_horse" => "🎠", "playground_slide" => "🛝", "ferris_wheel" => "🎡",
+                "roller_coaster" => "🎢", "barber_pole" => "💈", "circus_tent" => "🎪", "locomotive" => "🚂",
+                "railway_car" => "🚃", "high_speed_train" => "🚄", "bullet_train" => "🚅", "train" => "🚆",
+                "metro" => "🚇", "light_rail" => "🚈", "station" => "🚉", "tram" => "🚊",
+                "monorail" => "🚝", "mountain_railway" => "🚞", "tram_car" => "🚋", "bus" => "🚌",
+                "oncoming_bus" => "🚍", "trolleybus" => "🚎", "minibus" => "🚐", "ambulance" => "🚑",
+                "fire_engine" => "🚒", "police_car" => "🚓", "oncoming_police_car" => "🚔", "taxi" => "🚕",
+                "oncoming_taxi" => "🚖", "automobile" => "🚗", "oncoming_automobile" => "🚘", "sport_utility_vehicle" => "🚙",
+                "pickup_truck" => "🛻", "delivery_truck" => "🚚", "articulated_lorry" => "🚛", "tractor" => "🚜",
+                "racing_car" => "🏎️", "motorcycle" => "🏍️", "motor_scooter" => "🛵", "manual_wheelchair" => "🦽",
+                "motorized_wheelchair" => "🦼", "auto_rickshaw" => "🛺", "bicycle" => "🚲", "kick_scooter" => "🛴",
+                "skateboard" => "🛹", "roller_skate" => "🛼", "bus_stop" => "🚏", "motorway" => "🛣️",
+                "railway_track" => "🛤️", "oil_drum" => "🛢️", "fuel_pump" => "⛽", "wheel" => "🛞",
+                "police_car_light" => "🚨", "horizontal_traffic_light" => "🚥", "vertical_traffic_light" => "🚦", "stop_sign" => "🛑",
+                "construction" => "🚧", "anchor" => "⚓", "ring_buoy" => "🛟", "sailboat" => "⛵",
+                "canoe" => "🛶", "speedboat" => "🚤", "passenger_ship" => "🛳️", "ferry" => "⛴️",
+                "motor_boat" => "🛥️", "ship" => "🚢", "airplane" => "✈️", "small_airplane" => "🛩️",
+                "airplane_departure" => "🛫", "airplane_arrival" => "🛬", "parachute" => "🪂", "seat" => "💺",
+                "helicopter" => "🚁", "suspension_railway" => "🚟", "mountain_cableway" => "🚠", "aerial_tramway" => "🚡",
+                "satellite" => "🛰️", "rocket" => "🚀", "flying_saucer" => "🛸", "bellhop_bell" => "🛎️",
+                "luggage" => "🧳", "hourglass_done" => "⌛", "hourglass_not_done" => "⏳", "watch" => "⌚",
+                "alarm_clock" => "⏰", "stopwatch" => "⏱️", "timer_clock" => "⏲️", "mantelpiece_clock" => "🕰️",
+                "twelve_o_clock" => "🕛", "twelve_thirty" => "🕧", "one_o_clock" => "🕐", "one_thirty" => "🕜",
+                "two_o_clock" => "🕑", "two_thirty" => "🕝", "three_o_clock" => "🕒", "three_thirty" => "🕞",
+                "four_o_clock" => "🕓", "four_thirty" => "🕟", "five_o_clock" => "🕔", "five_thirty" => "🕠",
+                "six_o_clock" => "🕕", "six_thirty" => "🕡", "seven_o_clock" => "🕖", "seven_thirty" => "🕢",
+                "eight_o_clock" => "🕗", "eight_thirty" => "🕣", "nine_o_clock" => "🕘", "nine_thirty" => "🕤",
+                "ten_o_clock" => "🕙", "ten_thirty" => "🕥", "eleven_o_clock" => "🕚", "eleven_thirty" => "🕦",
+                "new_moon" => "🌑", "waxing_crescent_moon" => "🌒", "first_quarter_moon" => "🌓", "waxing_gibbous_moon" => "🌔",
+                "full_moon" => "🌕", "waning_gibbous_moon" => "🌖", "last_quarter_moon" => "🌗", "waning_crescent_moon" => "🌘",
+                "crescent_moon" => "🌙", "new_moon_face" => "🌚", "first_quarter_moon_face" => "🌛", "last_quarter_moon_face" => "🌜",
+                "thermometer" => "🌡️", "sun" => "☀️", "full_moon_face" => "🌝", "sun_with_face" => "🌞",
+                "ringed_planet" => "🪐", "star" => "⭐", "glowing_star" => "🌟", "shooting_star" => "🌠",
+                "milky_way" => "🌌", "cloud" => "☁️", "sun_behind_cloud" => "⛅", "cloud_with_lightning_and_rain" => "⛈️",
+                "sun_behind_small_cloud" => "🌤️", "sun_behind_large_cloud" => "🌥️", "sun_behind_rain_cloud" => "🌦️", "cloud_with_rain" => "🌧️",
+                "cloud_with_snow" => "🌨️", "cloud_with_lightning" => "🌩️", "tornado" => "🌪️", "fog" => "🌫️",
+                "wind_face" => "🌬️", "cyclone" => "🌀", "rainbow" => "🌈", "closed_umbrella" => "🌂",
+                "umbrella" => "☂️", "umbrella_with_rain_drops" => "☔", "umbrella_on_ground" => "⛱️", "high_voltage" => "⚡",
+                "snowflake" => "❄️", "snowman" => "☃️", "snowman_without_snow" => "⛄", "comet" => "☄️",
+                "fire" => "🔥", "droplet" => "💧", "water_wave" => "🌊", "jack_o_lantern" => "🎃",
+                "christmas_tree" => "🎄", "fireworks" => "🎆", "sparkler" => "🎇", "firecracker" => "🧨",
+                "sparkles" => "✨", "balloon" => "🎈", "party_popper" => "🎉", "confetti_ball" => "🎊",
+                "tanabata_tree" => "🎋", "pine_decoration" => "🎍", "japanese_dolls" => "🎎", "carp_streamer" => "🎏",
+                "wind_chime" => "🎐", "moon_viewing_ceremony" => "🎑", "red_envelope" => "🧧", "ribbon" => "🎀",
+                "wrapped_gift" => "🎁", "reminder_ribbon" => "🎗️", "admission_tickets" => "🎟️", "ticket" => "🎫",
+                "military_medal" => "🎖️", "trophy" => "🏆", "sports_medal" => "🏅", "1st_place_medal" => "🥇",
+                "2nd_place_medal" => "🥈", "3rd_place_medal" => "🥉", "soccer_ball" => "⚽", "baseball" => "⚾",
+                "softball" => "🥎", "basketball" => "🏀", "volleyball" => "🏐", "american_football" => "🏈",
+                "rugby_football" => "🏉", "tennis" => "🎾", "flying_disc" => "🥏", "bowling" => "🎳",
+                "cricket_game" => "🏏", "field_hockey" => "🏑", "ice_hockey" => "🏒", "lacrosse" => "🥍",
+                "ping_pong" => "🏓", "badminton" => "🏸", "boxing_glove" => "🥊", "martial_arts_uniform" => "🥋",
+                "goal_net" => "🥅", "flag_in_hole" => "⛳", "ice_skate" => "⛸️", "fishing_pole" => "🎣",
+                "diving_mask" => "🤿", "running_shirt" => "🎽", "skis" => "🎿", "sled" => "🛷",
+                "curling_stone" => "🥌", "bullseye" => "🎯", "yo_yo" => "🪀", "kite" => "🪁",
+                "water_pistol" => "🔫", "pool_8_ball" => "🎱", "crystal_ball" => "🔮", "magic_wand" => "🪄",
+                "video_game" => "🎮", "joystick" => "🕹️", "slot_machine" => "🎰", "game_die" => "🎲",
+                "puzzle_piece" => "🧩", "teddy_bear" => "🧸", "pinata" => "🪅", "mirror_ball" => "🪩",
+                "nesting_dolls" => "🪆", "spade_suit" => "♠️", "heart_suit" => "♥️", "diamond_suit" => "♦️",
+                "club_suit" => "♣️", "chess_pawn" => "♟️", "joker" => "🃏", "mahjong_red_dragon" => "🀄",
+                "flower_playing_cards" => "🎴", "performing_arts" => "🎭", "framed_picture" => "🖼️", "artist_palette" => "🎨",
+                "thread" => "🧵", "sewing_needle" => "🪡", "yarn" => "🧶", "knot" => "🪢",
+                "glasses" => "👓", "sunglasses" => "🕶️", "goggles" => "🥽", "lab_coat" => "🥼",
+                "safety_vest" => "🦺", "necktie" => "👔", "t_shirt" => "👕", "jeans" => "👖",
+                "scarf" => "🧣", "gloves" => "🧤", "coat" => "🧥", "socks" => "🧦",
+                "dress" => "👗", "kimono" => "👘", "sari" => "🥻", "one_piece_swimsuit" => "🩱",
+                "briefs" => "🩲", "shorts" => "🩳", "bikini" => "👙", "woman_s_clothes" => "👚",
+                "folding_hand_fan" => "🪭", "purse" => "👛", "handbag" => "👜", "clutch_bag" => "👝",
+                "shopping_bags" => "🛍️", "backpack" => "🎒", "thong_sandal" => "🩴", "man_s_shoe" => "👞",
+                "running_shoe" => "👟", "hiking_boot" => "🥾", "flat_shoe" => "🥿", "high_heeled_shoe" => "👠",
+                "woman_s_sandal" => "👡", "ballet_shoes" => "🩰", "woman_s_boot" => "👢", "hair_pick" => "🪮",
+                "crown" => "👑", "woman_s_hat" => "👒", "top_hat" => "🎩", "graduation_cap" => "🎓",
+                "billed_cap" => "🧢", "military_helmet" => "🪖", "rescue_worker_s_helmet" => "⛑️", "prayer_beads" => "📿",
+                "lipstick" => "💄", "ring" => "💍", "gem_stone" => "💎", "muted_speaker" => "🔇",
+                "speaker_low_volume" => "🔈", "speaker_medium_volume" => "🔉", "speaker_high_volume" => "🔊", "loudspeaker" => "📢",
+                "megaphone" => "📣", "postal_horn" => "📯", "bell" => "🔔", "bell_with_slash" => "🔕",
+                "musical_score" => "🎼", "musical_note" => "🎵", "musical_notes" => "🎶", "studio_microphone" => "🎙️",
+                "level_slider" => "🎚️", "control_knobs" => "🎛️", "microphone" => "🎤", "headphone" => "🎧",
+                "radio" => "📻", "saxophone" => "🎷", "accordion" => "🪗", "guitar" => "🎸",
+                "musical_keyboard" => "🎹", "trumpet" => "🎺", "violin" => "🎻", "banjo" => "🪕",
+                "drum" => "🥁", "long_drum" => "🪘", "maracas" => "🪇", "flute" => "🪈",
+                "harp" => "🪉", "mobile_phone" => "📱", "mobile_phone_with_arrow" => "📲", "telephone" => "☎️",
+                "telephone_receiver" => "📞", "pager" => "📟", "fax_machine" => "📠", "battery" => "🔋",
+                "low_battery" => "🪫", "electric_plug" => "🔌", "laptop" => "💻", "desktop_computer" => "🖥️",
+                "printer" => "🖨️", "keyboard" => "⌨️", "computer_mouse" => "🖱️", "trackball" => "🖲️",
+                "computer_disk" => "💽", "floppy_disk" => "💾", "optical_disk" => "💿", "dvd" => "📀",
+                "abacus" => "🧮", "movie_camera" => "🎥", "film_frames" => "🎞️", "film_projector" => "📽️",
+                "clapper_board" => "🎬", "television" => "📺", "camera" => "📷", "camera_with_flash" => "📸",
+                "video_camera" => "📹", "videocassette" => "📼", "magnifying_glass_tilted_left" => "🔍", "magnifying_glass_tilted_right" => "🔎",
+                "candle" => "🕯️", "light_bulb" => "💡", "flashlight" => "🔦", "red_paper_lantern" => "🏮",
+                "diya_lamp" => "🪔", "notebook_with_decorative_cover" => "📔", "closed_book" => "📕", "open_book" => "📖",
+                "green_book" => "📗", "blue_book" => "📘", "orange_book" => "📙", "books" => "📚",
+                "notebook" => "📓", "ledger" => "📒", "page_with_curl" => "📃", "scroll" => "📜",
+                "page_facing_up" => "📄", "newspaper" => "📰", "rolled_up_newspaper" => "🗞️", "bookmark_tabs" => "📑",
+                "bookmark" => "🔖", "label" => "🏷️", "money_bag" => "💰", "coin" => "🪙",
+                "yen_banknote" => "💴", "dollar_banknote" => "💵", "euro_banknote" => "💶", "pound_banknote" => "💷",
+                "money_with_wings" => "💸", "credit_card" => "💳", "receipt" => "🧾", "chart_increasing_with_yen" => "💹",
+                "envelope" => "✉️", "e_mail" => "📧", "incoming_envelope" => "📨", "envelope_with_arrow" => "📩",
+                "outbox_tray" => "📤", "inbox_tray" => "📥", "package" => "📦", "closed_mailbox_with_raised_flag" => "📫",
+                "closed_mailbox_with_lowered_flag" => "📪", "open_mailbox_with_raised_flag" => "📬", "open_mailbox_with_lowered_flag" => "📭", "postbox" => "📮",
+                "ballot_box_with_ballot" => "🗳️", "pencil" => "✏️", "black_nib" => "✒️", "fountain_pen" => "🖋️",
+                "pen" => "🖊️", "paintbrush" => "🖌️", "crayon" => "🖍️", "memo" => "📝",
+                "briefcase" => "💼", "file_folder" => "📁", "open_file_folder" => "📂", "card_index_dividers" => "🗂️",
+                "calendar" => "📅", "tear_off_calendar" => "📆", "spiral_notepad" => "🗒️", "spiral_calendar" => "🗓️",
+                "card_index" => "📇", "chart_increasing" => "📈", "chart_decreasing" => "📉", "bar_chart" => "📊",
+                "clipboard" => "📋", "pushpin" => "📌", "round_pushpin" => "📍", "paperclip" => "📎",
+                "linked_paperclips" => "🖇️", "straight_ruler" => "📏", "triangular_ruler" => "📐", "scissors" => "✂️",
+                "card_file_box" => "🗃️", "file_cabinet" => "🗄️", "wastebasket" => "🗑️", "locked" => "🔒",
+                "unlocked" => "🔓", "locked_with_pen" => "🔏", "locked_with_key" => "🔐", "key" => "🔑",
+                "old_key" => "🗝️", "hammer" => "🔨", "axe" => "🪓", "pick" => "⛏️",
+                "hammer_and_pick" => "⚒️", "hammer_and_wrench" => "🛠️", "dagger" => "🗡️", "crossed_swords" => "⚔️",
+                "bomb" => "💣", "boomerang" => "🪃", "bow_and_arrow" => "🏹", "shield" => "🛡️",
+                "carpentry_saw" => "🪚", "wrench" => "🔧", "screwdriver" => "🪛", "nut_and_bolt" => "🔩",
+                "gear" => "⚙️", "clamp" => "🗜️", "balance_scale" => "⚖️", "white_cane" => "🦯",
+                "link" => "🔗", "broken_chain" => "⛓️‍💥", "chains" => "⛓️", "hook" => "🪝",
+                "toolbox" => "🧰", "magnet" => "🧲", "ladder" => "🪜", "shovel" => "🪏",
+                "alembic" => "⚗️", "test_tube" => "🧪", "petri_dish" => "🧫", "dna" => "🧬",
+                "microscope" => "🔬", "telescope" => "🔭", "satellite_antenna" => "📡", "syringe" => "💉",
+                "drop_of_blood" => "🩸", "pill" => "💊", "adhesive_bandage" => "🩹", "crutch" => "🩼",
+                "stethoscope" => "🩺", "x_ray" => "🩻", "door" => "🚪", "elevator" => "🛗",
+                "mirror" => "🪞", "window" => "🪟", "bed" => "🛏️", "couch_and_lamp" => "🛋️",
+                "chair" => "🪑", "toilet" => "🚽", "plunger" => "🪠", "shower" => "🚿",
+                "bathtub" => "🛁", "mouse_trap" => "🪤", "razor" => "🪒", "lotion_bottle" => "🧴",
+                "safety_pin" => "🧷", "broom" => "🧹", "basket" => "🧺", "roll_of_paper" => "🧻",
+                "bucket" => "🪣", "soap" => "🧼", "bubbles" => "🫧", "toothbrush" => "🪥",
+                "sponge" => "🧽", "fire_extinguisher" => "🧯", "shopping_cart" => "🛒", "cigarette" => "🚬",
+                "coffin" => "⚰️", "headstone" => "🪦", "funeral_urn" => "⚱️", "nazar_amulet" => "🧿",
+                "hamsa" => "🪬", "moai" => "🗿", "placard" => "🪧", "identification_card" => "🪪",
+                "atm_sign" => "🏧", "litter_in_bin_sign" => "🚮", "potable_water" => "🚰", "wheelchair_symbol" => "♿",
+                "men_s_room" => "🚹", "women_s_room" => "🚺", "restroom" => "🚻", "baby_symbol" => "🚼",
+                "water_closet" => "🚾", "passport_control" => "🛂", "customs" => "🛃", "baggage_claim" => "🛄",
+                "left_luggage" => "🛅", "warning" => "⚠️", "children_crossing" => "🚸", "no_entry" => "⛔",
+                "prohibited" => "🚫", "no_bicycles" => "🚳", "no_smoking" => "🚭", "no_littering" => "🚯",
+                "non_potable_water" => "🚱", "no_pedestrians" => "🚷", "no_mobile_phones" => "📵", "no_one_under_eighteen" => "🔞",
+                "radioactive" => "☢️", "biohazard" => "☣️", "up_arrow" => "⬆️", "up_right_arrow" => "↗️",
+                "right_arrow" => "➡️", "down_right_arrow" => "↘️", "down_arrow" => "⬇️", "down_left_arrow" => "↙️",
+                "left_arrow" => "⬅️", "up_left_arrow" => "↖️", "up_down_arrow" => "↕️", "left_right_arrow" => "↔️",
+                "right_arrow_curving_left" => "↩️", "left_arrow_curving_right" => "↪️", "right_arrow_curving_up" => "⤴️", "right_arrow_curving_down" => "⤵️",
+                "clockwise_vertical_arrows" => "🔃", "counterclockwise_arrows_button" => "🔄", "back_arrow" => "🔙", "end_arrow" => "🔚",
+                "on_arrow" => "🔛", "soon_arrow" => "🔜", "top_arrow" => "🔝", "place_of_worship" => "🛐",
+                "atom_symbol" => "⚛️", "om" => "🕉️", "star_of_david" => "✡️", "wheel_of_dharma" => "☸️",
+                "yin_yang" => "☯️", "latin_cross" => "✝️", "orthodox_cross" => "☦️", "star_and_crescent" => "☪️",
+                "peace_symbol" => "☮️", "menorah" => "🕎", "dotted_six_pointed_star" => "🔯", "khanda" => "🪯",
+                "aries" => "♈", "taurus" => "♉", "gemini" => "♊", "cancer" => "♋",
+                "leo" => "♌", "virgo" => "♍", "libra" => "♎", "scorpio" => "♏",
+                "sagittarius" => "♐", "capricorn" => "♑", "aquarius" => "♒", "pisces" => "♓",
+                "ophiuchus" => "⛎", "shuffle_tracks_button" => "🔀", "repeat_button" => "🔁", "repeat_single_button" => "🔂",
+                "play_button" => "▶️", "fast_forward_button" => "⏩", "next_track_button" => "⏭️", "play_or_pause_button" => "⏯️",
+                "reverse_button" => "◀️", "fast_reverse_button" => "⏪", "last_track_button" => "⏮️", "upwards_button" => "🔼",
+                "fast_up_button" => "⏫", "downwards_button" => "🔽", "fast_down_button" => "⏬", "pause_button" => "⏸️",
+                "stop_button" => "⏹️", "record_button" => "⏺️", "eject_button" => "⏏️", "cinema" => "🎦",
+                "dim_button" => "🔅", "bright_button" => "🔆", "antenna_bars" => "📶", "wireless" => "🛜",
+                "vibration_mode" => "📳", "mobile_phone_off" => "📴", "female_sign" => "♀️", "male_sign" => "♂️",
+                "transgender_symbol" => "⚧️", "multiply" => "✖️", "plus" => "➕", "minus" => "➖",
+                "divide" => "➗", "heavy_equals_sign" => "🟰", "infinity" => "♾️", "double_exclamation_mark" => "‼️",
+                "exclamation_question_mark" => "⁉️", "red_question_mark" => "❓", "white_question_mark" => "❔", "white_exclamation_mark" => "❕",
+                "red_exclamation_mark" => "❗", "wavy_dash" => "〰️", "currency_exchange" => "💱", "heavy_dollar_sign" => "💲",
+                "medical_symbol" => "⚕️", "recycling_symbol" => "♻️", "fleur_de_lis" => "⚜️", "trident_emblem" => "🔱",
+                "name_badge" => "📛", "japanese_symbol_for_beginner" => "🔰", "hollow_red_circle" => "⭕", "check_mark_button" => "✅",
+                "check_box_with_check" => "☑️", "check_mark" => "✔️", "cross_mark" => "❌", "cross_mark_button" => "❎",
+                "curly_loop" => "➰", "double_curly_loop" => "➿", "part_alternation_mark" => "〽️", "eight_spoked_asterisk" => "✳️",
+                "eight_pointed_star" => "✴️", "sparkle" => "❇️", "copyright" => "©️", "registered" => "®️",
+                "trade_mark" => "™️", "splatter" => "🫟", "keycap_number_sign" => "#️⃣", "keycap_asterisk" => "*️⃣",
+                "keycap_0" => "0️⃣", "keycap_1" => "1️⃣", "keycap_2" => "2️⃣", "keycap_3" => "3️⃣",
+                "keycap_4" => "4️⃣", "keycap_5" => "5️⃣", "keycap_6" => "6️⃣", "keycap_7" => "7️⃣",
+                "keycap_8" => "8️⃣", "keycap_9" => "9️⃣", "keycap_10" => "🔟", "input_latin_uppercase" => "🔠",
+                "input_latin_lowercase" => "🔡", "input_numbers" => "🔢", "input_symbols" => "🔣", "input_latin_letters" => "🔤",
+                "a_button" => "🅰️", "ab_button" => "🆎", "b_button" => "🅱️", "cl_button" => "🆑",
+                "cool_button" => "🆒", "free_button" => "🆓", "information" => "ℹ️", "id_button" => "🆔",
+                "circled_m" => "Ⓜ️", "new_button" => "🆕", "ng_button" => "🆖", "o_button" => "🅾️",
+                "ok_button" => "🆗", "p_button" => "🅿️", "sos_button" => "🆘", "up_button" => "🆙",
+                "vs_button" => "🆚", "japanese_here_button" => "🈁", "japanese_service_charge_button" => "🈂️", "japanese_monthly_amount_button" => "🈷️",
+                "japanese_not_free_of_charge_button" => "🈶", "japanese_reserved_button" => "🈯", "japanese_bargain_button" => "🉐", "japanese_discount_button" => "🈹",
+                "japanese_free_of_charge_button" => "🈚", "japanese_prohibited_button" => "🈲", "japanese_acceptable_button" => "🉑", "japanese_application_button" => "🈸",
+                "japanese_passing_grade_button" => "🈴", "japanese_vacancy_button" => "🈳", "japanese_congratulations_button" => "㊗️", "japanese_secret_button" => "㊙️",
+                "japanese_open_for_business_button" => "🈺", "japanese_no_vacancy_button" => "🈵", "red_circle" => "🔴", "orange_circle" => "🟠",
+                "yellow_circle" => "🟡", "green_circle" => "🟢", "blue_circle" => "🔵", "purple_circle" => "🟣",
+                "brown_circle" => "🟤", "black_circle" => "⚫", "white_circle" => "⚪", "red_square" => "🟥",
+                "orange_square" => "🟧", "yellow_square" => "🟨", "green_square" => "🟩", "blue_square" => "🟦",
+                "purple_square" => "🟪", "brown_square" => "🟫", "black_large_square" => "⬛", "white_large_square" => "⬜",
+                "black_medium_square" => "◼️", "white_medium_square" => "◻️", "black_medium_small_square" => "◾", "white_medium_small_square" => "◽",
+                "black_small_square" => "▪️", "white_small_square" => "▫️", "large_orange_diamond" => "🔶", "large_blue_diamond" => "🔷",
+                "small_orange_diamond" => "🔸", "small_blue_diamond" => "🔹", "red_triangle_pointed_up" => "🔺", "red_triangle_pointed_down" => "🔻",
+                "diamond_with_a_dot" => "💠", "radio_button" => "🔘", "white_square_button" => "🔳", "black_square_button" => "🔲",
+                "chequered_flag" => "🏁", "triangular_flag" => "🚩", "crossed_flags" => "🎌", "black_flag" => "🏴",
+                "white_flag" => "🏳️", "rainbow_flag" => "🏳️‍🌈", "transgender_flag" => "🏳️‍⚧️", "pirate_flag" => "🏴‍☠️",
+                "flag_ascension_island" => "🇦🇨", "flag_andorra" => "🇦🇩", "flag_united_arab_emirates" => "🇦🇪", "flag_afghanistan" => "🇦🇫",
+                "flag_antigua_barbuda" => "🇦🇬", "flag_anguilla" => "🇦🇮", "flag_albania" => "🇦🇱", "flag_armenia" => "🇦🇲",
+                "flag_angola" => "🇦🇴", "flag_antarctica" => "🇦🇶", "flag_argentina" => "🇦🇷", "flag_american_samoa" => "🇦🇸",
+                "flag_austria" => "🇦🇹", "flag_australia" => "🇦🇺", "flag_aruba" => "🇦🇼", "flag_aland_islands" => "🇦🇽",
+                "flag_azerbaijan" => "🇦🇿", "flag_bosnia_herzegovina" => "🇧🇦", "flag_barbados" => "🇧🇧", "flag_bangladesh" => "🇧🇩",
+                "flag_belgium" => "🇧🇪", "flag_burkina_faso" => "🇧🇫", "flag_bulgaria" => "🇧🇬", "flag_bahrain" => "🇧🇭",
+                "flag_burundi" => "🇧🇮", "flag_benin" => "🇧🇯", "flag_st_barthelemy" => "🇧🇱", "flag_bermuda" => "🇧🇲",
+                "flag_brunei" => "🇧🇳", "flag_bolivia" => "🇧🇴", "flag_caribbean_netherlands" => "🇧🇶", "flag_brazil" => "🇧🇷",
+                "flag_bahamas" => "🇧🇸", "flag_bhutan" => "🇧🇹", "flag_bouvet_island" => "🇧🇻", "flag_botswana" => "🇧🇼",
+                "flag_belarus" => "🇧🇾", "flag_belize" => "🇧🇿", "flag_canada" => "🇨🇦", "flag_cocos_islands" => "🇨🇨",
+                "flag_congo_kinshasa" => "🇨🇩", "flag_central_african_republic" => "🇨🇫", "flag_congo_brazzaville" => "🇨🇬", "flag_switzerland" => "🇨🇭",
+                "flag_cote_d_ivoire" => "🇨🇮", "flag_cook_islands" => "🇨🇰", "flag_chile" => "🇨🇱", "flag_cameroon" => "🇨🇲",
+                "flag_china" => "🇨🇳", "flag_colombia" => "🇨🇴", "flag_clipperton_island" => "🇨🇵", "flag_sark" => "🇨🇶",
+                "flag_costa_rica" => "🇨🇷", "flag_cuba" => "🇨🇺", "flag_cape_verde" => "🇨🇻", "flag_curacao" => "🇨🇼",
+                "flag_christmas_island" => "🇨🇽", "flag_cyprus" => "🇨🇾", "flag_czechia" => "🇨🇿", "flag_germany" => "🇩🇪",
+                "flag_diego_garcia" => "🇩🇬", "flag_djibouti" => "🇩🇯", "flag_denmark" => "🇩🇰", "flag_dominica" => "🇩🇲",
+                "flag_dominican_republic" => "🇩🇴", "flag_algeria" => "🇩🇿", "flag_ceuta_melilla" => "🇪🇦", "flag_ecuador" => "🇪🇨",
+                "flag_estonia" => "🇪🇪", "flag_egypt" => "🇪🇬", "flag_western_sahara" => "🇪🇭", "flag_eritrea" => "🇪🇷",
+                "flag_spain" => "🇪🇸", "flag_ethiopia" => "🇪🇹", "flag_european_union" => "🇪🇺", "flag_finland" => "🇫🇮",
+                "flag_fiji" => "🇫🇯", "flag_falkland_islands" => "🇫🇰", "flag_micronesia" => "🇫🇲", "flag_faroe_islands" => "🇫🇴",
+                "flag_france" => "🇫🇷", "flag_gabon" => "🇬🇦", "flag_united_kingdom" => "🇬🇧", "flag_grenada" => "🇬🇩",
+                "flag_georgia" => "🇬🇪", "flag_french_guiana" => "🇬🇫", "flag_guernsey" => "🇬🇬", "flag_ghana" => "🇬🇭",
+                "flag_gibraltar" => "🇬🇮", "flag_greenland" => "🇬🇱", "flag_gambia" => "🇬🇲", "flag_guinea" => "🇬🇳",
+                "flag_guadeloupe" => "🇬🇵", "flag_equatorial_guinea" => "🇬🇶", "flag_greece" => "🇬🇷", "flag_south_georgia_south_sandwich_islands" => "🇬🇸",
+                "flag_guatemala" => "🇬🇹", "flag_guam" => "🇬🇺", "flag_guinea_bissau" => "🇬🇼", "flag_guyana" => "🇬🇾",
+                "flag_hong_kong_sar_china" => "🇭🇰", "flag_heard_mcdonald_islands" => "🇭🇲", "flag_honduras" => "🇭🇳", "flag_croatia" => "🇭🇷",
+                "flag_haiti" => "🇭🇹", "flag_hungary" => "🇭🇺", "flag_canary_islands" => "🇮🇨", "flag_indonesia" => "🇮🇩",
+                "flag_ireland" => "🇮🇪", "flag_israel" => "🇮🇱", "flag_isle_of_man" => "🇮🇲", "flag_india" => "🇮🇳",
+                "flag_british_indian_ocean_territory" => "🇮🇴", "flag_iraq" => "🇮🇶", "flag_iran" => "🇮🇷", "flag_iceland" => "🇮🇸",
+                "flag_italy" => "🇮🇹", "flag_jersey" => "🇯🇪", "flag_jamaica" => "🇯🇲", "flag_jordan" => "🇯🇴",
+                "flag_japan" => "🇯🇵", "flag_kenya" => "🇰🇪", "flag_kyrgyzstan" => "🇰🇬", "flag_cambodia" => "🇰🇭",
+                "flag_kiribati" => "🇰🇮", "flag_comoros" => "🇰🇲", "flag_st_kitts_nevis" => "🇰🇳", "flag_north_korea" => "🇰🇵",
+                "flag_south_korea" => "🇰🇷", "flag_kuwait" => "🇰🇼", "flag_cayman_islands" => "🇰🇾", "flag_kazakhstan" => "🇰🇿",
+                "flag_laos" => "🇱🇦", "flag_lebanon" => "🇱🇧", "flag_st_lucia" => "🇱🇨", "flag_liechtenstein" => "🇱🇮",
+                "flag_sri_lanka" => "🇱🇰", "flag_liberia" => "🇱🇷", "flag_lesotho" => "🇱🇸", "flag_lithuania" => "🇱🇹",
+                "flag_luxembourg" => "🇱🇺", "flag_latvia" => "🇱🇻", "flag_libya" => "🇱🇾", "flag_morocco" => "🇲🇦",
+                "flag_monaco" => "🇲🇨", "flag_moldova" => "🇲🇩", "flag_montenegro" => "🇲🇪", "flag_st_martin" => "🇲🇫",
+                "flag_madagascar" => "🇲🇬", "flag_marshall_islands" => "🇲🇭", "flag_north_macedonia" => "🇲🇰", "flag_mali" => "🇲🇱",
+                "flag_myanmar" => "🇲🇲", "flag_mongolia" => "🇲🇳", "flag_macao_sar_china" => "🇲🇴", "flag_northern_mariana_islands" => "🇲🇵",
+                "flag_martinique" => "🇲🇶", "flag_mauritania" => "🇲🇷", "flag_montserrat" => "🇲🇸", "flag_malta" => "🇲🇹",
+                "flag_mauritius" => "🇲🇺", "flag_maldives" => "🇲🇻", "flag_malawi" => "🇲🇼", "flag_mexico" => "🇲🇽",
+                "flag_malaysia" => "🇲🇾", "flag_mozambique" => "🇲🇿", "flag_namibia" => "🇳🇦", "flag_new_caledonia" => "🇳🇨",
+                "flag_niger" => "🇳🇪", "flag_norfolk_island" => "🇳🇫", "flag_nigeria" => "🇳🇬", "flag_nicaragua" => "🇳🇮",
+                "flag_netherlands" => "🇳🇱", "flag_norway" => "🇳🇴", "flag_nepal" => "🇳🇵", "flag_nauru" => "🇳🇷",
+                "flag_niue" => "🇳🇺", "flag_new_zealand" => "🇳🇿", "flag_oman" => "🇴🇲", "flag_panama" => "🇵🇦",
+                "flag_peru" => "🇵🇪", "flag_french_polynesia" => "🇵🇫", "flag_papua_new_guinea" => "🇵🇬", "flag_philippines" => "🇵🇭",
+                "flag_pakistan" => "🇵🇰", "flag_poland" => "🇵🇱", "flag_st_pierre_miquelon" => "🇵🇲", "flag_pitcairn_islands" => "🇵🇳",
+                "flag_puerto_rico" => "🇵🇷", "flag_palestinian_territories" => "🇵🇸", "flag_portugal" => "🇵🇹", "flag_palau" => "🇵🇼",
+                "flag_paraguay" => "🇵🇾", "flag_qatar" => "🇶🇦", "flag_reunion" => "🇷🇪", "flag_romania" => "🇷🇴",
+                "flag_serbia" => "🇷🇸", "flag_russia" => "🇷🇺", "flag_rwanda" => "🇷🇼", "flag_saudi_arabia" => "🇸🇦",
+                "flag_solomon_islands" => "🇸🇧", "flag_seychelles" => "🇸🇨", "flag_sudan" => "🇸🇩", "flag_sweden" => "🇸🇪",
+                "flag_singapore" => "🇸🇬", "flag_st_helena" => "🇸🇭", "flag_slovenia" => "🇸🇮", "flag_svalbard_jan_mayen" => "🇸🇯",
+                "flag_slovakia" => "🇸🇰", "flag_sierra_leone" => "🇸🇱", "flag_san_marino" => "🇸🇲", "flag_senegal" => "🇸🇳",
+                "flag_somalia" => "🇸🇴", "flag_suriname" => "🇸🇷", "flag_south_sudan" => "🇸🇸", "flag_sao_tome_principe" => "🇸🇹",
+                "flag_el_salvador" => "🇸🇻", "flag_sint_maarten" => "🇸🇽", "flag_syria" => "🇸🇾", "flag_eswatini" => "🇸🇿",
+                "flag_tristan_da_cunha" => "🇹🇦", "flag_turks_caicos_islands" => "🇹🇨", "flag_chad" => "🇹🇩", "flag_french_southern_territories" => "🇹🇫",
+                "flag_togo" => "🇹🇬", "flag_thailand" => "🇹🇭", "flag_tajikistan" => "🇹🇯", "flag_tokelau" => "🇹🇰",
+                "flag_timor_leste" => "🇹🇱", "flag_turkmenistan" => "🇹🇲", "flag_tunisia" => "🇹🇳", "flag_tonga" => "🇹🇴",
+                "flag_turkiye" => "🇹🇷", "flag_trinidad_tobago" => "🇹🇹", "flag_tuvalu" => "🇹🇻", "flag_taiwan" => "🇹🇼",
+                "flag_tanzania" => "🇹🇿", "flag_ukraine" => "🇺🇦", "flag_uganda" => "🇺🇬", "flag_u_s_outlying_islands" => "🇺🇲",
+                "flag_united_nations" => "🇺🇳", "flag_united_states" => "🇺🇸", "flag_uruguay" => "🇺🇾", "flag_uzbekistan" => "🇺🇿",
+                "flag_vatican_city" => "🇻🇦", "flag_st_vincent_grenadines" => "🇻🇨", "flag_venezuela" => "🇻🇪", "flag_british_virgin_islands" => "🇻🇬",
+                "flag_u_s_virgin_islands" => "🇻🇮", "flag_vietnam" => "🇻🇳", "flag_vanuatu" => "🇻🇺", "flag_wallis_futuna" => "🇼🇫",
+                "flag_samoa" => "🇼🇸", "flag_kosovo" => "🇽🇰", "flag_yemen" => "🇾🇪", "flag_mayotte" => "🇾🇹",
+                "flag_south_africa" => "🇿🇦", "flag_zambia" => "🇿🇲", "flag_zimbabwe" => "🇿🇼", "flag_england" => "🏴󠁧󠁢󠁥󠁮󠁧󠁿",
+                "flag_scotland" => "🏴󠁧󠁢󠁳󠁣󠁴󠁿", "flag_wales" => "🏴󠁧󠁢󠁷󠁬󠁳󠁿",
+            ];
+        }
 
-            // Check if the emoji code exists in the map
-            if (isset($emojiMap[$emojiCode])) {
-                return [
-                    'extent' => strlen($matches[0]), // Length of the matched emoji code including colons
-                    'element' => [
-                        'text' => $emojiMap[$emojiCode], // Replace emoji code with corresponding emoji
-                    ],
-                ];
-            }
+        $emojiCode = $matches[1]; // Extract the emoji code without colons
+
+        // Check if the emoji code exists in the map
+        if (isset($this->emojiMap[$emojiCode])) {
+            return [
+                'extent' => strlen($matches[0]), // Length of the matched emoji code including colons
+                'element' => [
+                    'text' => $this->emojiMap[$emojiCode], // Replace emoji code with corresponding emoji
+                ],
+            ];
         }
 
         // If no emoji code matches, return null
@@ -1582,7 +1757,7 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
      * @param array|null $CurrentBlock The current block context.
      * @return mixed The parsed list block if enabled, otherwise nothing.
      */
-    protected function blockList($Line, array $CurrentBlock = null)
+    protected function blockList($Line, ?array $CurrentBlock = null)
     {
         // Check if lists are enabled
         if ($this->config()->get('lists')) {
@@ -1698,7 +1873,7 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
     protected function blockAlert($Line): ?array
     {
         // Check if alerts are enabled in the configuration settings
-        if (!$this->config()->get('alerts.enabled')) {
+        if (!$this->config()->get('alerts')) {
             return null; // Return null if alert blocks are disabled
         }
 
@@ -1811,6 +1986,8 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
         return $Block; // Finalize and return the alert block
     }
 
+
+    // BUG: Breaks formatting if written in a single line
 
     /**
      * Processes block-level math notation.
@@ -2039,13 +2216,23 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
             // Check if the list item starts with a checkbox (e.g., `[x]` or `[ ]`)
             if (preg_match('/^\[[x ]\]/i', $firstFourChars, $matches)) {
                 // Check if the checkbox is checked (`[x]`) or unchecked (`[ ]`)
+                $inputAttributes = [
+                    'type'     => 'checkbox',
+                    'disabled' => 'disabled',
+                ];
+
                 if (strtolower($matches[0]) === '[x]') {
-                    // Replace the checkbox marker with an actual checked input element
-                    $markup = substr_replace($markup, '<input type="checkbox" disabled="disabled" checked="checked" />', 4, 4);
-                } else {
-                    // Replace the checkbox marker with an unchecked input element
-                    $markup = substr_replace($markup, '<input type="checkbox" disabled="disabled" />', 4, 4);
+                    $inputAttributes['checked'] = 'checked';
                 }
+
+                // Build the input element using Parsedown's element structure
+                $inputElement = $this->element([
+                    'name'       => 'input',
+                    'attributes' => $inputAttributes,
+                ]);
+
+                // Replace the checkbox marker with the generated input element
+                $markup = substr_replace($markup, $inputElement, 4, 4);
             }
 
             // Trim the markup and handle paragraph tags to format correctly
@@ -2073,26 +2260,27 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
                 $Elements[0]['handler']['argument'] = substr_replace($text, '', 0, 4);
 
                 // Set the appropriate attributes based on whether the checkbox is checked or unchecked
+                // Prepare attributes for the checkbox element
+                $inputAttributes = [
+                    'type'     => 'checkbox',
+                    'disabled' => 'disabled',
+                ];
+
                 if (strtolower($matches[0]) === '[x]') {
-                    $Elements[0]['attributes'] = [
-                        'checked' => 'checked',
-                        'type' => 'checkbox',
-                        'disabled' => 'disabled',
-                    ];
-                } else {
-                    $Elements[0]['attributes'] = [
-                        'type' => 'checkbox',
-                        'disabled' => 'disabled',
-                    ];
+                    $inputAttributes['checked'] = 'checked';
                 }
 
-                // Set the element type to 'input' for the checkbox
-                $Elements[0]['name'] = 'input';
+                // Insert the checkbox element at the beginning of the list item
+                array_unshift($Elements, [
+                    'name'       => 'input',
+                    'attributes' => $inputAttributes,
+                    'autobreak'  => false,
+                ]);
             }
 
             // Remove unnecessary paragraph tags for the list item if not interrupted
-            if (isset($Elements[0]['name']) && !in_array('', $lines) && $Elements[0]['name'] === 'p') {
-                unset($Elements[0]['name']); // Remove paragraph wrapper
+            if (!in_array('', $lines) && isset($Elements[1]['name']) && $Elements[1]['name'] === 'p') {
+                unset($Elements[1]['name']); // Remove paragraph wrapper
             }
 
             return $Elements; // Return the final array of elements for the list item
@@ -2142,7 +2330,8 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
             $Block['element']['attributes'] = ['id' => $id];
 
             // Check if the heading level should be included in the Table of Contents (TOC)
-            if (!in_array($level, $config->get('toc.levels'))) {
+            // Also ensure we skip adding it to TOC if it is disabled in the config
+            if (!$config->get('toc') || !in_array($level, $config->get('toc.levels'))) {
                 return $Block; // Return the block if it should not be part of the TOC
             }
 
@@ -2198,7 +2387,8 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
             $Block['element']['attributes'] = ['id' => $id];
 
             // Check if the heading level should be included in the Table of Contents (TOC)
-            if (!in_array($level, $config->get('toc.levels'))) {
+            // Also ensure we skip adding it to TOC if it is disabled in the config
+            if (!$config->get('toc') || !in_array($level, $config->get('toc.levels'))) {
                 return $Block; // Return the block if it should not be part of the TOC
             }
 
@@ -2461,6 +2651,16 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
      */
     public function body(string $text): string
     {
+        /**
+         * Reset the internal state for Table of Contents to avoid data persisting
+         * when the same instance parses multiple markdown strings.
+         */
+        $this->anchorRegister = [];
+        $this->contentsListArray = [];
+        $this->contentsListString = '';
+        $this->firstHeadLevel = 0;
+        $this->predefinedAbbreviationsAdded = false;
+
         $text = $this->encodeTag($text); // Escapes ToC tag temporarily
         $html = parent::text($text);     // Parses the markdown text
         return $this->decodeTag($html);  // Unescapes the ToC tag
@@ -2480,6 +2680,7 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
      */
     public function contentsList(string $type_return = 'string'): string
     {
+
         switch (strtolower($type_return)) {
             case 'string':
                 return $this->contentsListString ? $this->body($this->contentsListString) : '';
@@ -2534,8 +2735,6 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
         if (is_callable($this->createAnchorIDCallback)) {
             return call_user_func($this->createAnchorIDCallback, $text, $this->config());
         }
-
-        // Default logic for anchor ID creation
 
         // Convert text to lowercase if configured to do so
         if ($config->get('headings.auto_anchors.lowercase')) {
@@ -2982,134 +3181,17 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
     {
         $config = $this->config();
 
-        // Add predefined abbreviations to the definition data
-        foreach ($config->get('abbreviations.predefined') as $abbreviation => $description) {
-            $this->DefinitionData['Abbreviation'][$abbreviation] = $description;
+        if (!$this->predefinedAbbreviationsAdded) {
+            // Add predefined abbreviations to the definition data once per parse
+            foreach ($config->get('abbreviations.predefined') as $abbreviation => $description) {
+                $this->DefinitionData['Abbreviation'][$abbreviation] = $description;
+            }
+            $this->predefinedAbbreviationsAdded = true;
         }
 
         // Call the parent method to handle the rest of the text processing
         return parent::unmarkedText($text);
     }
-
-
-    // Settings
-    // -------------------------------------------------------------------------
-
-    /**
-     * Sets a configuration setting (DEPRECATED).
-     *
-     * This method sets a configuration setting using the new configuration system.
-     * It is deprecated and will be removed in future versions. Use `$ParsedownExtended->config()->set()` instead.
-     *
-     * @since 1.2.0
-     * @deprecated 1.3.0 Use ParsedownExtended->config()->set() instead.
-     * @see ParsedownExtended->config()->set()
-     *
-     * @param string $settingName The name of the setting to set.
-     * @param mixed $value The value to set for the setting.
-     * @param bool $overwrite Whether to overwrite an existing setting (default: false).
-     * @return void
-     */
-    public function setSetting(string $settingName, $value, bool $overwrite = false)
-    {
-        // Log the use of deprecated method for future reference
-        $this->deprecated(__METHOD__, '1.3.0', '$ParsedownExtended->config()->set()');
-
-        // Use the new configuration system to set the value
-        $this->config()->set($settingName, $value);
-    }
-
-    /**
-     * Sets multiple configuration settings at once (DEPRECATED).
-     *
-     * This method sets multiple configuration settings using the new configuration system.
-     * It is deprecated and will be removed in future versions. Use `$ParsedownExtended->config()->set()` instead.
-     *
-     * @since 1.2.0
-     * @deprecated 1.3.0 Use ParsedownExtended->config()->set() instead.
-     * @see ParsedownExtended->config()->set()
-     *
-     * @param array $settings An associative array of settings to set (key-value pairs).
-     * @return $this
-     */
-    public function setSettings(array $settings)
-    {
-        // Log the use of deprecated method for future reference
-        $this->deprecated(__METHOD__, '1.3.0', '$ParsedownExtended->config()->set()');
-
-        // Set each individual setting using the existing setSetting method
-        foreach ($settings as $key => $value) {
-            $this->setSetting($key, $value);
-        }
-
-        return $this;
-    }
-
-    /**
-     * Checks if a configuration setting is enabled (DEPRECATED).
-     *
-     * This method checks if a particular setting is enabled using the new configuration system.
-     * It is deprecated and will be removed in future versions. Use `$ParsedownExtended->config()->get()` instead.
-     *
-     * @since 1.2.2
-     * @deprecated 1.3.0 Use ParsedownExtended->config()->get() instead.
-     * @see ParsedownExtended->config()->get()
-     *
-     * @param string $keyPath The key path of the setting to check.
-     * @return mixed The value of the setting (generally a boolean for 'enabled' settings).
-     */
-    public function isEnabled(string $keyPath)
-    {
-        // Log the use of deprecated method for future reference
-        $this->deprecated(__METHOD__, '1.3.0', '$ParsedownExtended->config()->get()');
-
-        // Use the new configuration system to get the value
-        return $this->config()->get($keyPath);
-    }
-
-    /**
-     * Gets the value of a configuration setting (DEPRECATED).
-     *
-     * This method retrieves a setting using the new configuration system.
-     * It is deprecated and will be removed in future versions. Use `$ParsedownExtended->config()->get()` instead.
-     *
-     * @since 1.2.0
-     * @deprecated 1.3.0 Use ParsedownExtended->config()->get() instead.
-     * @see ParsedownExtended->config()->get()
-     *
-     * @param string $key The key of the setting to retrieve.
-     * @return mixed The value of the specified setting.
-     */
-    public function getSetting(string $key)
-    {
-        // Log the use of deprecated method for future reference
-        $this->deprecated(__METHOD__, '1.3.0', '$ParsedownExtended->config()->get()');
-
-        // Use the new configuration system to get the value
-        return $this->config()->get($key);
-    }
-
-    /**
-     * Gets all configuration settings (DEPRECATED).
-     *
-     * This method retrieves all settings.
-     * It is deprecated and will be removed in future versions. Use `$ParsedownExtended->config()->get()` instead.
-     *
-     * @since 1.2.0
-     * @deprecated 1.3.0 Use ParsedownExtended->config()->get() instead.
-     * @see ParsedownExtended->config()->get()
-     *
-     * @return array An associative array of all settings.
-     */
-    public function getSettings()
-    {
-        // Log the use of deprecated method for future reference
-        $this->deprecated(__METHOD__, '1.3.0', '$ParsedownExtended->config()->get()');
-
-        // Return the current settings
-        return $this->settings;
-    }
-
 
     // Helper functions
     // -------------------------------------------------------------------------
@@ -3183,483 +3265,252 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
         }
     }
 
-    /**
-     * Warns users about deprecated functions.
-     *
-     * This function is used to trigger a deprecation warning when deprecated functions are called.
-     * It informs the user about the function being deprecated, the version it was deprecated in,
-     * and suggests an alternative function to use.
-     *
-     * @since 1.3.0
-     *
-     * @param string $functionName The name of the deprecated function.
-     * @param string $version The version in which the function was deprecated.
-     * @param string $alternative (Optional) The name of an alternative function to use.
-     * @return void
-     */
-    private function deprecated(string $functionName, string $version, string $alternative = ''): void
-    {
-        // Get the call stack to determine where this deprecated function was called
-        $backtrace = debug_backtrace();
-        $caller = $backtrace[1] ?? $backtrace[0];
-
-        // Create the deprecation message with the function name and version
-        $message = "Function {$functionName} is deprecated as of version {$version} and will be removed in the future. ";
-        // Append an alternative function suggestion if provided
-        $message .= $alternative ? "Use {$alternative} instead." : '';
-        // Include the file and line number where the deprecated function was called
-        $message .= " Called in {$caller['file']} on line {$caller['line']}";
-
-        // Trigger the deprecated warning
-        trigger_error($message, E_USER_DEPRECATED);
-    }
 
     // Configurations Handler
     // -------------------------------------------------------------------------
 
     /**
-     * Initialize configuration using a given schema.
+     * Retrieves the flat schema array.
      *
-     * This function iterates through the given schema to initialize the default configuration settings.
-     * It handles nested arrays and array types with nested defaults.
-     *
-     * @since 1.3.0
-     *
-     * @param array $schema The configuration schema to use for initialization.
-     * @return array The initialized configuration based on the given schema.
+     * @return array The flat schema defined in the class.
      */
-    private function initializeConfig(array $schema)
+    public function getFlatSchema(): array
     {
-        $config = [];
-        foreach ($schema as $key => $definition) {
-            // Handle array types with nested defaults
-            if (isset($definition['type'])) {
-                if ($definition['type'] === 'array' && is_array($definition['default'])) {
-                    $config[$key] = $this->initializeConfig($definition['default']);
-                } else {
-                    $config[$key] = $definition['default'];
-                }
-            } else {
-                // Recursively initialize nested configurations
-                if (is_array($definition)) {
-                    $config[$key] = $this->initializeConfig($definition);
-                } else {
-                    $config[$key] = $definition;
-                }
-            }
-        }
-        return $config;
+        return self::$FLAT_SCHEMA;
     }
 
     /**
-     * Define the configuration schema.
+     * Returns a singleton configuration handler object for managing feature flags and payload settings.
      *
-     * This function returns a comprehensive configuration schema that defines the type,
-     * default values, and nested structures for each configuration setting.
+     * The handler provides methods to get, set, and export configuration values, supporting both bitmask-based
+     * feature toggles and arbitrary payload data. The configuration schema and path-to-bit mapping are provided
+     * statically. The handler validates types and throws exceptions for invalid paths or types.
      *
-     * @since 1.3.0
+     * @return object Configuration handler with the following public methods:
+     *                - get(string $path): mixed
+     *                - set(string|array $path, mixed $value = null): self
+     *                - export(): array
+     *                - bind(int &$features, array &$payload): void
      *
-     * @return array The defined configuration schema.
+     * @throws \InvalidArgumentException If an invalid config path or type is provided to set().
      */
-    private function defineConfigSchema(): array
+    public function config(): object
     {
-        return [
-            'abbreviations' => [
-                'enabled' => ['type' => 'boolean', 'default' => true],
-                'allow_custom' => ['type' => 'boolean', 'default' => true],
-                'predefined' => [
-                    'type' => 'array',
-                    'default' => [],
-                    'item_schema' => [
-                        'key_type' => 'string',
-                        'value_type' => 'string',
-                    ],
-                ],
-            ],
-            'code' => [
-                'enabled' => ['type' => 'boolean', 'default' => true],
-                'blocks' => ['type' => 'boolean', 'default' => true],
-                'inline' => ['type' => 'boolean', 'default' => true],
-            ],
-            'comments' => ['type' => 'boolean', 'default' => true],
-            'definition_lists' => ['type' => 'boolean', 'default' => true],
-            'diagrams' => [
-                'enabled' => ['type' => 'boolean', 'default' => false],
-                'chartjs' => ['type' => 'boolean', 'default' => true],
-                'mermaid' => ['type' => 'boolean', 'default' => true],
-            ],
-            'emojis' => ['type' => 'boolean', 'default' => true],
-            'emphasis' => [
-                'enabled' => ['type' => 'boolean', 'default' => true],
-                'bold' => ['type' => 'boolean', 'default' => true],
-                'italic' => ['type' => 'boolean', 'default' => true],
-                'strikethroughs' => ['type' => 'boolean', 'default' => true],
-                'insertions' => ['type' => 'boolean', 'default' => true],
-                'subscript' => ['type' => 'boolean', 'default' => false],
-                'superscript' => ['type' => 'boolean', 'default' => false],
-                'keystrokes' => ['type' => 'boolean', 'default' => true],
-                'mark' => ['type' => 'boolean', 'default' => true],
-            ],
-            'footnotes' => ['type' => 'boolean', 'default' => true],
-            'headings' => [
-                'enabled' => ['type' => 'boolean', 'default' => true],
-                'allowed_levels' => ['type' => 'array', 'default' => ['h1', 'h2', 'h3', 'h4', 'h5', 'h6']],
-                'auto_anchors' => [
-                    'enabled' => ['type' => 'boolean', 'default' => true],
-                    'delimiter' => ['type' => 'string', 'default' => '-'],
-                    'lowercase' => ['type' => 'boolean', 'default' => true],
-                    'replacements' => ['type' => 'array', 'default' => []],
-                    'transliterate' => ['type' => 'boolean', 'default' => false],
-                    'blacklist' => ['type' => 'array', 'default' => []],
-                ],
-                'special_attributes' => ['type' => 'boolean', 'default' => true],
-            ],
-            'images' => ['type' => 'boolean', 'default' => true],
-            'links' => [
-                'enabled' => ['type' => 'boolean', 'default' => true],
-                'email_links' => ['type' => 'boolean', 'default' => true],
-                'external_links' => [
-                    'enabled' => ['type' => 'boolean', 'default' => true],
-                    'nofollow' => ['type' => 'boolean', 'default' => true],
-                    'noopener' => ['type' => 'boolean', 'default' => true],
-                    'noreferrer' => ['type' => 'boolean', 'default' => true],
-                    'open_in_new_window' => ['type' => 'boolean', 'default' => true],
-                    'internal_hosts' => [
-                        'type' => 'array', 'default' => [],
-                        'item_schema' => ['type' => 'string'],
-                    ],
-                ],
-            ],
-            'lists' => [
-                'enabled' => ['type' => 'boolean', 'default' => true],
-                'tasks' => ['type' => 'boolean', 'default' => true],
-            ],
-            'allow_raw_html' => ['type' => 'boolean', 'default' => true],
-            'alerts' => [
-                'enabled' => ['type' => 'boolean', 'default' => true],
-                'types' => [
-                    'type' => 'array',
-                    'default' => ['note', 'tip', 'important', 'warning', 'caution'],
-                    'item_schema' => ['type' => 'string'],
-                ],
-                'class' => ['type' => 'string', 'default' => 'markdown-alert'],
-            ],
-            'math' => [
-                'enabled' => ['type' => 'boolean', 'default' => false],
-                'inline' => [
-                    'enabled' => ['type' => 'boolean', 'default' => true],
-                    'delimiters' => [
-                        'type' => 'array',
-                        'default' => [['left' => '$', 'right' => '$']],
-                        'item_schema' => ['type' => 'array', 'keys' => ['left' => 'string', 'right' => 'string']],
-                    ],
-                ],
-                'block' => [
-                    'enabled' => ['type' => 'boolean', 'default' => true],
-                    'delimiters' => [
-                        'type' => 'array',
-                        'default' => [
-                            ['left' => '$$', 'right' => '$$'],
-                        ],
-                        'item_schema' => ['type' => 'array', 'keys' => ['left' => 'string', 'right' => 'string']],
-                    ],
-                ],
-            ],
-            'quotes' => ['type' => 'boolean', 'default' => true],
-            'references' => ['type' => 'boolean', 'default' => true],
-            'smartypants' => [
-                'enabled' => ['type' => 'boolean', 'default' => false],
-                'smart_angled_quotes' => ['type' => 'boolean', 'default' => true],
-                'smart_backticks' => ['type' => 'boolean', 'default' => true],
-                'smart_dashes' => ['type' => 'boolean', 'default' => true],
-                'smart_ellipses' => ['type' => 'boolean', 'default' => true],
-                'smart_quotes' => ['type' => 'boolean', 'default' => true],
-                'substitutions' => [
-                    'ellipses' => ['type' => 'string', 'default' => '&hellip;'],
-                    'left_angle_quote' => ['type' => 'string', 'default' => '&laquo;'],
-                    'left_double_quote' => ['type' => 'string', 'default' => '&ldquo;'],
-                    'left_single_quote' => ['type' => 'string', 'default' => '&lsquo;'],
-                    'mdash' => ['type' => 'string', 'default' => '&mdash;'],
-                    'ndash' => ['type' => 'string', 'default' => '&ndash;'],
-                    'right_angle_quote' => ['type' => 'string', 'default' => '&raquo;'],
-                    'right_double_quote' => ['type' => 'string', 'default' => '&rdquo;'],
-                    'right_single_quote' => ['type' => 'string', 'default' => '&rsquo;'],
-                ],
-            ],
-            'tables' => [
-                'enabled' => ['type' => 'boolean', 'default' => true],
-                'tablespan' => ['type' => 'boolean', 'default' => true],
-            ],
-            'thematic_breaks' => ['type' => 'boolean', 'default' => true],
-            'toc' => [
-                'enabled' => ['type' => 'boolean', 'default' => true],
-                'levels' => [
-                    'type' => 'array',
-                    'default' => ['h1', 'h2', 'h3', 'h4', 'h5', 'h6'],
-                    'item_schema' => ['type' => 'string'],
-                ],
-                'tag' => ['type' => 'string', 'default' => '[TOC]'],
-                'id' => ['type' => 'string', 'default' => 'toc'],
-            ],
-            'typographer' => ['type' => 'boolean', 'default' => true],
-        ];
-    }
+        static $handler = null;
 
-
-    /**
-     * Retrieve the configuration schema.
-     *
-     * This function returns the complete configuration schema that defines the structure,
-     * expected data types, and default values for all configurable settings.
-     *
-     * The schema is used internally for validation and providing type safety when getting or setting configuration values.
-     *
-     * @since 1.3.0
-     *
-     * @return array The configuration schema as an associative array.
-     */
-    public function getConfigSchema(): array
-    {
-        return $this->configSchema;
-    }
-
-    /**
-     * Return a new instance of an anonymous configuration class.
-     *
-     * This function creates an instance of a class that provides methods to interact with the configuration settings.
-     * It allows getting and setting configuration values, including translating deprecated keys and validating types.
-     *
-     * @since 1.3.0
-     *
-     * @return object Anonymous configuration object with get and set methods.
-     */
-    public function config()
-    {
-        if ($this->configHandler === null) {
-            $this->configHandler = new class ($this->configSchema, $this->config) {
+        if ($handler === null) {
+            $handler = new class(self::$PATH_TO_BIT, self::$FLAT_SCHEMA) {
+                private array $p2b;
                 private array $schema;
-                private $config;
+                private int   $features;
+                private array $payload;
 
-            /**
-             * Constructor to initialize configuration schema and reference configuration array.
-             *
-             * @since 0.1.0
-             *
-             * @param array $schema The schema that defines the structure and types of config.
-             * @param array &$config A reference to the actual configuration array.
-             */
-            public function __construct(array $schema, &$config)
-            {
-                $this->schema = $schema;
-                $this->config = &$config;
-            }
-
-            /**
-             * Translate deprecated key paths to the new key paths.
-             *
-             * This function checks for deprecated configuration keys and suggests a newer version if available.
-             *
-             * @since 1.3.0
-             *
-             * @param string $keyPath The key path to be translated.
-             * @return string The translated or original key path.
-             */
-            private function translateDeprecatedKeyPath(string $keyPath): string
-            {
-                static $deprecatedMapping = [
-                    // Mapping of deprecated keys to new keys.
-                    'abbreviations.allow_custom_abbr' => 'abbreviations.allow_custom',
-                    'abbreviations.predefine' => 'abbreviations.predefined',
-                    'emphasis.marking' => 'emphasis.mark',
-                    'headings.allowed' => 'headings.allowed_levels',
-                    'smarty' => 'smartypants',
-                    'smarty.substitutions.left-angle-quote' => 'smartypants.substitutions.left_angle_quote',
-                    'toc.toc_tag' => 'toc.tag',
-                    'markup' => 'allow_raw_html',
-                    'toc.headings' => 'toc.levels',
-                ];
-
-                // If the key path is deprecated, trigger a deprecation warning.
-                if (isset($deprecatedMapping[$keyPath])) {
-                    $backtrace = debug_backtrace();
-                    $caller = $backtrace[1] ?? $backtrace[0];
-                    $message = "The config path '{$keyPath}' is deprecated. Use '{$deprecatedMapping[$keyPath]}' instead. Called in " . ($caller['file'] ?? 'unknown') . " on line " . ($caller['line'] ?? 'unknown');
-                    trigger_error($message, E_USER_DEPRECATED);
+                public function __construct(array $p2b, array $schema)
+                {
+                    $this->p2b    = $p2b;
+                    $this->schema = $schema;
+                }
+                public function bind(int &$f, array &$p): void
+                {
+                    $this->features = &$f;
+                    $this->payload  = &$p;
                 }
 
-                return $deprecatedMapping[$keyPath] ?? $keyPath;
-            }
-
-            /**
-             * Retrieves a value from a nested array or object using a dot-separated key path.
-             *
-             * @since 1.3.0
-             *
-             * @param string $keyPath Dot-separated key path indicating the config to get.
-             * @param bool $raw Whether to return the raw value without any processing.
-             * @return mixed The value of the configuration setting.
-             * @throws \InvalidArgumentException If the key path is invalid.
-             */
-            public function get(string $keyPath, bool $raw = false)
-            {
-                // Translate deprecated key paths.
-                $keyPath = $this->translateDeprecatedKeyPath($keyPath);
-
-                // Split the key path into individual keys.
-                $keys = explode('.', $keyPath);
-                $value = $this->config;
-
-                // Traverse through keys to reach the desired value.
-                foreach ($keys as $key) {
-                    if (!array_key_exists($key, $value)) {
-                        $backtrace = debug_backtrace();
-                        $caller = $backtrace[1] ?? $backtrace[0];
-                        $errorMessage = "Invalid key path '{$keyPath}' given. Called in " . ($caller['file'] ?? 'unknown') . " on line " . ($caller['line'] ?? 'unknown');
-                        throw new \InvalidArgumentException($errorMessage);
+                /* ---------------------------- GET ----------------------- */
+                public function get(string $path)
+                {
+                    $path = $this->normalisePath($path);
+                    if (!isset($this->schema[$path])) {
+                        throw new \InvalidArgumentException("Invalid config path: {$path}");
                     }
-                    $value = $value[$key];
+                    if (isset($this->p2b[$path])) {
+                        return ( ($this->features & $this->p2b[$path]) !== 0 );
+                    }
+                    return $this->payload[$path] ?? null;
                 }
 
-                if ($raw) {
-                    return $value;
-                }
+                /* ---------------------------- SET ----------------------- */
+                public function set($path, $value = null): self
+                {
+                    if (is_array($path)) {
+                        foreach ($path as $k => $v) { $this->set($k, $v); }
+                        return $this;
+                    }
 
-                // If the value is an array with an 'enabled' key, return that instead.
-                return is_array($value) && isset($value['enabled']) ? $value['enabled'] : $value;
-            }
+                    if (is_string($path) && is_array($value) && !isset($this->schema[$path])) {
+                        $prefix = $path . '.';
+                        $hasChild = false;
+                        foreach ($this->schema as $key => $_) {
+                            if (strpos($key, $prefix) === 0) { $hasChild = true; break; }
+                        }
+                        if ($hasChild) {
+                            foreach ($value as $k => $v) { $this->set($prefix . $k, $v); }
+                            return $this;
+                        }
+                    }
 
-            /**
-             * Set the configuration value for the provided key path.
-             *
-             * @since 1.3.0
-             *
-             * @param string|array $keyPath Dot-separated key path indicating the config to set or an associative array of key paths and values.
-             * @param mixed $value The value to set.
-             * @return self Returns the instance for method chaining.
-             * @throws \InvalidArgumentException If the key path is invalid or the value is of the wrong type.
-             */
-            public function set($keyPath, $value = null): self
-            {
-                if (is_array($keyPath)) {
-                    // Set multiple values if an associative array is provided.
-                    foreach ($keyPath as $key => $val) {
-                        $this->set($key, $val);
+                    $path = $this->normalisePath($path);
+
+                    if (!isset($this->schema[$path])) {
+                        throw new \InvalidArgumentException("Invalid config path: {$path}");
+                    }
+                    $this->validate($value, $this->schema[$path]['type']);
+
+                    if (isset($this->p2b[$path])) {
+                        $bit = $this->p2b[$path];
+                        $this->features = $value ? ($this->features | $bit)
+                                                  : ($this->features & ~$bit);
+                    } else {
+                        $this->payload[$path] = $value;
                     }
                     return $this;
                 }
 
-                // Translate deprecated key paths.
-                $keyPath = $this->translateDeprecatedKeyPath($keyPath);
-
-                // Split the key path into individual keys.
-                $keys = explode('.', $keyPath);
-                $lastKey = array_pop($keys);
-
-                $current = &$this->config;
-                $currentSchema = $this->schema;
-
-                // Navigate to the desired configuration section.
-                foreach ($keys as $key) {
-                    if (!isset($current[$key])) {
-                        $backtrace = debug_backtrace();
-                        $caller = $backtrace[1] ?? $backtrace[0];
-                        $errorMessage = "Invalid key path '{$keyPath}' given. Called in " . ($caller['file'] ?? 'unknown') . " on line " . ($caller['line'] ?? 'unknown');
-                        throw new \InvalidArgumentException($errorMessage);
+                public function export(): array
+                {
+                    $flat = $this->payload;
+                    foreach ($this->p2b as $p => $b) {
+                        $flat[$p] = (($this->features & $b) !== 0);
                     }
-                    $current = &$current[$key];
-                    if (!isset($currentSchema[$key])) {
-                        throw new \InvalidArgumentException("Invalid schema path: " . implode('.', $keys));
-                    }
-                    $currentSchema = $currentSchema[$key];
+                    return $flat;
                 }
 
-                // Validate and set the value for the specified key.
-                if (isset($currentSchema['default'][$lastKey])) {
-                    $expectedType = $currentSchema['default'][$lastKey]['type'];
-                    $this->validateType($value, $expectedType, $currentSchema['default'][$lastKey]);
-                    $current[$lastKey] = $value;
-                } else {
-                    if (!isset($currentSchema[$lastKey])) {
-                        $backtrace = debug_backtrace();
-                        $caller = $backtrace[1] ?? $backtrace[0];
-                        $errorMessage = "Invalid key path '{$keyPath}' given. Called in " . ($caller['file'] ?? 'unknown') . " on line " . ($caller['line'] ?? 'unknown');
-                        throw new \InvalidArgumentException($errorMessage);
+                /* -------------------- helpers --------------------------- */
+                private function normalisePath(string $p): string
+                {
+                    if (!isset($this->schema[$p]) && isset($this->schema[$p . '.enabled'])) {
+                        return $p . '.enabled';
                     }
-                    $expectedType = $currentSchema[$lastKey]['type'] ?? null;
-                    if ($expectedType) {
-                        $this->validateType($value, $expectedType, $currentSchema[$lastKey]);
-                    }
-                    // Update the 'enabled' field if applicable.
-                    if (isset($current[$lastKey]['enabled']) && is_array($current[$lastKey])) {
-
-                        /**
-                         * If the value is an array, it recursively sets each sub-value.
-                         * Otherwise, it sets the 'enabled' key of the current configuration.
-                         */
-                        if (is_array($value)) {
-                            foreach ($value as $subKey => $subValue) {
-                                $this->set($keyPath . '.' . $subKey, $subValue);
-                            }
-                        } else {
-                            $current[$lastKey]['enabled'] = $value;
-                        }
-
-                    } else {
-                        $current[$lastKey] = $value;
+                    return $p;
+                }
+                private function validate($val, string $expected): void
+                {
+                    $actual = gettype($val);
+                    if ($expected !== $actual) {
+                        throw new \InvalidArgumentException("Expected {$expected}, got {$actual}");
                     }
                 }
+            };
+        }
+        $handler->bind($this->features, $this->payload);
+        return $handler;
+    }
 
-                return $this;
-            }
+    /**
+     * Compiles the configuration schema by recursively traversing the schema definition.
+     *
+     * This method walks through the CONFIG_SCHEMA_DEFAULT array, registering boolean options
+     * and payloads for each configuration path. For associative array branches, it registers
+     * an "enabled" boolean (defaulting to true unless specified), and recurses into child nodes.
+     * For leaf nodes, it distinguishes between booleans (registered as boolean options) and
+     * other types (registered as payloads).
+     *
+     * @return void
+     */
+    private function compileSchema(): void
+    {
+        $bitIndex = 0;
 
-            /**
-             * Validate the type of the given value against the expected type.
-             *
-             * @since 1.3.0
-             *
-             * @param mixed $value The value to be validated.
-             * @param string $expectedType The expected type of the value.
-             * @param array|null $schema Additional schema for validation (e.g., item schema for arrays).
-             * @throws \InvalidArgumentException If the value type does not match the expected type.
-             */
-            protected function validateType($value, string $expectedType, ?array $schema = null): void
-            {
-                $type = gettype($value);
+        $walk = function (array $node, string $prefix = '') use (&$walk, &$bitIndex): void {
+            foreach ($node as $k => $v) {
+                $path = $prefix === '' ? $k : $prefix . '.' . $k;
 
-                if ($expectedType === 'array' && $type === 'array') {
-                    if (isset($schema['item_schema'])) {
-                        if (isset($schema['item_schema']['key_type']) && isset($schema['item_schema']['value_type'])) {
-                            // Validate key-value pairs in the array.
-                            $keyType = $schema['item_schema']['key_type'];
-                            $valueType = $schema['item_schema']['value_type'];
-
-                            foreach ($value as $key => $item) {
-                                if (gettype($key) !== $keyType || gettype($item) !== $valueType) {
-                                    $backtrace = debug_backtrace();
-                                    $caller = $backtrace[1] ?? $backtrace[0];
-                                    $errorMessage = "Array keys must be of type '$keyType' and values of type '$valueType'. Called in " . ($caller['file'] ?? 'unknown') . " on line " . ($caller['line'] ?? 'unknown');
-                                    throw new \InvalidArgumentException($errorMessage);
-                                }
-                            }
-                            return;
-                        }
+                // branch (associative => object)
+                if (is_array($v) && $v !== [] && array_keys($v) !== range(0, count($v) - 1)) {
+                    // implicit enabled=true unless provided
+                    $enabledDefault = true;
+                    if (array_key_exists('enabled', $v)) {
+                        $enabledDefault = (bool)$v['enabled'];
                     }
-                    return;
+                    $this->registerBoolean("{$path}.enabled", $enabledDefault, $bitIndex);
+                    if (array_key_exists('enabled', $v)) {
+                        unset($v['enabled']); // don't recurse into it
+                    }
+                    $walk($v, $path);
+                    continue;
                 }
 
-                // If types do not match, throw an error with debug information.
-                if ($type !== $expectedType) {
-                    $backtrace = debug_backtrace();
-                    $caller = $backtrace[1] ?? $backtrace[0];
-                    $errorMessage = "Expected type $expectedType, got $type. Called in " . ($caller['file'] ?? 'unknown') . " on line " . ($caller['line'] ?? 'unknown');
-                    throw new \InvalidArgumentException($errorMessage);
+                // leaf boolean
+                if (is_bool($v)) {
+                    $this->registerBoolean($path, $v, $bitIndex);
+                    continue;
                 }
+
+                // leaf non‑boolean (string, int, array, …)
+                $this->registerPayload($path, $v);
             }
         };
-        }
 
-        return $this->configHandler;
+        $walk(self::CONFIG_SCHEMA_DEFAULT);
     }
+
+    /**
+     * Registers a boolean feature flag with a unique bit index and default value.
+     *
+     * Maps the given feature path to a bit position, stores its schema, and updates
+     * the default bits if the feature is enabled by default. Throws an exception if
+     * more than 64 boolean features are registered.
+     *
+     * @param string $path      The unique path identifying the feature.
+     * @param bool   $default   The default value for the feature (enabled or disabled).
+     * @param int    &$bitIndex Reference to the current bit index, incremented after assignment.
+     *
+     * @throws \RuntimeException If more than 64 boolean features are registered.
+     */
+    private function registerBoolean(string $path, bool $default, int &$bitIndex): void
+    {
+        if ($bitIndex > 63) {
+            throw new \RuntimeException('Exceeded 64 boolean feature bits');
+        }
+        $bit = 1 << $bitIndex++;
+        self::$PATH_TO_BIT[$path] = $bit;
+        self::$BIT_TO_PATH[$bit]  = $path;
+        self::$FLAT_SCHEMA[$path] = ['type' => 'boolean', 'default' => $default];
+        if ($default) {
+            self::$DEFAULT_BITS |= $bit;
+        }
+    }
+
+    /**
+     * Registers a payload path with its default value and type in the schema.
+     *
+     * @param string $path    The unique path identifier for the payload.
+     * @param mixed  $default The default value to associate with the payload path.
+     *
+     * @return void
+     */
+    private function registerPayload(string $path, $default): void
+    {
+        self::$FLAT_SCHEMA[$path]   = ['type' => gettype($default), 'default' => $default];
+        self::$DEFAULT_PAYLOAD[$path] = $default;
+    }
+
+    /**
+     * Recursively applies configuration overrides to the current configuration.
+     *
+     * This method traverses the provided associative array of overrides, optionally using a prefix
+     * to build dot-notated paths for nested configuration keys. If a value is an array and does not
+     * correspond to a flat schema entry, the method recurses into that array. Otherwise, it sets the
+     * configuration value at the computed path.
+     *
+     * @param array $ovr    The associative array of configuration overrides.
+     * @param string $prefix The prefix for nested configuration keys, used for dot notation (optional).
+     *
+     * @return void
+     */
+    private function applyOverrides(array $ovr, string $prefix = ''): void
+    {
+        foreach ($ovr as $k => $v) {
+            $path = $prefix === '' ? $k : $prefix . '.' . $k;
+
+            if (is_array($v) && !isset(self::$FLAT_SCHEMA[$path])) {
+                $this->applyOverrides($v, $path);
+                continue;
+            }
+            $this->config()->set($path, $v);
+        }
+    }
+
 
 
     // Overwriting core Parsedown functions
@@ -3704,71 +3555,75 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
     public function line($text, $nonNestables = [])
     {
         $markup = '';
+        $inlineMarkerList = $this->inlineMarkerList;
+        $InlineTypes = $this->InlineTypes;
+        $nonNestablesSet = $nonNestables ? array_flip($nonNestables) : [];
 
-        // Search for inline markers in the text
-        while ($Excerpt = strpbrk((string)$text, $this->inlineMarkerList)) {
-            $marker = $Excerpt[0];
+        while (true) {
+            $ExcerptStr = strpbrk((string)$text, $inlineMarkerList);
+            if ($ExcerptStr === false) {
+                // No more markers, process the rest and break
+                $markup .= $this->unmarkedText($text);
+                break;
+            }
+
+            $marker = $ExcerptStr[0];
             $markerPosition = strpos($text, $marker);
 
-            // Get the character before the marker
+            // Prepare excerpt context
             $before = $markerPosition > 0 ? $text[$markerPosition - 1] : '';
-
-            // Create an excerpt array with context for inline processing
             $Excerpt = [
-                'text' => $Excerpt,
+                'text' => $ExcerptStr,
                 'context' => $text,
                 'before' => $before,
                 'parent' => $this,
             ];
 
-            // Iterate through possible inline types for the marker
-            foreach ($this->InlineTypes[$marker] as $inlineType) {
-                if (!empty($nonNestables) && in_array($inlineType, $nonNestables)) {
-                    continue; // Skip non-nestable inline types in this context
+            // Try each inline type for this marker
+            foreach ($InlineTypes[$marker] as $inlineType) {
+                if (isset($nonNestablesSet[$inlineType])) {
+                    continue;
                 }
 
-                // Attempt to create an inline element using the handler
-                $Inline = $this->{'inline'.$inlineType}($Excerpt);
+                $handler = 'inline' . $inlineType;
+                $Inline = $this->$handler($Excerpt);
 
                 if (!isset($Inline)) {
-                    continue; // If no inline element was found, continue to the next type
+                    continue;
                 }
 
                 if (isset($Inline['position']) && $Inline['position'] > $markerPosition) {
-                    continue; // Ensure the inline belongs to the current marker
+                    continue;
                 }
 
-                // Set a default position if not provided
-                if (!isset($Inline['position'])) {
-                    $Inline['position'] = $markerPosition;
+                $Inline['position'] = $Inline['position'] ?? $markerPosition;
+
+                // Only add nonNestables if present
+                if ($nonNestables) {
+                    foreach ($nonNestables as $non_nestable) {
+                        $Inline['element']['nonNestables'][] = $non_nestable;
+                    }
                 }
 
-                // Add non-nestables to the inline element
-                foreach ($nonNestables as $non_nestable) {
-                    $Inline['element']['nonNestables'][] = $non_nestable;
+                // Add text before the inline element
+                if ($Inline['position'] > 0) {
+                    $markup .= $this->unmarkedText(substr($text, 0, $Inline['position']));
                 }
 
-                // Compile the text that comes before the inline element
-                $unmarkedText = substr($text, 0, $Inline['position']);
-                $markup .= $this->unmarkedText($unmarkedText);
-
-                // Compile the inline element
+                // Add the inline element
                 $markup .= $Inline['markup'] ?? $this->element($Inline['element']);
 
-                // Remove the processed text from the input
+                // Remove processed text
                 $text = substr($text, $Inline['position'] + $Inline['extent']);
 
-                continue 2; // Continue parsing the rest of the text
+                // Continue with the rest of the text
+                continue 2;
             }
 
-            // If no valid inline marker was found, add the marker to the markup
-            $unmarkedText = substr($text, 0, $markerPosition + 1);
-            $markup .= $this->unmarkedText($unmarkedText);
+            // No inline found, treat marker as plain text
+            $markup .= $this->unmarkedText(substr($text, 0, $markerPosition + 1));
             $text = substr($text, $markerPosition + 1);
         }
-
-        // Compile the remaining text
-        $markup .= $this->unmarkedText($text);
 
         return $markup;
     }
@@ -3793,85 +3648,83 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
     protected function lineElements($text, $nonNestables = []): array
     {
         $Elements = [];
+        $inlineMarkerList = $this->inlineMarkerList;
+        $InlineTypes = $this->InlineTypes;
+        $nonNestablesSet = $nonNestables ? array_flip($nonNestables) : [];
 
-        // If non-nestable elements are provided, convert them to associative array for fast lookup
-        $nonNestables = (
-            empty($nonNestables)
-            ? []
-            : array_combine($nonNestables, $nonNestables)
-        );
+        $textLen = strlen($text);
+        $offset = 0;
 
-        // $Excerpt represents the first occurrence of an inline marker in the text
-        while ($Excerpt = strpbrk($text, $this->inlineMarkerList)) {
-            $marker = $Excerpt[0]; // The detected marker
-            $markerPosition = strlen($text) - strlen($Excerpt); // Calculate the marker position in the text
+        while ($offset < $textLen) {
+            $ExcerptStr = strpbrk(substr($text, $offset), $inlineMarkerList);
+            if ($ExcerptStr === false) {
+                // No more markers, process the rest and break
+                if ($offset < $textLen) {
+                    $InlineText = $this->inlineText(substr($text, $offset));
+                    $Elements[] = $InlineText['element'];
+                }
+                break;
+            }
 
-            // Get the character before the marker (if any)
+            $marker = $ExcerptStr[0];
+            $markerPosition = strpos($text, $marker, $offset);
+
             $before = $markerPosition > 0 ? $text[$markerPosition - 1] : '';
+            $Excerpt = [
+                'text' => substr($text, $markerPosition),
+                'context' => $text,
+                'before' => $before,
+            ];
 
-            // Prepare an excerpt for further processing
-            $Excerpt = ['text' => $Excerpt, 'context' => $text, 'before' => $before];
-
-            // Process all inline types associated with this marker
-            foreach ($this->InlineTypes[$marker] as $inlineType) {
-                // Skip inline types that are non-nestable within this context
-                if (isset($nonNestables[$inlineType])) {
+            foreach ($InlineTypes[$marker] as $inlineType) {
+                if (isset($nonNestablesSet[$inlineType])) {
                     continue;
                 }
 
-                // Call the corresponding inline processing function
                 $Inline = $this->{"inline$inlineType"}($Excerpt);
 
-                // If no valid inline element was found, continue to the next inline type
                 if (!isset($Inline)) {
                     continue;
                 }
 
-                // Ensure the inline element belongs to the current marker
-                if (isset($Inline['position']) && $Inline['position'] > $markerPosition) {
+                if (isset($Inline['position']) && $Inline['position'] > ($markerPosition - $offset)) {
                     continue;
                 }
 
-                // Set default inline position if not specified
-                if (!isset($Inline['position'])) {
-                    $Inline['position'] = $markerPosition;
+                $Inline['position'] = $Inline['position'] ?? 0;
+
+                // Only add nonNestables if present
+                if ($nonNestablesSet) {
+                    $Inline['element']['nonNestables'] = isset($Inline['element']['nonNestables'])
+                        ? array_merge($Inline['element']['nonNestables'], array_keys($nonNestablesSet))
+                        : array_keys($nonNestablesSet);
                 }
 
-                // Inherit non-nestable elements from the current context
-                $Inline['element']['nonNestables'] = isset($Inline['element']['nonNestables'])
-                    ? array_merge($Inline['element']['nonNestables'], $nonNestables)
-                    : $nonNestables;
+                // Add unmarked text before the inline element
+                if ($Inline['position'] > 0) {
+                    $unmarkedText = substr($text, $offset, $Inline['position']);
+                    if ($unmarkedText !== '') {
+                        $InlineText = $this->inlineText($unmarkedText);
+                        $Elements[] = $InlineText['element'];
+                    }
+                }
 
-                // Get the text before the inline marker
-                $unmarkedText = substr($text, 0, $Inline['position']);
-
-                // Process and add the unmarked text as an element
-                $InlineText = $this->inlineText($unmarkedText);
-                $Elements[] = $InlineText['element'];
-
-                // Process and add the inline element
+                // Add the inline element
                 $Elements[] = $this->extractElement($Inline);
 
-                // Remove the processed portion from the text and continue parsing
-                $text = substr($text, $Inline['position'] + $Inline['extent']);
-
+                // Move offset past the processed inline element
+                $offset = $markerPosition + $Inline['position'] + $Inline['extent'];
                 continue 2;
             }
 
-            // If no valid inline element was found for the marker, treat it as plain text
-            $unmarkedText = substr($text, 0, $markerPosition + 1);
-
-            // Process and add the unmarked text as an element
-            $InlineText = $this->inlineText($unmarkedText);
-            $Elements[] = $InlineText['element'];
-
-            // Remove the processed portion from the text
-            $text = substr($text, $markerPosition + 1);
+            // No inline found, treat marker as plain text
+            $plainText = substr($text, $offset, $markerPosition - $offset + 1);
+            if ($plainText !== '') {
+                $InlineText = $this->inlineText($plainText);
+                $Elements[] = $InlineText['element'];
+            }
+            $offset = $markerPosition + 1;
         }
-
-        // Process any remaining text after all markers
-        $InlineText = $this->inlineText($text);
-        $Elements[] = $InlineText['element'];
 
         // Set the `autobreak` property for each element, defaulting to false if not already set
         foreach ($Elements as &$Element) {
