@@ -467,49 +467,35 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
     {
         $config = $this->config();
 
-        if (!$config->get('links') || !$Excerpt || !isset($Excerpt['element']['attributes']['href'])) {
+        // Fast fail for missing config or href
+        if (
+            !$config->get('links') ||
+            !$Excerpt ||
+            empty($Excerpt['element']['attributes']['href'])
+        ) {
             return null;
         }
 
-        if (isset($Excerpt['element']['attributes']['href'])) {
-            // Get the href attribute
-            $href = $Excerpt['element']['attributes']['href'];
+        $href = $Excerpt['element']['attributes']['href'];
 
-            // Check if link is an external link
-            $isExternal = $this->isExternalLink($href);
+        // Only process external links if enabled
+        if ($this->isExternalLink($href)) {
+            $extCfg = $config->get('links.external_links');
+            if (!$extCfg) {
+                return null;
+            }
 
-            if ($isExternal === true) {
-                // Check if external links are disabled
-                if (!$config->get('links.external_links')) {
-                    return null;
-                }
+            // Only build rel if needed
+            $rel = [];
+            if (!empty($extCfg['nofollow']))   $rel[] = 'nofollow';
+            if (!empty($extCfg['noopener']))   $rel[] = 'noopener';
+            if (!empty($extCfg['noreferrer'])) $rel[] = 'noreferrer';
 
-                $rel = [];
-
-                // Add nofollow attribute if specified in the configuration
-                if ($config->get('links.external_links.nofollow')) {
-                    $rel[] = 'nofollow';
-                }
-
-                // Add noopener attribute if specified in the configuration
-                if ($config->get('links.external_links.noopener')) {
-                    $rel[] = 'noopener';
-                }
-
-                // Add noreferrer attribute if specified in the configuration
-                if ($config->get('links.external_links.noreferrer')) {
-                    $rel[] = 'noreferrer';
-                }
-
-                // Add target attribute with '_blank' value
-                if ($config->get('links.external_links.open_in_new_window')) {
-                    $Excerpt['element']['attributes']['target'] = '_blank';
-                }
-
-                // Add rel attribute with values from the $rel array
-                if (!empty($rel)) {
-                    $Excerpt['element']['attributes']['rel'] = implode(' ', $rel);
-                }
+            if (!empty($extCfg['open_in_new_window'])) {
+                $Excerpt['element']['attributes']['target'] = '_blank';
+            }
+            if ($rel) {
+                $Excerpt['element']['attributes']['rel'] = implode(' ', $rel);
             }
         }
 
