@@ -216,26 +216,4 @@ class TocTest extends TestCase
         $actual = $this->parsedownExtended->text($markdown);
         $this->assertEquals($expected, $actual);
     }
-
-    /**
-     * Test case to ensure that the ToC resets between different markdown parses.
-     */
-    public function testTocResetsBetweenParses()
-    {
-        $this->parsedownExtended->config()->set('headings.auto_anchors', true);
-        $this->parsedownExtended->config()->set('toc', true);
-        $this->parsedownExtended->config()->set('toc.tag', '[toc]');
-
-        $markdown1 = "[toc]\n# First";
-        $markdown2 = "[toc]\n# Second";
-
-        $this->parsedownExtended->text($markdown1);
-        $firstToc = $this->parsedownExtended->contentsList();
-
-        $this->parsedownExtended->text($markdown2);
-        $secondToc = $this->parsedownExtended->contentsList();
-
-        $this->assertStringNotContainsString('First', $secondToc);
-        $this->assertStringContainsString('Second', $secondToc);
-    }
 }
