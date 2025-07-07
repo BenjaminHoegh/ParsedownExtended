@@ -1028,7 +1028,7 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
 
         // ``like this''
         if ('`' === $first && $config->get('smartypants.smart_backticks')) {
-            if (preg_match('/^(?:``)(?!\s)([^"\'`]+)(?:\'\')/i', $text, $matches)) {
+            if (preg_match('/^``(?!\s)([^"\'`]+)\'\'/i', $text, $matches)) {
                 if (strlen(trim($Excerpt['before'])) > 0) {
                     return null;
                 }
@@ -1044,7 +1044,7 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
 
         // "like this" or 'like this'
         if (('"' === $first || "'" === $first) && $config->get('smartypants.smart_quotes')) {
-            if (preg_match('/^(\")(?!\s)([^\"]+)(?:\")|^(?<!\w)(\')(?!\s)([^\']+)(?:\')/i', $text, $matches)) {
+            if (preg_match('/^(\")(?!\s)([^\"]+)\"|^(?<!\w)(\')(?!\s)([^\']+)\'/i', $text, $matches)) {
                 if (strlen(trim($Excerpt['before'])) > 0) {
                     return null;
                 }
@@ -1069,7 +1069,7 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
 
         // <<like this>>
         if ('<' === $first && $config->get('smartypants.smart_angled_quotes')) {
-            if (preg_match('/^(?:<{2})(?!\s)([^<>]+)(?:>{2})/i', $text, $matches)) {
+            if (preg_match('/^<{2}(?!\s)([^<>]+)>{2}/i', $text, $matches)) {
                 if (strlen(trim($Excerpt['before'])) > 0) {
                     return null;
                 }
