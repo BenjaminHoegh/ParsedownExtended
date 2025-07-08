@@ -57,6 +57,9 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
     /** @var array|null $internalHostsSet Cached set of internal hosts for link processing */
     private ?array $internalHostsSet = null;
 
+    /** @var array $internalHosts List of internal hosts loaded from configuration */
+    private array $internalHosts = [];
+
     /** @var array CONFIG_SCHEMA_DEFAULT Default configuration schema */
     private const CONFIG_SCHEMA_DEFAULT = [
         'abbreviations' => [
