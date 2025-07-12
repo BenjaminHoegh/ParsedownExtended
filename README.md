@@ -67,24 +67,6 @@ ParsedownExtended includes a variety of features to enhance your Markdown parsin
 
 ## Getting started
 
-### Manual
-Download the source code from the latest release
-You must include `parsedown.php` 1.7+
-Include `ParsedownExtended.php`
-
-```php
-require 'Parsedown.php';
-require 'ParsedownExtra.php'; // optional
-require 'ParsedownExtended.php';
-
-use BenjaminHoegh\ParsedownExtended\ParsedownExtended;
-
-$ParsedownExtended = new ParsedownExtended();
-
-echo $ParsedownExtended->text('Hello _Parsedown_!'); # prints: <p>Hello <em>Parsedown</em>!</p>
-// you can also parse inline markdown only
-echo $ParsedownExtended->line('Hello _Parsedown_!'); # prints: Hello <em>Parsedown</em>!
-```
 
 ### Using composer
 
@@ -92,18 +74,32 @@ From the command line interface, navigate to your project folder then run this c
 ```shell
 composer require benjaminhoegh/parsedown-extended
 ```
-Then require the auto-loader file:
+
 ```php
 require 'vendor/autoload.php';
 
 use BenjaminHoegh\ParsedownExtended\ParsedownExtended;
 
-$ParsedownExtended = new ParsedownExtended();
+$parser = new ParsedownExtended();
 
-echo $ParsedownExtended->text('Hello _Parsedown_!'); # prints: <p>Hello <em>Parsedown</em>!</p>
-// you can also parse inline markdown only
-echo $ParsedownExtended->line('Hello _Parsedown_!'); # prints: Hello <em>Parsedown</em>!
+echo $parser->toHtml("Hello _ParsedownExtended_!"); // <p>Hello <em>ParsedownExtended</em>!</p>
+
 ```
+
+
+### Manual
+
+```php
+require 'Parsedown.php';
+require 'ParsedownExtended.php';
+
+use BenjaminHoegh\ParsedownExtended\ParsedownExtended;
+
+$parser = new ParsedownExtended();
+
+echo $parser->toHtml("Hello _ParsedownExtended_!"); // <p>Hello <em>ParsedownExtended</em>!</p>
+```
+
 
 ## Development
 
