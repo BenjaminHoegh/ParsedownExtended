@@ -23,7 +23,7 @@ class DiagramsTest extends TestCase
         $this->parsedownExtended->config()->set('diagrams', true);
 
         $markdown = "```mermaid\ngraph TD;\n    A-->B;\n```";
-        $expectedHtml = "<div class=\"mermaid\">graph TD;\n    A-->B;</div>";
+        $expectedHtml = "<div class=\"mermaid\">graph TD;\n    A--&gt;B;</div>";
 
         $result = $this->parsedownExtended->text($markdown);
 
