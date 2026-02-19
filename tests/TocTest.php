@@ -37,16 +37,16 @@ class TocTest extends TestCase
 
         $expected = <<<HTML
             <ul>
-            <li><a href="#heading-1">Heading 1</a>
-            <ul>
+            <li><a href="#heading-1">Heading 1</a><ul>
             <li><a href="#heading-1-1">Heading 1.1</a></li>
             <li><a href="#heading-1-2">Heading 1.2</a></li>
-            </ul></li>
-            <li><a href="#heading-2">Heading 2</a>
-            <ul>
+            </ul>
+            </li>
+            <li><a href="#heading-2">Heading 2</a><ul>
             <li><a href="#heading-2-1">Heading 2.1</a></li>
             <li><a href="#heading-2-2">Heading 2.2</a></li>
-            </ul></li>
+            </ul>
+            </li>
             </ul>
             HTML;
 
@@ -107,16 +107,16 @@ class TocTest extends TestCase
 
         $expected = <<<HTML
             <ul>
-            <li><a href="#heading-1">Heading 1</a>
-            <ul>
+            <li><a href="#heading-1">Heading 1</a><ul>
             <li><a href="#heading-1-1">Heading 1.1</a></li>
             <li><a href="#heading-1-2">Heading 1.2</a></li>
-            </ul></li>
-            <li><a href="#heading-2">Heading 2</a>
-            <ul>
+            </ul>
+            </li>
+            <li><a href="#heading-2">Heading 2</a><ul>
             <li><a href="#heading-2-1">Heading 2.1</a></li>
             <li><a href="#heading-2-2">Heading 2.2</a></li>
-            </ul></li>
+            </ul>
+            </li>
             </ul>
             HTML;
 
@@ -146,16 +146,16 @@ class TocTest extends TestCase
 
         $expected = <<<HTML
             <div id="toc"><ul>
-            <li><a href="#heading-1">Heading 1</a>
-            <ul>
+            <li><a href="#heading-1">Heading 1</a><ul>
             <li><a href="#heading-1-1">Heading 1.1</a></li>
             <li><a href="#heading-1-2">Heading 1.2</a></li>
-            </ul></li>
-            <li><a href="#heading-2">Heading 2</a>
-            <ul>
+            </ul>
+            </li>
+            <li><a href="#heading-2">Heading 2</a><ul>
             <li><a href="#heading-2-1">Heading 2.1</a></li>
             <li><a href="#heading-2-2">Heading 2.2</a></li>
-            </ul></li>
+            </ul>
+            </li>
             </ul></div>
             <h1 id="heading-1">Heading 1</h1>
             <h2 id="heading-1-1">Heading 1.1</h2>
@@ -193,16 +193,16 @@ class TocTest extends TestCase
 
         $expected = <<<HTML
             <div id="toc"><ul>
-            <li><a href="#heading-1">Heading 1</a>
-            <ul>
+            <li><a href="#heading-1">Heading 1</a><ul>
             <li><a href="#heading-1-1">Heading 1.1</a></li>
             <li><a href="#heading-1-2">Heading 1.2</a></li>
-            </ul></li>
-            <li><a href="#heading-2">Heading 2</a>
-            <ul>
+            </ul>
+            </li>
+            <li><a href="#heading-2">Heading 2</a><ul>
             <li><a href="#heading-2-1">Heading 2.1</a></li>
             <li><a href="#heading-2-2">Heading 2.2</a></li>
-            </ul></li>
+            </ul>
+            </li>
             </ul></div>
             <h1 id="heading-1">Heading 1</h1>
             <h2 id="heading-1-1">Heading 1.1</h2>
