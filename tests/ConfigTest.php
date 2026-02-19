@@ -91,4 +91,23 @@ class ConfigTest extends TestCase
         $this->assertFalse($parsedownExtended->config()->get('code.enabled'), 'Code should be disabled');
         $this->assertFalse($parsedownExtended->config()->get('lists.tasks'), 'Task lists should be disabled');
     }
+
+    /**
+     * Test that config handlers remain isolated between ParsedownExtended instances.
+     */
+    public function testConfigHandlerIsolationBetweenInstances()
+    {
+        $first = new ParsedownExtended();
+        $second = new ParsedownExtended();
+
+        $firstConfig = $first->config();
+        $secondConfig = $second->config();
+
+        $this->assertNotSame($firstConfig, $secondConfig, 'Each instance should keep its own config handler');
+
+        $firstConfig->set('emojis', false);
+
+        $this->assertFalse($first->config()->get('emojis'), 'First instance should reflect its own config change');
+        $this->assertTrue($second->config()->get('emojis'), 'Second instance should not be affected by first instance changes');
+    }
 }
