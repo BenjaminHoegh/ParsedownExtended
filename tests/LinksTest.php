@@ -222,6 +222,21 @@ class LinksTest extends TestCase
         $this->assertStringNotContainsString('target="_blank"', $html);
     }
 
+    public function testInternalHostsCacheRefreshesAfterConfigUpdate()
+    {
+        $markdown = '[External](https://www.google.com)';
+
+        $beforeUpdate = $this->parsedownExtended->text($markdown);
+        $this->assertStringContainsString('rel="nofollow noopener noreferrer"', $beforeUpdate);
+        $this->assertStringContainsString('target="_blank"', $beforeUpdate);
+
+        $this->parsedownExtended->config()->set('links.external_links.internal_hosts', ['google.com']);
+
+        $afterUpdate = $this->parsedownExtended->text($markdown);
+        $this->assertStringNotContainsString('rel="nofollow noopener noreferrer"', $afterUpdate);
+        $this->assertStringNotContainsString('target="_blank"', $afterUpdate);
+    }
+
     public function testSameDomainLinkWithoutNewWindow()
     {
         $markdown = '[Home](https://www.example.com)';
