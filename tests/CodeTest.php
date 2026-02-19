@@ -35,7 +35,7 @@ class CodeTest extends TestCase
         $this->parsedownExtended->config()->set('code', false); // Code blocks are turned into paragraphs
 
         $markdown = "```php\n<?php echo \"Hello, World!\";\n```";
-        $expectedHtml = "<p>```php\n&lt;?php echo &quot;Hello, World!&quot;;\n```</p>";
+        $expectedHtml = "<p>```php\n&lt;?php echo \"Hello, World!\";\n```</p>";
 
         $result = $this->parsedownExtended->text($markdown);
 
