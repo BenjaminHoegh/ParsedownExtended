@@ -36,14 +36,8 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
     /** @var callable|null $createAnchorIDCallback Callback function for anchor creation */
     private $createAnchorIDCallback = null;
 
-    /** @var array $config Configuration options */
-    private array $config;
-
-    /** @var array $configSchema Schema for validating configuration options */
-    private array $configSchema;
-
     /** @var object|null $configHandler Cached configuration handler */
-    private $configHandler = null;
+    private ?object $configHandler = null;
 
     /** @var array|null $emojiMap Cached emoji map for emoji replacements */
     private ?array $emojiMap = null;
@@ -54,8 +48,11 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
     /** @var array|null $internalHostsSet Cached set of internal hosts for link processing */
     private ?array $internalHostsSet = null;
 
-    /** @var array $internalHosts List of internal hosts loaded from configuration */
-    private array $internalHosts = [];
+    /** @var string $internalHostsCacheKey Hash key for the current cached internal host set */
+    private string $internalHostsCacheKey = '';
+
+    /** @var array $inlineMathPatternCache Cached regex patterns for inline math delimiters */
+    private array $inlineMathPatternCache = ['key' => '', 'patterns' => []];
 
     /** @var array CONFIG_SCHEMA_DEFAULT Default configuration schema */
     private const CONFIG_SCHEMA_DEFAULT = [
@@ -211,35 +208,10 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
         }
 
 
-        // Add support for inline types (e.g., special formatting)
-        $this->addInlineType('=', 'Marking');
-        $this->addInlineType('+', 'Insertions');
-        $this->addInlineType('[', 'Keystrokes');
-        $this->addInlineType(['\\', '$'], 'MathNotation');
-        $this->addInlineType('^', 'Superscript');
-        $this->addInlineType('~', 'Subscript');
-        $this->addInlineType(':', 'Emojis');
-        $this->addInlineType(['<', '>', '-', '.', "'", '"', '`'], 'Smartypants');
-        $this->addInlineType(['(', '.', '+', '!', '?'], 'Typographer');
-
-        // Add support for block types (e.g., blocks of content)
-        $this->addBlockType(['\\','$'], 'MathNotation');
-        $this->addBlockType('>', 'Alert');
-
-        // Reorganize 'SpecialCharacter' to ensure it is processed last in InlineTypes and BlockTypes
-        foreach ($this->InlineTypes as &$list) {
-            if (($key = array_search('SpecialCharacter', $list)) !== false) {
-                unset($list[$key]);
-                $list[] = 'SpecialCharacter'; // Append 'SpecialCharacter' at the end
-            }
-        }
-
-        foreach ($this->BlockTypes as &$list) {
-            if (($key = array_search('SpecialCharacter', $list)) !== false) {
-                unset($list[$key]);
-                $list[] = 'SpecialCharacter'; // Append 'SpecialCharacter' at the end
-            }
-        }
+        $this->registerCustomInlineTypes();
+        $this->registerCustomBlockTypes();
+        $this->moveSpecialCharacterHandlerToEnd($this->InlineTypes);
+        $this->moveSpecialCharacterHandlerToEnd($this->BlockTypes);
     }
 
     /**
@@ -482,8 +454,14 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
 
             if ($rel) {
                 $existing = $Excerpt['element']['attributes']['rel'] ?? '';
-                $relString = trim($existing . ' ' . implode(' ', $rel));
-                $Excerpt['element']['attributes']['rel'] = $relString;
+                $tokens = preg_split('/\s+/', trim($existing));
+                if (!is_array($tokens)) {
+                    $tokens = [];
+                }
+
+                $tokens = array_filter($tokens, 'strlen');
+                $tokens = array_unique(array_merge($tokens, $rel));
+                $Excerpt['element']['attributes']['rel'] = implode(' ', $tokens);
             }
         }
 
@@ -520,36 +498,69 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
             return false;
         }
 
-        // Normalize host (lowercase, strip www.)
-        $host = strtolower($host);
-        if (strpos($host, 'www.') === 0) {
-            $host = substr($host, 4);
-        }
+        $host = $this->normalizeHost((string) $host);
 
         // Normalize current host
-        $currentHost = $_SERVER['HTTP_HOST'] ?? '';
-        $currentHost = strtolower($currentHost);
-        if (strpos($currentHost, 'www.') === 0) {
-            $currentHost = substr($currentHost, 4);
-        }
+        $currentHost = $this->normalizeHost($_SERVER['HTTP_HOST'] ?? '');
         if ($host === $currentHost) {
             return false;
         }
 
-        // Use cache for internal hosts set
-        if ($this->internalHostsSet === null) {
-            $this->internalHostsSet = [];
-            $this->internalHosts = $this->config()->get('links.external_links.internal_hosts');
-            foreach ($this->internalHosts as $h) {
-                $h = strtolower($h);
-                if (strpos($h, 'www.') === 0) {
-                    $h = substr($h, 4);
-                }
-                $this->internalHostsSet[$h] = true;
+        $internalHostsSet = $this->getInternalHostsSet();
+
+        return !isset($internalHostsSet[$host]);
+    }
+
+    /**
+     * Normalizes host names for case-insensitive comparisons.
+     *
+     * @param string $host Raw host.
+     * @return string Normalized host.
+     */
+    private function normalizeHost(string $host): string
+    {
+        $parsedHost = parse_url('http://' . ltrim($host, '/'), PHP_URL_HOST);
+        if (is_string($parsedHost) && $parsedHost !== '') {
+            $host = $parsedHost;
+        }
+
+        $host = strtolower($host);
+        if (strpos($host, 'www.') === 0) {
+            return substr($host, 4);
+        }
+
+        return $host;
+    }
+
+    /**
+     * Builds and caches the internal host lookup set.
+     *
+     * @return array<string, bool>
+     */
+    private function getInternalHostsSet(): array
+    {
+        $internalHosts = $this->config()->get('links.external_links.internal_hosts');
+        $cacheKey = json_encode($internalHosts);
+        if (!is_string($cacheKey)) {
+            $cacheKey = md5(print_r($internalHosts, true));
+        }
+
+        if ($this->internalHostsSet !== null && $this->internalHostsCacheKey === $cacheKey) {
+            return $this->internalHostsSet;
+        }
+
+        $hostSet = [];
+        foreach ($internalHosts as $host) {
+            $normalizedHost = $this->normalizeHost((string) $host);
+            if ($normalizedHost !== '') {
+                $hostSet[$normalizedHost] = true;
             }
         }
 
-        return !isset($this->internalHostsSet[$host]);
+        $this->internalHostsSet = $hostSet;
+        $this->internalHostsCacheKey = $cacheKey;
+
+        return $this->internalHostsSet;
     }
 
     /**
@@ -827,20 +838,9 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
             return null; // Return null if the math notation is not preceded by whitespace
         }
 
-        // Iterate through the inline math delimiters (e.g., `$...$`, `\\(...\\)`)
-        $delimiters = $config->get('math.inline.delimiters');
-        foreach ($delimiters as $dConfig) {
-            $leftMarker = preg_quote($dConfig['left'], '/');  // Escape the left delimiter for use in regex
-            $rightMarker = preg_quote($dConfig['right'], '/'); // Escape the right delimiter for use in regex
-
-            // Create the regex pattern for matching math notation
-            if ($dConfig['left'][0] === '\\' || strlen($dConfig['left']) > 1) {
-                $regex = '/^(?<!\S)' . $leftMarker . '(?![\r\n])((?:\\\\' . $rightMarker . '|\\\\' . $leftMarker . '|[^\r\n])+?)' . $rightMarker . '(?!\w)/s';
-            } else {
-                $regex = '/^(?<!\S)' . $leftMarker . '(?![\r\n])((?:\\\\' . $rightMarker . '|\\\\' . $leftMarker . '|[^' . $rightMarker . '\r\n])+?)' . $rightMarker . '(?!\w)/s';
-            }
-
-            // Match the regular expression pattern against the excerpt
+        // Iterate through the inline math delimiters (e.g., `$...$`, `\\(...\\)`).
+        $patterns = $this->getInlineMathPatterns($config->get('math.inline.delimiters'));
+        foreach ($patterns as $regex) {
             if (preg_match($regex, $Excerpt['text'], $matches)) {
                 // Return the parsed math element
                 return [
@@ -872,20 +872,9 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
     {
         $config = $this->config();
 
-        // If math is enabled, check for any inline math delimiters that might need special handling
+        // If math is enabled, check for any inline math delimiters that might need special handling.
         if ($config->get('math')) {
-            $delimiters = $config->get('math.inline.delimiters');
-            foreach ($delimiters as $dConfig) {
-                $leftMarker = preg_quote($dConfig['left'], '/');  // Escape the left delimiter for use in regex
-                $rightMarker = preg_quote($dConfig['right'], '/'); // Escape the right delimiter for use in regex
-
-                // Create the regex pattern for matching math notation
-                if ($dConfig['left'][0] === '\\' || strlen($dConfig['left']) > 1) {
-                    $regex = '/^(?<!\S)' . $leftMarker . '(?![\r\n])((?:\\\\' . $rightMarker . '|\\\\' . $leftMarker . '|[^\r\n])+?)' . $rightMarker . '(?!\w)/s';
-                } else {
-                    $regex = '/^(?<!\S)' . $leftMarker . '(?![\r\n])((?:\\\\' . $rightMarker . '|\\\\' . $leftMarker . '|[^' . $rightMarker . '\r\n])+?)' . $rightMarker . '(?!\w)/s';
-                }
-
+            foreach ($this->getInlineMathPatterns($config->get('math.inline.delimiters')) as $regex) {
                 // If a math notation match is found, return null as it's not an escape sequence
                 if (preg_match($regex, $Excerpt['text'])) {
                     return null;
@@ -894,7 +883,7 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
         }
 
         // Check if the character following the backslash is a special character that should be escaped
-        if (isset($Excerpt['text'][1]) && in_array($Excerpt['text'][1], $this->specialCharacters)) {
+        if (isset($Excerpt['text'][1]) && in_array($Excerpt['text'][1], $this->specialCharacters, true)) {
             // Return the escaped character
             return [
                 'markup' => $Excerpt['text'][1], // The character to be escaped
@@ -904,6 +893,55 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
 
         // If no valid escape sequence is found, return null
         return null;
+    }
+
+    /**
+     * Builds and caches regex patterns for inline math delimiters.
+     *
+     * @param array $delimiters Inline math delimiters.
+     * @return array<int, string> Regex pattern list.
+     */
+    private function getInlineMathPatterns(array $delimiters): array
+    {
+        $cacheKey = json_encode($delimiters);
+        if (!is_string($cacheKey)) {
+            $cacheKey = md5(print_r($delimiters, true));
+        }
+
+        if ($this->inlineMathPatternCache['key'] === $cacheKey) {
+            return $this->inlineMathPatternCache['patterns'];
+        }
+
+        $patterns = [];
+        foreach ($delimiters as $delimiter) {
+            if (
+                !is_array($delimiter) ||
+                !isset($delimiter['left'], $delimiter['right']) ||
+                !is_string($delimiter['left']) ||
+                !is_string($delimiter['right']) ||
+                $delimiter['left'] === '' ||
+                $delimiter['right'] === ''
+            ) {
+                continue;
+            }
+
+            $leftMarker = preg_quote($delimiter['left'], '/');
+            $rightMarker = preg_quote($delimiter['right'], '/');
+
+            if ($delimiter['left'][0] === '\\' || strlen($delimiter['left']) > 1) {
+                $patterns[] = '/^(?<!\S)' . $leftMarker . '(?![\r\n])((?:\\\\' . $rightMarker . '|\\\\' . $leftMarker . '|[^\r\n])+?)' . $rightMarker . '(?!\w)/s';
+                continue;
+            }
+
+            $patterns[] = '/^(?<!\S)' . $leftMarker . '(?![\r\n])((?:\\\\' . $rightMarker . '|\\\\' . $leftMarker . '|[^' . $rightMarker . '\r\n])+?)' . $rightMarker . '(?!\w)/s';
+        }
+
+        $this->inlineMathPatternCache = [
+            'key' => $cacheKey,
+            'patterns' => $patterns,
+        ];
+
+        return $this->inlineMathPatternCache['patterns'];
     }
 
 
@@ -2446,7 +2484,7 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
                     $rowNo + $rowspan < count($rows) &&
                     $index < count($rows[$rowNo + $rowspan]['elements']) &&
                     '^' === $rows[$rowNo + $rowspan]['elements'][$index]['handler']['argument'] &&
-                    (@$element['attributes']['colspan'] ?: null) === (@$rows[$rowNo + $rowspan]['elements'][$index]['attributes']['colspan'] ?: null)
+                    (($element['attributes']['colspan'] ?? null) === ($rows[$rowNo + $rowspan]['elements'][$index]['attributes']['colspan'] ?? null))
                 ) {
                     $rows[$rowNo + $rowspan]['elements'][$index]['merged'] = true;
                     ++$rowspan;
@@ -2605,7 +2643,7 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
 
         // If a user-defined callback is provided, use it to generate the anchor ID
         if (is_callable($this->createAnchorIDCallback)) {
-            return call_user_func($this->createAnchorIDCallback, $text, $this->config());
+            return ($this->createAnchorIDCallback)($text, $config);
         }
 
         // Convert text to lowercase if configured to do so
@@ -2618,8 +2656,9 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
         }
 
         // Apply replacements to the text based on the configuration settings
-        if ($config->get('headings.auto_anchors.replacements')) {
-            $text = preg_replace(array_keys($config->get('headings.auto_anchors.replacements')), $config->get('headings.auto_anchors.replacements'), $text);
+        $replacements = $config->get('headings.auto_anchors.replacements');
+        if (!empty($replacements)) {
+            $text = preg_replace(array_keys($replacements), $replacements, $text);
         }
 
         // Normalize the text (ensure proper encoding)
@@ -2651,7 +2690,12 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
      */
     protected function normalizeString(string $text)
     {
-        if (extension_loaded('mbstring')) {
+        static $mbstringLoaded = null;
+        if ($mbstringLoaded === null) {
+            $mbstringLoaded = extension_loaded('mbstring');
+        }
+
+        if ($mbstringLoaded) {
             return mb_convert_encoding($text, 'UTF-8', mb_list_encodings());
         } else {
             return $text; // Return raw text as there is no good alternative for mb_convert_encoding
@@ -2672,11 +2716,18 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
      */
     protected function transliterate(string $text): string
     {
-        if (class_exists('\Transliterator')) {
-            $transliterator = \Transliterator::create('Any-Latin; Latin-ASCII;');
-            if ($transliterator) {
-                return $transliterator->transliterate($text);
+        static $transliteratorInitialized = false;
+        static $transliterator = null;
+
+        if (!$transliteratorInitialized) {
+            $transliteratorInitialized = true;
+            if (class_exists('\Transliterator')) {
+                $transliterator = \Transliterator::create('Any-Latin; Latin-ASCII;');
             }
+        }
+
+        if ($transliterator instanceof \Transliterator) {
+            return $transliterator->transliterate($text);
         }
 
         return $this->manualTransliterate($text); // Use manual transliteration if `Transliterator` is not available
@@ -2698,7 +2749,7 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
     protected function manualTransliterate(string $text): string
     {
         // Character mapping from different alphabets to their ASCII equivalents
-        $characterMap = [
+        static $characterMap = [
             // Latin
             'À' => 'A', 'Á' => 'A', 'Â' => 'A', 'Ã' => 'A', 'Ä' => 'A', 'Å' => 'AA', 'Æ' => 'AE', 'Ç' => 'C',
             'È' => 'E', 'É' => 'E', 'Ê' => 'E', 'Ë' => 'E', 'Ì' => 'I', 'Í' => 'I', 'Î' => 'I', 'Ï' => 'I',
@@ -3045,11 +3096,13 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
      */
     private function initializePredefinedAbbreviations(): void
     {
-        if ($this->predefinedAbbreviationsAdded || !$this->config()->get('abbreviations')) {
+        $config = $this->config();
+
+        if ($this->predefinedAbbreviationsAdded || !$config->get('abbreviations')) {
             return;
         }
 
-        foreach ($this->config()->get('abbreviations.predefined') as $abbreviation => $description) {
+        foreach ($config->get('abbreviations.predefined') as $abbreviation => $description) {
             $this->DefinitionData['Abbreviation'][$abbreviation] = $description;
         }
 
@@ -3070,6 +3123,55 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
 
     // Helper functions
     // -------------------------------------------------------------------------
+
+    /**
+     * Registers all custom inline parsers for the extended syntax.
+     *
+     * @return void
+     */
+    private function registerCustomInlineTypes(): void
+    {
+        $this->addInlineType('=', 'Marking');
+        $this->addInlineType('+', 'Insertions');
+        $this->addInlineType('[', 'Keystrokes');
+        $this->addInlineType(['\\', '$'], 'MathNotation');
+        $this->addInlineType('^', 'Superscript');
+        $this->addInlineType('~', 'Subscript');
+        $this->addInlineType(':', 'Emojis');
+        $this->addInlineType(['<', '>', '-', '.', "'", '"', '`'], 'Smartypants');
+        $this->addInlineType(['(', '.', '+', '!', '?'], 'Typographer');
+    }
+
+    /**
+     * Registers all custom block parsers for the extended syntax.
+     *
+     * @return void
+     */
+    private function registerCustomBlockTypes(): void
+    {
+        $this->addBlockType(['\\', '$'], 'MathNotation');
+        $this->addBlockType('>', 'Alert');
+    }
+
+    /**
+     * Ensures the special-character handler always executes last for each marker list.
+     *
+     * @param array $types Parser type map keyed by marker.
+     * @return void
+     */
+    private function moveSpecialCharacterHandlerToEnd(array &$types): void
+    {
+        foreach ($types as &$list) {
+            $key = array_search('SpecialCharacter', $list, true);
+            if ($key === false) {
+                continue;
+            }
+
+            unset($list[$key]);
+            $list[] = 'SpecialCharacter';
+        }
+        unset($list);
+    }
 
     /**
      * Registers an inline type marker with a corresponding handler function.
@@ -3095,15 +3197,21 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
             }
 
             // Add the marker to the special characters array if it's not already present
-            if (!in_array($marker, $this->specialCharacters)) {
+            if (!in_array($marker, $this->specialCharacters, true)) {
                 $this->specialCharacters[] = $marker;
             }
 
-            // Add the function name to the beginning of the marker's handlers for priority
+            // Add the function to the front while keeping a single instance in the handler chain.
+            $handlerIndex = array_search($funcName, $this->InlineTypes[$marker], true);
+            if ($handlerIndex !== false) {
+                unset($this->InlineTypes[$marker][$handlerIndex]);
+            }
             array_unshift($this->InlineTypes[$marker], $funcName);
 
-            // Append the marker to the inline marker list
-            $this->inlineMarkerList .= $marker;
+            // Keep a unique marker list for strpbrk scanning.
+            if (strpos($this->inlineMarkerList, $marker) === false) {
+                $this->inlineMarkerList .= $marker;
+            }
         }
     }
 
@@ -3131,11 +3239,15 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
             }
 
             // Add the marker to the special characters array if it's not already present
-            if (!in_array($marker, $this->specialCharacters)) {
+            if (!in_array($marker, $this->specialCharacters, true)) {
                 $this->specialCharacters[] = $marker;
             }
 
-            // Add the function name to the beginning of the marker's handlers for priority
+            // Add the function to the front while keeping a single instance in the handler chain.
+            $handlerIndex = array_search($funcName, $this->BlockTypes[$marker], true);
+            if ($handlerIndex !== false) {
+                unset($this->BlockTypes[$marker][$handlerIndex]);
+            }
             array_unshift($this->BlockTypes[$marker], $funcName);
         }
     }
@@ -3171,10 +3283,8 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
      */
     public function config(): object
     {
-        static $handler = null;
-
-        if ($handler === null) {
-            $handler = new class(self::$PATH_TO_BIT, self::$FLAT_SCHEMA) {
+        if ($this->configHandler === null) {
+            $this->configHandler = new class(self::$PATH_TO_BIT, self::$FLAT_SCHEMA) {
                 private array $p2b;
                 private array $schema;
                 private int   $features;
@@ -3267,8 +3377,8 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
                 }
             };
         }
-        $handler->bind($this->features, $this->payload);
-        return $handler;
+        $this->configHandler->bind($this->features, $this->payload);
+        return $this->configHandler;
     }
 
     /**
@@ -3373,16 +3483,18 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
      *
      * @return void
      */
-    private function applyOverrides(array $ovr, string $prefix = ''): void
+    private function applyOverrides(array $ovr, string $prefix = '', ?object $configHandler = null): void
     {
+        $configHandler = $configHandler ?? $this->config();
+
         foreach ($ovr as $k => $v) {
             $path = $prefix === '' ? $k : $prefix . '.' . $k;
 
             if (is_array($v) && !isset(self::$FLAT_SCHEMA[$path])) {
-                $this->applyOverrides($v, $path);
+                $this->applyOverrides($v, $path, $configHandler);
                 continue;
             }
-            $this->config()->set($path, $v);
+            $configHandler->set($path, $v);
         }
     }
 
@@ -3434,7 +3546,7 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
         $Elements = [];
         $nonNestables = empty($nonNestables)
             ? []
-            : array_combine($nonNestables, $nonNestables);
+            : array_fill_keys($nonNestables, true);
 
         while ($ExcerptStr = strpbrk($text, $this->inlineMarkerList)) {
             $marker = $ExcerptStr[0];
@@ -3498,6 +3610,7 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
                 $Element['autobreak'] = false;
             }
         }
+        unset($Element);
 
         return $Elements;
     }
