@@ -17,8 +17,8 @@ class_alias(class_exists('ParsedownExtra') ? 'ParsedownExtra' : 'Parsedown', 'Pa
 class ParsedownExtended extends \ParsedownExtendedParentAlias
 {
     public const VERSION = '2.0.0';
-    public const VERSION_PARSEDOWN_REQUIRED = '1.7.4';
-    public const VERSION_PARSEDOWN_EXTRA_REQUIRED = '0.8.1';
+    public const VERSION_PARSEDOWN_REQUIRED = '1.8.0';
+    public const VERSION_PARSEDOWN_EXTRA_REQUIRED = '0.9.0';
     public const MIN_PHP_VERSION = '7.4';
 
     /** @var array $anchorRegister Registry for anchors generated during parsing */
@@ -44,9 +44,6 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
 
     /** @var object|null $configHandler Cached configuration handler */
     private $configHandler = null;
-
-    /** @var bool $legacyMode Flag indicating if legacy compatibility mode is enabled */
-    private bool $legacyMode = false;
 
     /** @var array|null $emojiMap Cached emoji map for emoji replacements */
     private ?array $emojiMap = null;
@@ -198,8 +195,6 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
             parent::__construct();
         }
 
-        $this->setLegacyMode();
-
         // Initialize the configuration schema
         if (!self::$COMPILED) {
             $this->compileSchema();
@@ -276,25 +271,6 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
         }
     }
 
-
-    /**
-     * Method setLegacyMode
-     *
-     * Sets the legacy mode based on the version of Parsedown.
-     *
-     * @since 1.3.0
-     *
-     * @return void
-     */
-    private function setLegacyMode(): void
-    {
-        $parsedownVersion = preg_replace('/-.*$/', '', \Parsedown::version);
-
-        // Enable legacy mode if Parsedown version is between 1.7.4 and below 1.8.0
-        if (version_compare($parsedownVersion, '1.8.0') < 0 && version_compare($parsedownVersion, '1.7.4') >= 0) {
-            $this->legacyMode = true;
-        }
-    }
 
     // Inline types
     // -------------------------------------------------------------------------
@@ -1904,8 +1880,7 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
                     'attributes' => [
                         'class' => "{$class} {$class}-{$type}", // Add alert type as a class (e.g., 'alert alert-note')
                     ],
-                    'handler' => 'elements', // Use 'elements' because we'll be adding more content elements later
-                    'text' => [
+                    'elements' => [
                         [
                             'name' => 'p',
                             'attributes' => [
@@ -1950,12 +1925,12 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
         if ($Line['text'][0] === '>' && preg_match('/^> ?(.*)/', $Line['text'], $matches)) {
             // If the block was interrupted, add an empty paragraph for spacing
             if (isset($Block['interrupted'])) {
-                $Block['element']['text'][] = ['text' => ''];
+                $Block['element']['elements'][] = ['text' => ''];
                 unset($Block['interrupted']); // Reset the interrupted status
             }
 
             // Append the new line content to the current block
-            $Block['element']['text'][] = [
+            $Block['element']['elements'][] = [
                 'name' => 'p',
                 'text' => $matches[1], // Add the text following the '>'
             ];
@@ -1965,7 +1940,7 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
 
         // If the line does not start with '>' and the block is not interrupted, append it
         if (!isset($Block['interrupted'])) {
-            $Block['element']['text'][] = [
+            $Block['element']['elements'][] = [
                 'name' => 'p',
                 'text' => $Line['text'], // Add the text directly to the alert block
             ];
@@ -2147,39 +2122,19 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
         if (isset($extensions[$language])) {
             [$elementName, $class] = $extensions[$language]; // Extract the element name and class for the language
 
-            // Return different structures depending on the legacy mode setting
-            if (!$this->legacyMode) {
-                // Structure for version 1.8 or newer
-                return [
-                    'char' => $marker, // Store the marker character
-                    'openerLength' => $openerLength, // Store the length of the opener
+            return [
+                'char' => $marker, // Store the marker character
+                'openerLength' => $openerLength, // Store the length of the opener
+                'element' => [
+                    'name' => $elementName, // Set the element name (e.g., 'div', 'canvas')
                     'element' => [
-                        'name' => $elementName, // Set the element name (e.g., 'div', 'canvas')
-                        'element' => [
-                            'text' => '', // Placeholder for content
-                        ],
-                        'attributes' => [
-                            'class' => $class, // Add the class for styling (e.g., 'mermaid', 'chartjs')
-                        ],
+                        'text' => '', // Placeholder for content
                     ],
-                ];
-            } else {
-                // Structure for version 1.7 or older
-                return [
-                    'char' => $marker, // Store the marker character
-                    'openerLength' => $openerLength, // Store the length of the opener
-                    'element' => [
-                        'name' => $elementName, // Set the element name (e.g., 'div', 'canvas')
-                        'handler' => 'element', // Handler type for processing elements
-                        'text' => [
-                            'text' => '', // Placeholder for content
-                        ],
-                        'attributes' => [
-                            'class' => $class, // Add the class for styling (e.g., 'mermaid', 'chartjs')
-                        ],
+                    'attributes' => [
+                        'class' => $class, // Add the class for styling (e.g., 'mermaid', 'chartjs')
                     ],
-                ];
-            }
+                ],
+            ];
         }
 
         // Return the standard code block if no special handling is needed
@@ -2191,13 +2146,12 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
      * Processes list items, including handling task list syntax for checkboxes.
      *
      * This function processes list items in Markdown and handles special task list syntax (e.g., `- [x]` or `- [ ]`).
-     * It converts list items into appropriate HTML markup, rendering checkboxes when task lists are enabled.
-     * The function also maintains compatibility with older parsing modes.
+     * It converts list items into Parsedown 1.8 elements and renders checkboxes when task lists are enabled.
      *
      * @since 0.1.0
      *
      * @param array $lines The lines that make up the list item being processed.
-     * @return mixed The parsed list item markup, either as a string for legacy mode or as an array of elements.
+     * @return array The parsed list item as an array of elements.
      */
     protected function li($lines)
     {
@@ -2208,86 +2162,44 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
             return parent::li($lines); // Return the default list item if task lists are not enabled
         }
 
-        // Handling for legacy mode (older versions of the parser)
-        if ($this->legacyMode) {
-            // Generate markup for the list item lines
-            $markup = $this->lines($lines);
+        $Elements = $this->linesElements($lines);
+        $paragraphIndex = 0;
 
-            // Get first 4 characters of the generated markup to check for a task checkbox
-            $firstFourChars = substr($markup, 4, 4);
+        // Extract the text of the first element to check for a task list checkbox
+        $text = $Elements[0]['handler']['argument'] ?? null;
+        $firstFourChars = is_string($text) ? substr($text, 0, 4) : '';
 
-            // Check if the list item starts with a checkbox (e.g., `[x]` or `[ ]`)
-            if (preg_match('/^\[[x ]\]/i', $firstFourChars, $matches)) {
-                // Check if the checkbox is checked (`[x]`) or unchecked (`[ ]`)
-                $inputAttributes = [
-                    'type'     => 'checkbox',
-                    'disabled' => 'disabled',
-                ];
+        // Check if the list item starts with a checkbox (e.g., `[x]` or `[ ]`)
+        if (is_string($text) && preg_match('/^\[[x ]\]/i', $firstFourChars, $matches)) {
+            // Remove the checkbox marker from the beginning of the text
+            $Elements[0]['handler']['argument'] = substr_replace($text, '', 0, 4);
 
-                if (strtolower($matches[0]) === '[x]') {
-                    $inputAttributes['checked'] = 'checked';
-                }
+            // Prepare attributes for the checkbox element
+            $inputAttributes = [
+                'type'     => 'checkbox',
+                'disabled' => 'disabled',
+            ];
 
-                // Build the input element using Parsedown's element structure
-                $inputElement = $this->element([
-                    'name'       => 'input',
-                    'attributes' => $inputAttributes,
-                ]);
-
-                // Replace the checkbox marker with the generated input element
-                $markup = substr_replace($markup, $inputElement, 4, 4);
+            if (strtolower($matches[0]) === '[x]') {
+                $inputAttributes['checked'] = 'checked';
             }
 
-            // Trim the markup and handle paragraph tags to format correctly
-            $trimmedMarkup = trim($markup);
-            if (!in_array('', $lines) && substr($trimmedMarkup, 0, 3) === '<p>') {
-                $markup = $trimmedMarkup;
-                $markup = substr($markup, 3); // Remove opening paragraph tag
+            // Insert the checkbox element at the beginning of the list item
+            array_unshift($Elements, [
+                'name'       => 'input',
+                'attributes' => $inputAttributes,
+                'autobreak'  => false,
+            ]);
 
-                $position = strpos($markup, "</p>");
-                $markup = substr_replace($markup, '', $position, 4); // Remove closing paragraph tag
-            }
-
-            return $markup; // Return the final markup for the list item
-        } else {
-            // Handling for the newer version of the parser
-            $Elements = $this->linesElements($lines);
-
-            // Extract the text of the first element to check for a task list checkbox
-            $text = $Elements[0]['handler']['argument'];
-            $firstFourChars = substr($text, 0, 4);
-
-            // Check if the list item starts with a checkbox (e.g., `[x]` or `[ ]`)
-            if (preg_match('/^\[[x ]\]/i', $firstFourChars, $matches)) {
-                // Remove the checkbox marker from the beginning of the text
-                $Elements[0]['handler']['argument'] = substr_replace($text, '', 0, 4);
-
-                // Set the appropriate attributes based on whether the checkbox is checked or unchecked
-                // Prepare attributes for the checkbox element
-                $inputAttributes = [
-                    'type'     => 'checkbox',
-                    'disabled' => 'disabled',
-                ];
-
-                if (strtolower($matches[0]) === '[x]') {
-                    $inputAttributes['checked'] = 'checked';
-                }
-
-                // Insert the checkbox element at the beginning of the list item
-                array_unshift($Elements, [
-                    'name'       => 'input',
-                    'attributes' => $inputAttributes,
-                    'autobreak'  => false,
-                ]);
-            }
-
-            // Remove unnecessary paragraph tags for the list item if not interrupted
-            if (!in_array('', $lines) && isset($Elements[1]['name']) && $Elements[1]['name'] === 'p') {
-                unset($Elements[1]['name']); // Remove paragraph wrapper
-            }
-
-            return $Elements; // Return the final array of elements for the list item
+            $paragraphIndex = 1;
         }
+
+        // Remove unnecessary paragraph tags for the list item if not interrupted
+        if (!in_array('', $lines) && isset($Elements[$paragraphIndex]['name']) && $Elements[$paragraphIndex]['name'] === 'p') {
+            unset($Elements[$paragraphIndex]['name']); // Remove paragraph wrapper
+        }
+
+        return $Elements; // Return the final array of elements for the list item
     }
 
 
@@ -2443,7 +2355,7 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
      *
      * This function processes table blocks after the initial parsing to handle special features such as column spans
      * and row spans. It processes each cell in the table, merging cells where indicated by specific characters
-     * (e.g., '>' for colspan and '^' for rowspan). The implementation handles both legacy and modern parsing modes.
+     * (e.g., '>' for colspan and '^' for rowspan).
      *
      * @since 1.0.1
      *
@@ -2457,39 +2369,19 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
             return $block; // Return the original block if spanning is not enabled
         }
 
-        // Reference to header elements depending on legacy mode or newer version
-        if ($this->legacyMode === true) {
-            // Version 1.7
-            $headerElements = &$block['element']['text'][0]['text'][0]['text'];
-        } else {
-            // Version 1.8
-            $headerElements = &$block['element']['elements'][0]['elements'][0]['elements'];
-        }
+        $headerElements = &$block['element']['elements'][0]['elements'][0]['elements'];
 
         // Process colspan in header elements
         for ($index = count($headerElements) - 1; $index >= 0; --$index) {
             $colspan = 1;
             $headerElement = &$headerElements[$index];
 
-            if ($this->legacyMode === true) {
-                // Version 1.7
-                while ($index && $headerElements[$index - 1]['text'] === '>') {
-                    $colspan++;
-                    $PreviousHeaderElement = &$headerElements[--$index];
-                    $PreviousHeaderElement['merged'] = true;
-                    if (isset($PreviousHeaderElement['attributes'])) {
-                        $headerElement['attributes'] = $PreviousHeaderElement['attributes'];
-                    }
-                }
-            } else {
-                // Version 1.8
-                while ($index && '>' === $headerElements[$index - 1]['handler']['argument']) {
-                    $colspan++;
-                    $PreviousHeaderElement = &$headerElements[--$index];
-                    $PreviousHeaderElement['merged'] = true;
-                    if (isset($PreviousHeaderElement['attributes'])) {
-                        $headerElement['attributes'] = $PreviousHeaderElement['attributes'];
-                    }
+            while ($index && '>' === $headerElements[$index - 1]['handler']['argument']) {
+                ++$colspan;
+                $previousHeaderElement = &$headerElements[--$index];
+                $previousHeaderElement['merged'] = true;
+                if (isset($previousHeaderElement['attributes'])) {
+                    $headerElement['attributes'] = $previousHeaderElement['attributes'];
                 }
             }
 
@@ -2509,48 +2401,22 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
             }
         }
 
-        // Reference to table rows based on legacy or modern mode
-        if ($this->legacyMode === true) {
-            // Version 1.7
-            $rows = &$block['element']['text'][1]['text'];
-        } else {
-            // Version 1.8
-            $rows = &$block['element']['elements'][1]['elements'];
-        }
+        $rows = &$block['element']['elements'][1]['elements'];
 
         // Process colspan for rows
         foreach ($rows as &$row) {
-            if ($this->legacyMode === true) {
-                // Version 1.7
-                $elements = &$row['text'];
-            } else {
-                // Version 1.8
-                $elements = &$row['elements'];
-            }
+            $elements = &$row['elements'];
 
             for ($index = count($elements) - 1; $index >= 0; --$index) {
                 $colspan = 1;
                 $element = &$elements[$index];
 
-                if ($this->legacyMode === true) {
-                    // Version 1.7
-                    while ($index && $elements[$index - 1]['text'] === '>') {
-                        $colspan++;
-                        $PreviousElement = &$elements[--$index];
-                        $PreviousElement['merged'] = true;
-                        if (isset($PreviousElement['attributes'])) {
-                            $element['attributes'] = $PreviousElement['attributes'];
-                        }
-                    }
-                } else {
-                    // Version 1.8
-                    while ($index && '>' === $elements[$index - 1]['handler']['argument']) {
-                        ++$colspan;
-                        $PreviousElement = &$elements[--$index];
-                        $PreviousElement['merged'] = true;
-                        if (isset($PreviousElement['attributes'])) {
-                            $element['attributes'] = $PreviousElement['attributes'];
-                        }
+                while ($index && '>' === $elements[$index - 1]['handler']['argument']) {
+                    ++$colspan;
+                    $previousElement = &$elements[--$index];
+                    $previousElement['merged'] = true;
+                    if (isset($previousElement['attributes'])) {
+                        $element['attributes'] = $previousElement['attributes'];
                     }
                 }
 
@@ -2563,16 +2429,11 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
                 }
             }
         }
+        unset($row);
 
         // Process rowspan for rows
         foreach ($rows as $rowNo => &$row) {
-            if ($this->legacyMode === true) {
-                // Version 1.7
-                $elements = &$row['text'];
-            } else {
-                // Version 1.8
-                $elements = &$row['elements'];
-            }
+            $elements = &$row['elements'];
 
             foreach ($elements as $index => &$element) {
                 $rowspan = 1;
@@ -2581,28 +2442,14 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
                     continue; // Skip merged elements
                 }
 
-                if ($this->legacyMode === true) {
-                    // Version 1.7
-                    while (
-                        $rowNo + $rowspan < count($rows) &&
-                        $index < count($rows[$rowNo + $rowspan]['text']) &&
-                        $rows[$rowNo + $rowspan]['text'][$index]['text'] === '^' &&
-                        (@$element['attributes']['colspan'] ?: null) === (@$rows[$rowNo + $rowspan]['text'][$index]['attributes']['colspan'] ?: null)
-                    ) {
-                        $rows[$rowNo + $rowspan]['text'][$index]['merged'] = true;
-                        $rowspan++;
-                    }
-                } else {
-                    // Version 1.8
-                    while (
-                        $rowNo + $rowspan < count($rows) &&
-                        $index < count($rows[$rowNo + $rowspan]['elements']) &&
-                        '^' === $rows[$rowNo + $rowspan]['elements'][$index]['handler']['argument'] &&
-                        (@$element['attributes']['colspan'] ?: null) === (@$rows[$rowNo + $rowspan]['elements'][$index]['attributes']['colspan'] ?: null)
-                    ) {
-                        $rows[$rowNo + $rowspan]['elements'][$index]['merged'] = true;
-                        $rowspan++;
-                    }
+                while (
+                    $rowNo + $rowspan < count($rows) &&
+                    $index < count($rows[$rowNo + $rowspan]['elements']) &&
+                    '^' === $rows[$rowNo + $rowspan]['elements'][$index]['handler']['argument'] &&
+                    (@$element['attributes']['colspan'] ?: null) === (@$rows[$rowNo + $rowspan]['elements'][$index]['attributes']['colspan'] ?: null)
+                ) {
+                    $rows[$rowNo + $rowspan]['elements'][$index]['merged'] = true;
+                    ++$rowspan;
                 }
 
                 // Assign rowspan attribute if rowspan is greater than 1
@@ -2613,17 +2460,13 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
                     $element['attributes']['rowspan'] = $rowspan;
                 }
             }
+            unset($element);
         }
+        unset($row);
 
         // Remove merged elements after processing row spans
         foreach ($rows as &$row) {
-            if ($this->legacyMode === true) {
-                // Version 1.7
-                $elements = &$row['text'];
-            } else {
-                // Version 1.8
-                $elements = &$row['elements'];
-            }
+            $elements = &$row['elements'];
 
             for ($index = count($elements) - 1; $index >= 0; --$index) {
                 if (isset($elements[$index]['merged'])) {
@@ -2631,6 +2474,7 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
                 }
             }
         }
+        unset($row);
 
         return $block; // Return the completed and modified table block
     }
@@ -2663,10 +2507,35 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
         $this->contentsListString = '';
         $this->firstHeadLevel = 0;
         $this->predefinedAbbreviationsAdded = false;
+        $this->initializePredefinedAbbreviations();
 
         $text = $this->encodeTag($text); // Escapes ToC tag temporarily
         $html = parent::text($text);     // Parses the markdown text
         return $this->decodeTag($html);  // Unescapes the ToC tag
+    }
+
+    /**
+     * Parses markdown input into block elements while preloading predefined abbreviations.
+     *
+     * Parsedown clears definition data at the start of each parse, so predefined abbreviations
+     * must be re-applied immediately after that reset and before block parsing begins.
+     *
+     * @param string $text Markdown source.
+     * @return array Parsed element tree.
+     */
+    protected function textElements($text)
+    {
+        // Ensure definitions are reset per parse, then re-apply predefined abbreviations.
+        $this->DefinitionData = [];
+        $this->predefinedAbbreviationsAdded = false;
+        $this->initializePredefinedAbbreviations();
+
+        // Standardize and normalize input before delegating to block parsing.
+        $text = str_replace(["\r\n", "\r"], "\n", $text);
+        $text = trim($text, "\n");
+        $lines = explode("\n", $text);
+
+        return $this->linesElements($lines);
     }
 
     /**
@@ -3170,29 +3039,32 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
     }
 
     /**
-     * Processes unmarked text, adding predefined abbreviations if configured.
+     * Registers predefined abbreviations in Parsedown's definition data once per parse.
      *
-     * This function extends the parent class's functionality by adding predefined
-     * abbreviations from the configuration, before processing the unmarked text.
-     *
-     * @since 0.1.0
+     * @return void
+     */
+    private function initializePredefinedAbbreviations(): void
+    {
+        if ($this->predefinedAbbreviationsAdded || !$this->config()->get('abbreviations')) {
+            return;
+        }
+
+        foreach ($this->config()->get('abbreviations.predefined') as $abbreviation => $description) {
+            $this->DefinitionData['Abbreviation'][$abbreviation] = $description;
+        }
+
+        $this->predefinedAbbreviationsAdded = true;
+    }
+
+    /**
+     * Processes unmarked text, ensuring predefined abbreviations are initialized before parsing.
      *
      * @param string $text The input text to be processed.
-     * @return string The processed text with abbreviations applied.
+     * @return string The processed text.
      */
     protected function unmarkedText($text)
     {
-        $config = $this->config();
-
-        if (!$this->predefinedAbbreviationsAdded) {
-            // Add predefined abbreviations to the definition data once per parse
-            foreach ($config->get('abbreviations.predefined') as $abbreviation => $description) {
-                $this->DefinitionData['Abbreviation'][$abbreviation] = $description;
-            }
-            $this->predefinedAbbreviationsAdded = true;
-        }
-
-        // Call the parent method to handle the rest of the text processing
+        $this->initializePredefinedAbbreviations();
         return parent::unmarkedText($text);
     }
 
@@ -3520,30 +3392,6 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
     // -------------------------------------------------------------------------
 
     /**
-     * Handle an element based on the legacy mode.
-     *
-     * This function extends the core Parsedown behavior to handle specific cases
-     * when in legacy mode, particularly for empty element names.
-     *
-     * @since 0.1.0
-     *
-     * @param array $Element The element to be processed.
-     * @return string|array Processed element or markup.
-     */
-    protected function element(array $Element)
-    {
-        if ($this->legacyMode) {
-            // If the element's name is empty, return the text attribute
-            if (empty($Element['name'])) {
-                return $Element['text'] ?? '';
-            }
-        }
-
-        // Use the original element method from the parent
-        return parent::element($Element);
-    }
-
-    /**
      * Process a line of Markdown text and extract inline elements.
      *
      * This function processes a line of Markdown text by iteratively searching for
@@ -3557,78 +3405,8 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
      */
     public function line($text, $nonNestables = [])
     {
-        $markup = '';
-        $inlineMarkerList = $this->inlineMarkerList;
-        $InlineTypes = $this->InlineTypes;
-        $nonNestablesSet = $nonNestables ? array_flip($nonNestables) : [];
-
-        while (true) {
-            $ExcerptStr = strpbrk((string)$text, $inlineMarkerList);
-            if ($ExcerptStr === false) {
-                // No more markers, process the rest and break
-                $markup .= $this->unmarkedText($text);
-                break;
-            }
-
-            $marker = $ExcerptStr[0];
-            $markerPosition = strpos($text, $marker);
-
-            // Prepare excerpt context
-            $before = $markerPosition > 0 ? $text[$markerPosition - 1] : '';
-            $Excerpt = [
-                'text' => $ExcerptStr,
-                'context' => $text,
-                'before' => $before,
-                'parent' => $this,
-            ];
-
-            // Try each inline type for this marker
-            foreach ($InlineTypes[$marker] as $inlineType) {
-                if (isset($nonNestablesSet[$inlineType])) {
-                    continue;
-                }
-
-                $handler = 'inline' . $inlineType;
-                $Inline = $this->$handler($Excerpt);
-
-                if (!isset($Inline)) {
-                    continue;
-                }
-
-                if (isset($Inline['position']) && $Inline['position'] > $markerPosition) {
-                    continue;
-                }
-
-                $Inline['position'] = $Inline['position'] ?? $markerPosition;
-
-                // Only add nonNestables if present
-                if ($nonNestables) {
-                    foreach ($nonNestables as $non_nestable) {
-                        $Inline['element']['nonNestables'][] = $non_nestable;
-                    }
-                }
-
-                // Add text before the inline element
-                if ($Inline['position'] > 0) {
-                    $markup .= $this->unmarkedText(substr($text, 0, $Inline['position']));
-                }
-
-                // Add the inline element
-                $markup .= $Inline['markup'] ?? $this->element($Inline['element']);
-
-                // Remove processed text
-                $text = substr($text, $Inline['position'] + $Inline['extent']);
-
-                // Continue with the rest of the text
-                continue 2;
-            }
-
-            // No inline found, treat marker as plain text
-            $markup .= $this->unmarkedText(substr($text, 0, $markerPosition + 1));
-            $text = substr($text, $markerPosition + 1);
-        }
-
-        return $markup;
+        $this->initializePredefinedAbbreviations();
+        return $this->elements($this->lineElements($text, $nonNestables));
     }
 
 
@@ -3639,8 +3417,6 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
      * Inline elements include things like bold, italic, links, etc. It recursively handles nesting and respects
      * non-nestable contexts.
      *
-     * lineElements() is 1.8 version of line() from 1.7
-     *
      * @since 0.1.0
      *
      * @param string $text The text to be parsed.
@@ -3650,37 +3426,28 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
      */
     protected function lineElements($text, $nonNestables = []): array
     {
+        $this->initializePredefinedAbbreviations();
+
+        // Standardize line breaks.
+        $text = str_replace(["\r\n", "\r"], "\n", $text);
+
         $Elements = [];
-        $inlineMarkerList = $this->inlineMarkerList;
-        $InlineTypes = $this->InlineTypes;
-        $nonNestablesSet = $nonNestables ? array_flip($nonNestables) : [];
+        $nonNestables = empty($nonNestables)
+            ? []
+            : array_combine($nonNestables, $nonNestables);
 
-        $textLen = strlen($text);
-        $offset = 0;
-
-        while ($offset < $textLen) {
-            $ExcerptStr = strpbrk(substr($text, $offset), $inlineMarkerList);
-            if ($ExcerptStr === false) {
-                // No more markers, process the rest and break
-                if ($offset < $textLen) {
-                    $InlineText = $this->inlineText(substr($text, $offset));
-                    $Elements[] = $InlineText['element'];
-                }
-                break;
-            }
-
+        while ($ExcerptStr = strpbrk($text, $this->inlineMarkerList)) {
             $marker = $ExcerptStr[0];
-            $markerPosition = strpos($text, $marker, $offset);
+            $markerPosition = strlen($text) - strlen($ExcerptStr);
 
-            $before = $markerPosition > 0 ? $text[$markerPosition - 1] : '';
             $Excerpt = [
-                'text' => substr($text, $markerPosition),
+                'text' => $ExcerptStr,
                 'context' => $text,
-                'before' => $before,
+                'before' => $markerPosition > 0 ? $text[$markerPosition - 1] : '',
             ];
 
-            foreach ($InlineTypes[$marker] as $inlineType) {
-                if (isset($nonNestablesSet[$inlineType])) {
+            foreach ($this->InlineTypes[$marker] as $inlineType) {
+                if (isset($nonNestables[$inlineType])) {
                     continue;
                 }
 
@@ -3690,46 +3457,42 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
                     continue;
                 }
 
-                if (isset($Inline['position']) && $Inline['position'] > ($markerPosition - $offset)) {
+                // Make sure the inline belongs to this marker.
+                if (isset($Inline['position']) && $Inline['position'] > $markerPosition) {
                     continue;
                 }
 
-                $Inline['position'] = $Inline['position'] ?? 0;
-
-                // Only add nonNestables if present
-                if ($nonNestablesSet) {
-                    $Inline['element']['nonNestables'] = isset($Inline['element']['nonNestables'])
-                        ? array_merge($Inline['element']['nonNestables'], array_keys($nonNestablesSet))
-                        : array_keys($nonNestablesSet);
+                // Set a default inline position.
+                if (!isset($Inline['position'])) {
+                    $Inline['position'] = $markerPosition;
                 }
 
-                // Add unmarked text before the inline element
-                if ($Inline['position'] > 0) {
-                    $unmarkedText = substr($text, $offset, $Inline['position']);
-                    if ($unmarkedText !== '') {
-                        $InlineText = $this->inlineText($unmarkedText);
-                        $Elements[] = $InlineText['element'];
-                    }
-                }
+                // Propagate non-nestable markers through nested elements.
+                $Inline['element']['nonNestables'] = isset($Inline['element']['nonNestables'])
+                    ? array_merge($Inline['element']['nonNestables'], $nonNestables)
+                    : $nonNestables;
 
-                // Add the inline element
+                // Compile text before the inline.
+                $InlineText = $this->inlineText(substr($text, 0, $Inline['position']));
+                $Elements[] = $InlineText['element'];
+
+                // Compile inline element itself.
                 $Elements[] = $this->extractElement($Inline);
 
-                // Move offset past the processed inline element
-                $offset = $markerPosition + $Inline['position'] + $Inline['extent'];
+                // Remove processed text and continue.
+                $text = substr($text, $Inline['position'] + $Inline['extent']);
                 continue 2;
             }
 
-            // No inline found, treat marker as plain text
-            $plainText = substr($text, $offset, $markerPosition - $offset + 1);
-            if ($plainText !== '') {
-                $InlineText = $this->inlineText($plainText);
-                $Elements[] = $InlineText['element'];
-            }
-            $offset = $markerPosition + 1;
+            // Marker does not belong to an inline.
+            $InlineText = $this->inlineText(substr($text, 0, $markerPosition + 1));
+            $Elements[] = $InlineText['element'];
+            $text = substr($text, $markerPosition + 1);
         }
 
-        // Set the `autobreak` property for each element, defaulting to false if not already set
+        $InlineText = $this->inlineText($text);
+        $Elements[] = $InlineText['element'];
+
         foreach ($Elements as &$Element) {
             if (!isset($Element['autobreak'])) {
                 $Element['autobreak'] = false;
