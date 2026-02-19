@@ -42,7 +42,7 @@ class SmartypantsTest extends TestCase
             MARKDOWN;
 
         $expected = <<<HTML
-            <p>&quot;Hello,&quot; he said.</p>
+            <p>"Hello," he said.</p>
             HTML;
 
         $this->assertEquals($expected, $this->parsedownExtended->text($markdown));
