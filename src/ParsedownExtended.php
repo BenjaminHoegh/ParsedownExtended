@@ -16,7 +16,7 @@ class_alias(class_exists('ParsedownExtra') ? 'ParsedownExtra' : 'Parsedown', 'Pa
 // @psalm-suppress UndefinedClass
 class ParsedownExtended extends \ParsedownExtendedParentAlias
 {
-    public const VERSION = '2.0.0';
+    public const VERSION = '2.1.0';
     public const VERSION_PARSEDOWN_REQUIRED = '1.8.0';
     public const VERSION_PARSEDOWN_EXTRA_REQUIRED = '0.9.0';
     public const MIN_PHP_VERSION = '7.4';
