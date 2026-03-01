@@ -250,4 +250,26 @@ class AlertsTest extends TestCase
         $this->assertStringContainsString('<p class="markdown-alert-title">Note</p>', $result);
         $this->assertStringContainsString('<p>This is <em>italic</em> and <strong>bold</strong> text.</p>', $result);
     }
+
+    public function testAlertTypesAreRegexEscaped()
+    {
+        $this->parsedownExtended->config()->set('alerts.types', ['A.B']);
+
+        $matchingMarkdown = <<<MARKDOWN
+            > [!A.B]
+            > Dot type should match exactly.
+            MARKDOWN;
+
+        $nonMatchingMarkdown = <<<MARKDOWN
+            > [!AXB]
+            > This should not match A.B.
+            MARKDOWN;
+
+        $matchingResult = $this->parsedownExtended->text($matchingMarkdown);
+        $nonMatchingResult = $this->parsedownExtended->text($nonMatchingMarkdown);
+
+        $this->assertStringContainsString('<div class="markdown-alert markdown-alert-a.b">', $matchingResult);
+        $this->assertStringNotContainsString('<div class="markdown-alert', $nonMatchingResult);
+        $this->assertStringContainsString('<blockquote>', $nonMatchingResult);
+    }
 }
