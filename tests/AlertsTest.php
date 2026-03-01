@@ -236,4 +236,18 @@ class AlertsTest extends TestCase
         $this->assertStringContainsString('<p class="markdown-alert-title">Note</p>', $result);
         $this->assertStringContainsString('<p>Visit <a href="/docs">Docs</a>.</p>', $result);
     }
+
+    public function testBoldAndItalicWorkInsideAlert()
+    {
+        $markdown = <<<MARKDOWN
+            > [!NOTE]
+            > This is *italic* and **bold** text.
+            MARKDOWN;
+
+        $result = $this->parsedownExtended->text($markdown);
+
+        $this->assertStringContainsString('<div class="markdown-alert markdown-alert-note">', $result);
+        $this->assertStringContainsString('<p class="markdown-alert-title">Note</p>', $result);
+        $this->assertStringContainsString('<p>This is <em>italic</em> and <strong>bold</strong> text.</p>', $result);
+    }
 }
