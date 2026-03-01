@@ -1959,6 +1959,37 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
             return null; // Return null to terminate the current alert block
         }
 
+        // Treat nested quote lines inside an alert as a regular blockquote
+        if (preg_match('/^> > ?(.*)/', $Line['text'], $nestedMatches)) {
+            if (isset($Block['interrupted'])) {
+                unset($Block['interrupted']);
+            }
+
+            $nestedText = $nestedMatches[1];
+
+            $lastElementIndex = count($Block['element']['elements']) - 1;
+            $hasPreviousBlockquote = $lastElementIndex >= 0
+                && isset($Block['element']['elements'][$lastElementIndex]['name'])
+                && $Block['element']['elements'][$lastElementIndex]['name'] === 'blockquote';
+
+            if ($hasPreviousBlockquote) {
+                $Block['element']['elements'][$lastElementIndex]['handler']['argument'][] = $nestedText;
+
+                return $Block;
+            }
+
+            $Block['element']['elements'][] = [
+                'name' => 'blockquote',
+                'handler' => [
+                    'function' => 'linesElements',
+                    'argument' => [$nestedText],
+                    'destination' => 'elements',
+                ],
+            ];
+
+            return $Block;
+        }
+
         // Check if the line continues the current alert block with '>' followed by content
         if ($Line['text'][0] === '>' && preg_match('/^> ?(.*)/', $Line['text'], $matches)) {
             // Reset interruption state before appending new content
@@ -1974,7 +2005,11 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
             // Append the new line content to the current block
             $Block['element']['elements'][] = [
                 'name' => 'p',
-                'text' => $matches[1], // Add the text following the '>'
+                'handler' => [
+                    'function' => 'lineElements',
+                    'argument' => $matches[1],
+                    'destination' => 'elements',
+                ],
             ];
 
             return $Block; // Return the updated block
@@ -1984,7 +2019,11 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
         if (!isset($Block['interrupted'])) {
             $Block['element']['elements'][] = [
                 'name' => 'p',
-                'text' => $Line['text'], // Add the text directly to the alert block
+                'handler' => [
+                    'function' => 'lineElements',
+                    'argument' => $Line['text'],
+                    'destination' => 'elements',
+                ],
             ];
 
             return $Block; // Return the updated block
