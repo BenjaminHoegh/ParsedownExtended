@@ -1961,10 +1961,14 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
 
         // Check if the line continues the current alert block with '>' followed by content
         if ($Line['text'][0] === '>' && preg_match('/^> ?(.*)/', $Line['text'], $matches)) {
-            // If the block was interrupted, add an empty paragraph for spacing
+            // Reset interruption state before appending new content
             if (isset($Block['interrupted'])) {
-                $Block['element']['elements'][] = ['text' => ''];
                 unset($Block['interrupted']); // Reset the interrupted status
+            }
+
+            // Treat an empty quote marker (">" or "> ") as a paragraph separator
+            if (trim($matches[1]) === '') {
+                return $Block;
             }
 
             // Append the new line content to the current block
