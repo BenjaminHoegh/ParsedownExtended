@@ -216,4 +216,15 @@ class TocTest extends TestCase
         $actual = $this->parsedownExtended->text($markdown);
         $this->assertEquals($expected, $actual);
     }
+
+    public function testContentsListJsonFallbackOnEncodingFailure()
+    {
+        $reflection = new ReflectionProperty(ParsedownExtended::class, 'contentsListArray');
+        $reflection->setAccessible(true);
+        $reflection->setValue($this->parsedownExtended, [NAN]);
+
+        $actual = $this->parsedownExtended->contentsList('json');
+
+        $this->assertSame('[]', $actual);
+    }
 }
