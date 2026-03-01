@@ -175,4 +175,65 @@ class AlertsTest extends TestCase
 
         $this->assertEquals(trim($expectedHtml), trim($result));
     }
+
+    public function testMultiLineAlert()
+    {
+        $markdown = <<<MARKDOWN
+            > [!NOTE]
+            > First line.
+            >
+            > Second line.
+            MARKDOWN;
+
+        $expectedHtml = <<<HTML
+            <div class="markdown-alert markdown-alert-note">
+            <p class="markdown-alert-title">Note</p>
+            <p>First line.</p>
+            <p>Second line.</p>
+            </div>
+            HTML;
+
+        $result = $this->parsedownExtended->text($markdown);
+
+        $this->assertEquals(trim($expectedHtml), trim($result));
+    }
+
+    public function testAlertCannotBeNestedInsideAlert()
+    {
+        $markdown = <<<MARKDOWN
+            > [!NOTE]
+            > Outer note.
+            > > [!WARNING]
+            > > Inner warning should not become an alert.
+            MARKDOWN;
+
+        $expectedHtml = <<<HTML
+            <div class="markdown-alert markdown-alert-note">
+            <p class="markdown-alert-title">Note</p>
+            <p>Outer note.</p>
+            <blockquote>
+            <p>[!WARNING]
+            Inner warning should not become an alert.</p>
+            </blockquote>
+            </div>
+            HTML;
+
+        $result = $this->parsedownExtended->text($markdown);
+
+        $this->assertEquals(trim($expectedHtml), trim($result));
+    }
+
+    public function testLinksWorkInsideAlert()
+    {
+        $markdown = <<<MARKDOWN
+            > [!NOTE]
+            > Visit [Docs](/docs).
+            MARKDOWN;
+
+        $result = $this->parsedownExtended->text($markdown);
+
+        $this->assertStringContainsString('<div class="markdown-alert markdown-alert-note">', $result);
+        $this->assertStringContainsString('<p class="markdown-alert-title">Note</p>', $result);
+        $this->assertStringContainsString('<p>Visit <a href="/docs">Docs</a>.</p>', $result);
+    }
 }
