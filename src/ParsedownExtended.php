@@ -149,17 +149,14 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
     ];
 
 
-    /** @var array $PATH_TO_BIT Stores a mapping of file or directory paths to their corresponding bit values. */
-    private static array $PATH_TO_BIT   = [];
-
-    /** @var array $BIT_TO_PATH Stores a mapping of bit values to their corresponding file or directory paths. */
-    private static array $BIT_TO_PATH   = [];
+    /** @var array $BOOLEAN_PATHS Stores a set of boolean config paths. */
+    private static array $BOOLEAN_PATHS = [];
 
     /** @var array $FLAT_SCHEMA Stores a flat schema of configuration options for easy access. */
     private static array $FLAT_SCHEMA   = [];
 
-    /** @var int $DEFAULT_BITS Stores the default boolean mask. */
-    private static int   $DEFAULT_BITS  = 0;   // default boolean mask
+    /** @var array $DEFAULT_FEATURES Stores default boolean settings keyed by path. */
+    private static array $DEFAULT_FEATURES = [];
 
     /** @var array $DEFAULT_PAYLOAD Stores default non-boolean settings for the configuration. */
     private static array $DEFAULT_PAYLOAD = [];
@@ -167,8 +164,8 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
     /** @var bool $COMPILED Indicates whether the schema has been compiled. */
     private static bool  $COMPILED = false;
 
-    /** @var int $features Stores the feature flags for the instance. */
-    private int   $features;  // 64‑bit mask of booleans
+    /** @var array $features Stores boolean feature flags for the instance. */
+    private array $features;
 
     /** @var array $payload Stores non-boolean settings for the instance. */
     private array $payload;   // non‑boolean settings
@@ -199,7 +196,7 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
         }
 
         // Initialize features and payload
-        $this->features = self::$DEFAULT_BITS;
+        $this->features = self::$DEFAULT_FEATURES;
         $this->payload  = self::$DEFAULT_PAYLOAD;
 
         // Apply overrides if provided
@@ -1894,11 +1891,11 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
             return null; // Return null if alert blocks are disabled
         }
 
-        // Retrieve the alert types from the config (e.g., 'NOTE', 'WARNING')
-        $alertTypes = $this->config()->get('alerts.types');
-
-        // Build the regex pattern dynamically based on the alert types
-        $alertTypesPattern = implode('|', array_map('strtoupper', $alertTypes));
+        // Build escaped alert type pattern from config values
+        $alertTypesPattern = $this->buildAlertTypesPattern();
+        if ($alertTypesPattern === null) {
+            return null;
+        }
 
         // Create the full regex pattern for matching alert block syntax
         $pattern = '/^> \[!(' . $alertTypesPattern . ')\]/';
@@ -1945,11 +1942,11 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
      */
     protected function blockAlertContinue($Line, array $Block)
     {
-        // Retrieve the alert types from the config (e.g., 'NOTE', 'WARNING')
-        $alertTypes = $this->config()->get('alerts.types');
-
-        // Build the regex pattern dynamically based on the alert types
-        $alertTypesPattern = implode('|', array_map('strtoupper', $alertTypes));
+        // Build escaped alert type pattern from config values
+        $alertTypesPattern = $this->buildAlertTypesPattern();
+        if ($alertTypesPattern === null) {
+            return null;
+        }
 
         // Create the full regex pattern for identifying new alert blocks
         $pattern = '/^> \[!(' . $alertTypesPattern . ')\]/';
@@ -1991,7 +1988,7 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
         }
 
         // Check if the line continues the current alert block with '>' followed by content
-        if ($Line['text'][0] === '>' && preg_match('/^> ?(.*)/', $Line['text'], $matches)) {
+        if (isset($Line['text'][0]) && $Line['text'][0] === '>' && preg_match('/^> ?(.*)/', $Line['text'], $matches)) {
             // Reset interruption state before appending new content
             if (isset($Block['interrupted'])) {
                 unset($Block['interrupted']); // Reset the interrupted status
@@ -2043,6 +2040,34 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
     protected function blockAlertComplete($Block)
     {
         return $Block; // Finalize and return the alert block
+    }
+
+    /**
+     * Builds a safe alternation pattern for configured alert types.
+     *
+     * @return string|null Regex-safe alternation pattern or null if no valid types exist.
+     */
+    private function buildAlertTypesPattern(): ?string
+    {
+        $alertTypes = $this->config()->get('alerts.types');
+        if (!is_array($alertTypes) || $alertTypes === []) {
+            return null;
+        }
+
+        $escapedTypes = [];
+        foreach ($alertTypes as $alertType) {
+            if (!is_string($alertType) || $alertType === '') {
+                continue;
+            }
+
+            $escapedTypes[] = preg_quote(strtoupper($alertType), '/');
+        }
+
+        if ($escapedTypes === []) {
+            return null;
+        }
+
+        return implode('|', $escapedTypes);
     }
 
 
@@ -2180,12 +2205,16 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
 
         // Use the parent class to parse the fenced code block
         $Block = parent::blockFencedCode($Line);
+        if (!$Block || !isset($Line['text'][0])) {
+            return $Block;
+        }
+
         $marker = $Line['text'][0]; // Identify the marker character (e.g., backticks)
         $openerLength = strspn($Line['text'], $marker); // Determine the length of the opening markers
 
         // Extract the language identifier from the fenced code line
         $parts = explode(' ', trim(substr($Line['text'], $openerLength)), 2);
-        $language = strtolower($parts[0]); // Convert the language identifier to lowercase
+        $language = strtolower($parts[0] ?? ''); // Convert the language identifier to lowercase
 
         // Check if diagram support is enabled in the configuration
         if (!$config->get('diagrams')) {
@@ -2638,9 +2667,10 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
             case 'string':
                 return $this->contentsListString ? $this->body($this->contentsListString) : '';
             case 'json':
-                return json_encode($this->contentsListArray);
+                $json = json_encode($this->contentsListArray);
+                return is_string($json) ? $json : '[]';
             default:
-                $backtrace = debug_backtrace();
+                $backtrace = debug_backtrace(DEBUG_BACKTRACE_IGNORE_ARGS, 2);
                 $caller = $backtrace[1] ?? $backtrace[0];
                 $errorMessage = "Unknown return type '{$type_return}' given while parsing ToC. Called in " . ($caller['file'] ?? 'unknown') . " on line " . ($caller['line'] ?? 'unknown');
                 throw new \InvalidArgumentException($errorMessage);
@@ -3310,35 +3340,36 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
     }
 
     /**
-     * Returns a singleton configuration handler object for managing feature flags and payload settings.
+     * Returns a singleton configuration handler object for managing boolean settings and payload values.
      *
-     * The handler provides methods to get, set, and export configuration values, supporting both bitmask-based
-     * feature toggles and arbitrary payload data. The configuration schema and path-to-bit mapping are provided
-     * statically. The handler validates types and throws exceptions for invalid paths or types.
+     * The handler provides methods to get, set, and export configuration values, supporting both
+     * boolean path-based settings and arbitrary payload data. The configuration schema and boolean-path
+     * mapping are provided statically. The handler validates types and throws exceptions for invalid
+     * paths or types.
      *
      * @return object Configuration handler with the following public methods:
      *                - get(string $path): mixed
      *                - set(string|array $path, mixed $value = null): self
      *                - export(): array
-     *                - bind(int &$features, array &$payload): void
+     *                - bind(array &$features, array &$payload): void
      *
      * @throws \InvalidArgumentException If an invalid config path or type is provided to set().
      */
     public function config(): object
     {
         if ($this->configHandler === null) {
-            $this->configHandler = new class(self::$PATH_TO_BIT, self::$FLAT_SCHEMA) {
-                private array $p2b;
+            $this->configHandler = new class(self::$BOOLEAN_PATHS, self::$FLAT_SCHEMA) {
+                private array $booleanPaths;
                 private array $schema;
-                private int   $features;
+                private array $features;
                 private array $payload;
 
-                public function __construct(array $p2b, array $schema)
+                public function __construct(array $booleanPaths, array $schema)
                 {
-                    $this->p2b    = $p2b;
+                    $this->booleanPaths = $booleanPaths;
                     $this->schema = $schema;
                 }
-                public function bind(int &$f, array &$p): void
+                public function bind(array &$f, array &$p): void
                 {
                     $this->features = &$f;
                     $this->payload  = &$p;
@@ -3351,8 +3382,8 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
                     if (!isset($this->schema[$path])) {
                         throw new \InvalidArgumentException("Invalid config path: {$path}");
                     }
-                    if (isset($this->p2b[$path])) {
-                        return ( ($this->features & $this->p2b[$path]) !== 0 );
+                    if (isset($this->booleanPaths[$path])) {
+                        return $this->features[$path] ?? false;
                     }
                     return $this->payload[$path] ?? null;
                 }
@@ -3384,10 +3415,8 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
                     }
                     $this->validate($value, $this->schema[$path]['type']);
 
-                    if (isset($this->p2b[$path])) {
-                        $bit = $this->p2b[$path];
-                        $this->features = $value ? ($this->features | $bit)
-                                                  : ($this->features & ~$bit);
+                    if (isset($this->booleanPaths[$path])) {
+                        $this->features[$path] = $value;
                     } else {
                         $this->payload[$path] = $value;
                     }
@@ -3397,8 +3426,8 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
                 public function export(): array
                 {
                     $flat = $this->payload;
-                    foreach ($this->p2b as $p => $b) {
-                        $flat[$p] = (($this->features & $b) !== 0);
+                    foreach ($this->booleanPaths as $p => $_) {
+                        $flat[$p] = $this->features[$p] ?? false;
                     }
                     return $flat;
                 }
@@ -3437,9 +3466,7 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
      */
     private function compileSchema(): void
     {
-        $bitIndex = 0;
-
-        $walk = function (array $node, string $prefix = '') use (&$walk, &$bitIndex): void {
+        $walk = function (array $node, string $prefix = '') use (&$walk): void {
             foreach ($node as $k => $v) {
                 $path = $prefix === '' ? $k : $prefix . '.' . $k;
 
@@ -3450,7 +3477,7 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
                     if (array_key_exists('enabled', $v)) {
                         $enabledDefault = (bool)$v['enabled'];
                     }
-                    $this->registerBoolean("{$path}.enabled", $enabledDefault, $bitIndex);
+                    $this->registerBoolean("{$path}.enabled", $enabledDefault);
                     if (array_key_exists('enabled', $v)) {
                         unset($v['enabled']); // don't recurse into it
                     }
@@ -3460,7 +3487,7 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
 
                 // leaf boolean
                 if (is_bool($v)) {
-                    $this->registerBoolean($path, $v, $bitIndex);
+                    $this->registerBoolean($path, $v);
                     continue;
                 }
 
@@ -3473,30 +3500,19 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
     }
 
     /**
-     * Registers a boolean feature flag with a unique bit index and default value.
+     * Registers a boolean feature flag with a default value.
      *
-     * Maps the given feature path to a bit position, stores its schema, and updates
-     * the default bits if the feature is enabled by default. Throws an exception if
-     * more than 64 boolean features are registered.
+     * Tracks the path as a boolean setting and stores its default value in the
+     * per-instance defaults map.
      *
      * @param string $path      The unique path identifying the feature.
      * @param bool   $default   The default value for the feature (enabled or disabled).
-     * @param int    &$bitIndex Reference to the current bit index, incremented after assignment.
-     *
-     * @throws \RuntimeException If more than 64 boolean features are registered.
      */
-    private function registerBoolean(string $path, bool $default, int &$bitIndex): void
+    private function registerBoolean(string $path, bool $default): void
     {
-        if ($bitIndex > 63) {
-            throw new \RuntimeException('Exceeded 64 boolean feature bits');
-        }
-        $bit = 1 << $bitIndex++;
-        self::$PATH_TO_BIT[$path] = $bit;
-        self::$BIT_TO_PATH[$bit]  = $path;
+        self::$BOOLEAN_PATHS[$path] = true;
         self::$FLAT_SCHEMA[$path] = ['type' => 'boolean', 'default' => $default];
-        if ($default) {
-            self::$DEFAULT_BITS |= $bit;
-        }
+        self::$DEFAULT_FEATURES[$path] = $default;
     }
 
     /**
