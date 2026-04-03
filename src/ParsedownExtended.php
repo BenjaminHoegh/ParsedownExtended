@@ -2752,9 +2752,10 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
     /**
      * Normalizes the given string to UTF-8 encoding.
      *
-     * This function ensures that the given text is properly encoded to UTF-8, using
-     * `mb_convert_encoding` if available. If `mbstring` is not available, it returns
-     * the raw string as there is no equivalent alternative.
+     * This function ensures that the given text is properly encoded to UTF-8. It detects
+     * the source encoding from a small set of common encodings and converts only when
+     * necessary. If `mbstring` is not available, it returns the raw string as there is
+     * no equivalent alternative.
      *
      * @since 1.2.0
      *
@@ -2768,11 +2769,16 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
             $mbstringLoaded = extension_loaded('mbstring');
         }
 
-        if ($mbstringLoaded) {
-            return mb_convert_encoding($text, 'UTF-8', mb_list_encodings());
-        } else {
-            return $text; // Return raw text as there is no good alternative for mb_convert_encoding
+        if (!$mbstringLoaded) {
+            return $text;
         }
+
+        $encoding = mb_detect_encoding($text, ['UTF-8', 'ISO-8859-1', 'Windows-1252'], true);
+        if ($encoding === false || $encoding === 'UTF-8') {
+            return $text;
+        }
+
+        return mb_convert_encoding($text, 'UTF-8', $encoding);
     }
 
     /**
