@@ -1,0 +1,304 @@
+From 494d1e9073b9efc1108f87a3663b2b36b0e28701 Mon Sep 17 00:00:00 2001
+From: "copilot-swe-agent[bot]" <198982749+Copilot@users.noreply.github.com>
+Date: Fri, 3 Apr 2026 09:27:59 +0000
+Subject: [PATCH] Fix docs: wrong versions, config keys, missing Alerts page,
+ and add external_links docs
+
+Co-authored-by: BenjaminHoegh <22152591+BenjaminHoegh@users.noreply.github.com>
+---
+ docs/Configuration/Alerts.md            | 90 +++++++++++++++++++++++++
+ docs/Configuration/Headings.md          |  8 ++-
+ docs/Configuration/Links.md             | 38 ++++++++++-
+ docs/Configuration/Smartypants.md       |  7 +-
+ docs/Configuration/Table of Contents.md |  8 +--
+ docs/Installation.md                    |  8 ++-
+ docs/Introduction.md                    |  1 +
+ 7 files changed, 146 insertions(+), 14 deletions(-)
+ create mode 100644 docs/Configuration/Alerts.md
+
+diff --git a/docs/Configuration/Alerts.md b/docs/Configuration/Alerts.md
+new file mode 100644
+index 0000000..1a8dc9f
+--- /dev/null
++++ b/docs/Configuration/Alerts.md
+@@ -0,0 +1,90 @@
++---
++title: Alerts
++---
++
++# Alerts
++
++## Description
++
++ParsedownExtended supports GitHub Flavored Markdown (GFM) alert syntax. Alerts are block-quote-style callouts that are styled with a distinctive type label, making it easy to draw attention to notes, tips, warnings, and other important information.
++
++```markdown
++> [!NOTE]
++> Highlights information that users should take into account.
++
++> [!TIP]
++> Optional information to help a user be more successful.
++
++> [!IMPORTANT]
++> Crucial information necessary for users to succeed.
++
++> [!WARNING]
++> Critical content demanding immediate user attention due to potential risks.
++
++> [!CAUTION]
++> Negative potential consequences of an action.
++```
++
++Each alert type is wrapped in a `<div>` with a CSS class composed of the base class and the lowercase alert type, e.g., `markdown-alert markdown-alert-note`.
++
++## Configuration Syntax
++
++To configure Alerts in ParsedownExtended, use the `config()->set()` method:
++
++```php
++$ParsedownExtended->config()->set('alerts', (bool|array) $value);
++```
++
++## Parameters
++
++- **types** (array): The list of recognised alert type labels (case-insensitive). Defaults to `['note', 'tip', 'important', 'warning', 'caution']`.
++- **class** (string): The base CSS class applied to the outer `<div>` wrapper of every alert. Defaults to `'markdown-alert'`.
++
++## Examples
++
++### Disable Alerts
++
++To disable alert block processing entirely:
++
++```php
++$ParsedownExtended->config()->set('alerts', false);
++```
++
++### Custom Alert Types
++
++To support only a subset of alert types, or to add your own:
++
++```php
++$ParsedownExtended->config()->set('alerts.types', ['note', 'warning', 'danger']);
++```
++
++### Custom CSS Class
++
++To use a different base CSS class for styling:
++
++```php
++$ParsedownExtended->config()->set('alerts.class', 'callout');
++```
++
++With this setting a `> [!NOTE]` block would render as:
++
++```html
++<div class="callout callout-note">
++  <p>...</p>
++</div>
++```
++
++### Localised Alert Labels
++
++You can replace the default English type labels with your own language or branding:
++
++```php
++$ParsedownExtended->config()->set('alerts.types', ['hinweis', 'tipp', 'warnung']);
++```
++
++Then use the matching labels in your Markdown:
++
++```markdown
++> [!HINWEIS]
++> This is a note in German.
++```
+diff --git a/docs/Configuration/Headings.md b/docs/Configuration/Headings.md
+index a7ec533..e1cc7e6 100644
+--- a/docs/Configuration/Headings.md
++++ b/docs/Configuration/Headings.md
+@@ -52,14 +52,16 @@ $ParsedownExtended->config()->set('headings', false);
+ 
+ ### Custom Anchor IDs
+ 
+-Implement custom logic for anchor IDs:
++Use the `setCreateAnchorIDCallback` method to provide custom logic for generating anchor IDs:
+ 
+ ```php
+-$ParsedownExtended->config()->set('headings.custom_anchor_id_callback', function($text, $level) {
+-    return 'custom-anchor-' . $level . '-' . strtolower(str_replace(' ', '-', $text));
++$ParsedownExtended->setCreateAnchorIDCallback(function (string $text): string {
++    return strtolower(preg_replace('/[^a-z0-9]+/i', '-', $text));
+ });
+ ```
+ 
++The callback receives the heading text as its only argument and must return the desired anchor ID string.
++
+ ### Configure Allowed Headings
+ 
+ Specify allowed heading levels:
+diff --git a/docs/Configuration/Links.md b/docs/Configuration/Links.md
+index 57101e6..051faaf 100644
+--- a/docs/Configuration/Links.md
++++ b/docs/Configuration/Links.md
+@@ -21,6 +21,12 @@ This setting can be a simple boolean to enable or disable all link processing, o
+ ## Parameters
+ 
+ - **email_links** (boolean): Determines whether email addresses are automatically converted into mailto links. This is enabled by default.
++- **external_links** (boolean|array): Controls how external links are handled. When enabled, external links can be automatically annotated with security-related attributes.
++    - **nofollow** (boolean): Adds `rel="nofollow"` to external links. Enabled by default.
++    - **noopener** (boolean): Adds `rel="noopener"` to external links. Enabled by default.
++    - **noreferrer** (boolean): Adds `rel="noreferrer"` to external links. Enabled by default.
++    - **open_in_new_window** (boolean): Adds `target="_blank"` to external links. Enabled by default.
++    - **internal_hosts** (array): A list of hostnames to treat as internal (not external). Links to these hosts will not receive external-link attributes.
+ 
+ ## Examples
+ 
+@@ -37,7 +43,35 @@ $ParsedownExtended->config()->set('links', false);
+ To disable the automatic conversion of email addresses into mailto links:
+ 
+ ```php
+-$ParsedownExtended->config()->set('links', [
+-    'email_links' => false
++$ParsedownExtended->config()->set('links.email_links', false);
++```
++
++### Disable External Link Attributes
++
++To allow external links without any extra security attributes:
++
++```php
++$ParsedownExtended->config()->set('links.external_links', false);
++```
++
++### Customize External Link Attributes
++
++To selectively enable only specific attributes on external links:
++
++```php
++$ParsedownExtended->config()->set('links.external_links.nofollow', true);
++$ParsedownExtended->config()->set('links.external_links.noopener', true);
++$ParsedownExtended->config()->set('links.external_links.noreferrer', false);
++$ParsedownExtended->config()->set('links.external_links.open_in_new_window', false);
++```
++
++### Mark Hosts as Internal
++
++To prevent certain domains from being treated as external links:
++
++```php
++$ParsedownExtended->config()->set('links.external_links.internal_hosts', [
++    'mysite.com',
++    'cdn.mysite.com',
+ ]);
+ ```
+\ No newline at end of file
+diff --git a/docs/Configuration/Smartypants.md b/docs/Configuration/Smartypants.md
+index 74649ad..c87dc4f 100644
+--- a/docs/Configuration/Smartypants.md
++++ b/docs/Configuration/Smartypants.md
+@@ -24,7 +24,7 @@ Smartypants in ParsedownExtended automatically transforms basic ASCII punctuatio
+ Configure Smartypants using the `config()->set()` method:
+ 
+ ```php
+-$ParsedownExtended->config()->set('smarty', (bool|array) $value);
++$ParsedownExtended->config()->set('smartypants', (bool|array) $value);
+ ```
+ 
+ ## Parameters
+@@ -35,6 +35,7 @@ Customize Smartypants with these options:
+ - **smart_quotes** (boolean): Convert straight quotes to curly quotes.
+ - **smart_angled_quotes** (boolean): Convert angled quotes.
+ - **smart_ellipses** (boolean): Convert triple periods to ellipses.
++- **smart_backticks** (boolean): Convert ``backtick double-quoted'' text to curly double quotes.
+ - **substitutions** (array): Overwrite default substitutions with custom mappings.
+ 
+ ## Examples
+@@ -44,7 +45,7 @@ Customize Smartypants with these options:
+ To customize the substitutions for a specific language or style:
+ 
+ ```php
+-$ParsedownExtended->config()->set('smarty', [
++$ParsedownExtended->config()->set('smartypants', [
+     'substitutions' => [
+         'left_single_quote' => '&sbquo;', // Single bottom quote
+         'right_single_quote' => '&lsquo;', // Single top quote
+@@ -59,5 +60,5 @@ $ParsedownExtended->config()->set('smarty', [
+ To enable Smartypants and automatically apply typographical enhancements:
+ 
+ ```php
+-$ParsedownExtended->config()->set('smarty', true);
++$ParsedownExtended->config()->set('smartypants', true);
+ ```
+diff --git a/docs/Configuration/Table of Contents.md b/docs/Configuration/Table of Contents.md
+index 99431cd..bb07e45 100644
+--- a/docs/Configuration/Table of Contents.md	
++++ b/docs/Configuration/Table of Contents.md	
+@@ -20,8 +20,8 @@ $ParsedownExtended->config()->set('toc', (bool|array) $value);
+ 
+ Configure ToC with these options:
+ 
+-- **headings** (array): Defines which heading levels to include in the ToC.
+-- **tag** (string): Sets a custom markdown tag for generating the ToC.
++- **levels** (array): Defines which heading levels to include in the ToC.
++- **tag** (string): Sets a custom markdown tag for generating the ToC. Defaults to `[TOC]`.
+ - **id** (string): Assigns a custom ID to the ToC container.
+ 
+ ## Generating ToC and Content Separately
+@@ -61,8 +61,8 @@ Customize ToC with specific configurations:
+ 
+ ```php
+ $ParsedownExtended->config()->set('toc', [
+-    'headings' => ['h1', 'h2', 'h3'], // Headings to include
+-    'tag' => '[toc]', // Custom ToC tag
++    'levels' => ['h1', 'h2', 'h3'], // Heading levels to include
++    'tag' => '[TOC]', // Custom ToC tag
+     'id' => 'table-of-contents', // Custom ToC ID
+ ]);
+ ```
+diff --git a/docs/Installation.md b/docs/Installation.md
+index 239f69a..8bb3675 100644
+--- a/docs/Installation.md
++++ b/docs/Installation.md
+@@ -11,8 +11,8 @@ sidebar_position: 2
+ Before you start using ParsedownExtended, ensure that your system meets the following requirements:
+ 
+ - **PHP Version:** PHP 7.4 or higher. ParsedownExtended relies on the latest PHP features and improvements.
+-- **Parsedown:** The original Parsedown library version 1.7 or higher is required. This is automatically managed via Composer if you install ParsedownExtended through Composer.
+-- **ParsedownExtra:** If you want to use the ParsedownExtra features, you need to have the ParsedownExtra library version 0.8 or higher. This is automatically managed via Composer if you install ParsedownExtended through Composer.
++- **Parsedown:** The original Parsedown library version 1.8 or higher is required. This is automatically managed via Composer if you install ParsedownExtended through Composer.
++- **ParsedownExtra:** If you want to use the ParsedownExtra features, you need to have the ParsedownExtra library version 0.9 or higher. This is automatically managed via Composer if you install ParsedownExtended through Composer.
+ 
+ Meeting these requirements will ensure that ParsedownExtended functions correctly and efficiently on your system.
+ 
+@@ -26,6 +26,8 @@ Then require the auto-loader file:
+ ```php
+ require 'vendor/autoload.php';
+ 
++use BenjaminHoegh\ParsedownExtended\ParsedownExtended;
++
+ $ParsedownExtended = new ParsedownExtended();
+ 
+ echo $ParsedownExtended->text('Hello _Parsedown_!'); # prints: <p>Hello <em>Parsedown</em>!</p>
+@@ -43,6 +45,8 @@ require 'Parsedown.php';
+ require 'ParsedownExtra.php'; // optional
+ require 'ParsedownExtended.php';
+ 
++use BenjaminHoegh\ParsedownExtended\ParsedownExtended;
++
+ $ParsedownExtended = new ParsedownExtended();
+ 
+ echo $ParsedownExtended->text('Hello _Parsedown_!'); # prints: <p>Hello <em>Parsedown</em>!</p>
+diff --git a/docs/Introduction.md b/docs/Introduction.md
+index 6acbdf1..0be2d53 100644
+--- a/docs/Introduction.md
++++ b/docs/Introduction.md
+@@ -25,5 +25,6 @@ Whether you need task lists, emoji support, or advanced LaTeX syntax handling, `
+ - **Diagrams Syntax Support:** Recognizes diagram syntax for integration with libraries like mermaid.js and chart.js.
+ - **LaTeX Syntax Support:** Detects LaTeX syntax, suitable for mathematical expressions, to be rendered with libraries like KaTeX.js.
+ - **Predefined Abbreviations:** Define and use abbreviations easily.
++- **GFM Alerts:** Create alerts using GitHub Flavored Markdown Alert syntax that can be customized or extended with your own types.
+ - **Customizable Options:** Extensive options for customizing each Markdown element.
+ - **Additional Features:** `ParsedownExtended` continuously evolves, adding more features over time.
+-- 
+2.53.0
+
