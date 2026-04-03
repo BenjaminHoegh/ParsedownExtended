@@ -166,7 +166,7 @@ $ParsedownExtended->config()->set('emojis', false);
 ```php
 $ParsedownExtended->config()->set('smartypants', true);
 
-// "Hello" becomes "Hello" (curly quotes)
+// Straight "Hello" becomes curly \u201cHello\u201d (left/right double quotes)
 // -- becomes – (en-dash)
 // --- becomes — (em-dash)
 // ... becomes … (ellipsis)
@@ -202,7 +202,7 @@ $json = $ParsedownExtended->contentsList('json');  // JSON string
 #### GFM Alerts
 
 ```php
-// Enabled by default. Customise types and CSS class:
+// Enabled by default. Customize types and CSS class:
 $ParsedownExtended->config()->set('alerts.types', ['note', 'tip', 'warning']);
 $ParsedownExtended->config()->set('alerts.class', 'markdown-alert');
 
