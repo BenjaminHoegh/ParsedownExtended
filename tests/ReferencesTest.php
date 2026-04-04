@@ -17,4 +17,35 @@ class ReferencesTest extends TestCase
     {
         unset($this->parsedownExtended);
     }
+
+    public function testReferencesEnabled()
+    {
+        $this->parsedownExtended->config()->set('references', true);
+
+        $markdown = "[link text][ref]\n\n[ref]: https://example.com";
+        $html = $this->parsedownExtended->text($markdown);
+
+        $this->assertStringContainsString('<a href="https://example.com"', $html);
+    }
+
+    public function testReferencesDisabled()
+    {
+        $this->parsedownExtended->config()->set('references', false);
+
+        $markdown = "[link text][ref]\n\n[ref]: https://example.com";
+        $html = $this->parsedownExtended->text($markdown);
+
+        $this->assertStringContainsString('[link text][ref]', $html);
+    }
+
+    public function testReferenceWithTitle()
+    {
+        $this->parsedownExtended->config()->set('references', true);
+
+        $markdown = "[link text][ref]\n\n[ref]: https://example.com \"Example Title\"";
+        $html = $this->parsedownExtended->text($markdown);
+
+        $this->assertStringContainsString('href="https://example.com"', $html);
+        $this->assertStringContainsString('title="Example Title"', $html);
+    }
 }
