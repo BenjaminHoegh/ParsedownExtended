@@ -11,8 +11,8 @@ sidebar_position: 2
 Before you start using ParsedownExtended, ensure that your system meets the following requirements:
 
 - **PHP Version:** PHP 7.4 or higher. ParsedownExtended relies on the latest PHP features and improvements.
-- **Parsedown:** The original Parsedown library version 1.7 or higher is required. This is automatically managed via Composer if you install ParsedownExtended through Composer.
-- **ParsedownExtra:** If you want to use the ParsedownExtra features, you need to have the ParsedownExtra library version 0.8 or higher. This is automatically managed via Composer if you install ParsedownExtended through Composer.
+- **Parsedown:** The original Parsedown library version 1.8 or higher is required. This is automatically managed via Composer if you install ParsedownExtended through Composer.
+- **ParsedownExtra:** If you want to use the ParsedownExtra features, you need to have the ParsedownExtra library version 0.9 or higher. This is automatically managed via Composer if you install ParsedownExtended through Composer.
 
 Meeting these requirements will ensure that ParsedownExtended functions correctly and efficiently on your system.
 
@@ -25,6 +25,8 @@ composer require benjaminhoegh/parsedown-extended
 Then require the auto-loader file:
 ```php
 require 'vendor/autoload.php';
+
+use BenjaminHoegh\ParsedownExtended\ParsedownExtended;
 
 $ParsedownExtended = new ParsedownExtended();
 
@@ -42,6 +44,8 @@ Download the source code from the latest release, then include the necessary fil
 require 'Parsedown.php';
 require 'ParsedownExtra.php'; // optional
 require 'ParsedownExtended.php';
+
+use BenjaminHoegh\ParsedownExtended\ParsedownExtended;
 
 $ParsedownExtended = new ParsedownExtended();
 
