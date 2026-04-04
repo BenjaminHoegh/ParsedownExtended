@@ -52,13 +52,15 @@ $ParsedownExtended->config()->set('headings', false);
 
 ### Custom Anchor IDs
 
-Implement custom logic for anchor IDs:
+Use the `setCreateAnchorIDCallback` method to provide custom logic for generating anchor IDs:
 
 ```php
-$ParsedownExtended->config()->set('headings.custom_anchor_id_callback', function($text, $level) {
-    return 'custom-anchor-' . $level . '-' . strtolower(str_replace(' ', '-', $text));
+$ParsedownExtended->setCreateAnchorIDCallback(function (string $text): string {
+    return strtolower(preg_replace('/[^a-z0-9]+/i', '-', $text));
 });
 ```
+
+The callback receives the heading text as its only argument and must return the desired anchor ID string.
 
 ### Configure Allowed Headings
 
