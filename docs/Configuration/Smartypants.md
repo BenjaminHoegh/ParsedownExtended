@@ -24,7 +24,7 @@ Smartypants in ParsedownExtended automatically transforms basic ASCII punctuatio
 Configure Smartypants using the `config()->set()` method:
 
 ```php
-$ParsedownExtended->config()->set('smarty', (bool|array) $value);
+$ParsedownExtended->config()->set('smartypants', (bool|array) $value);
 ```
 
 ## Parameters
@@ -35,6 +35,7 @@ Customize Smartypants with these options:
 - **smart_quotes** (boolean): Convert straight quotes to curly quotes.
 - **smart_angled_quotes** (boolean): Convert angled quotes.
 - **smart_ellipses** (boolean): Convert triple periods to ellipses.
+- **smart_backticks** (boolean): Convert ``backtick double-quoted'' text to curly double quotes.
 - **substitutions** (array): Overwrite default substitutions with custom mappings.
 
 ## Examples
@@ -44,7 +45,7 @@ Customize Smartypants with these options:
 To customize the substitutions for a specific language or style:
 
 ```php
-$ParsedownExtended->config()->set('smarty', [
+$ParsedownExtended->config()->set('smartypants', [
     'substitutions' => [
         'left_single_quote' => '&sbquo;', // Single bottom quote
         'right_single_quote' => '&lsquo;', // Single top quote
@@ -59,5 +60,5 @@ $ParsedownExtended->config()->set('smarty', [
 To enable Smartypants and automatically apply typographical enhancements:
 
 ```php
-$ParsedownExtended->config()->set('smarty', true);
+$ParsedownExtended->config()->set('smartypants', true);
 ```
