@@ -20,8 +20,8 @@ $ParsedownExtended->config()->set('toc', (bool|array) $value);
 
 Configure ToC with these options:
 
-- **headings** (array): Defines which heading levels to include in the ToC.
-- **tag** (string): Sets a custom markdown tag for generating the ToC.
+- **levels** (array): Defines which heading levels to include in the ToC.
+- **tag** (string): Sets a custom markdown tag for generating the ToC. Defaults to `[TOC]`.
 - **id** (string): Assigns a custom ID to the ToC container.
 
 ## Generating ToC and Content Separately
@@ -61,8 +61,8 @@ Customize ToC with specific configurations:
 
 ```php
 $ParsedownExtended->config()->set('toc', [
-    'headings' => ['h1', 'h2', 'h3'], // Headings to include
-    'tag' => '[toc]', // Custom ToC tag
+    'levels' => ['h1', 'h2', 'h3'], // Heading levels to include
+    'tag' => '[TOC]', // Custom ToC tag
     'id' => 'table-of-contents', // Custom ToC ID
 ]);
 ```
