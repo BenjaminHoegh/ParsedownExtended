@@ -3787,16 +3787,36 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
         }
 
         foreach ($attributes as $name => $value) {
-            if ($name === 'class' && isset($Inline['element']['attributes']['class']) && $Inline['element']['attributes']['class'] !== '') {
+            $normalizedName = strtolower($name);
+            if (!$this->isAllowedInlineAttributeName($normalizedName)) {
+                continue;
+            }
+
+            if ($normalizedName === 'class' && isset($Inline['element']['attributes']['class']) && $Inline['element']['attributes']['class'] !== '') {
                 $Inline['element']['attributes']['class'] .= ' ' . $value;
                 continue;
             }
 
-            $Inline['element']['attributes'][$name] = $value;
+            $Inline['element']['attributes'][$normalizedName] = $value;
         }
 
         $Inline['extent'] += strlen($matches[0]);
 
         return $Inline;
+    }
+
+    /**
+     * Limits inline trailing attributes to safe allowlisted names.
+     *
+     * @param string $name Attribute name.
+     * @return bool True when the attribute may be applied.
+     */
+    private function isAllowedInlineAttributeName(string $name): bool
+    {
+        if ($name === 'class' || $name === 'id') {
+            return true;
+        }
+
+        return strpos($name, 'data-') === 0;
     }
 }

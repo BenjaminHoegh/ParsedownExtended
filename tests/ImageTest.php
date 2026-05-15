@@ -53,4 +53,17 @@ class ImageTest extends TestCase
 
         $this->assertEquals($expectedHtml, trim($result));
     }
+
+    public function testImageDisallowsSensitiveTrailingAttributes()
+    {
+        $markdown = '![some image](image.png){[src=evil.png] [style=color:red] .safe #ok [data-track=1]}';
+        $result = $this->parsedownExtended->text($markdown);
+
+        $this->assertStringContainsString('src="image.png"', $result);
+        $this->assertStringContainsString('class="safe"', $result);
+        $this->assertStringContainsString('id="ok"', $result);
+        $this->assertStringContainsString('data-track="1"', $result);
+        $this->assertStringNotContainsString('src="evil.png"', $result);
+        $this->assertStringNotContainsString('style="color:red"', $result);
+    }
 }

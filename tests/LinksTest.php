@@ -51,6 +51,22 @@ class LinksTest extends TestCase
         $this->assertEquals($expectedHtml, trim($html));
     }
 
+    public function testInlineLinkDisallowsSensitiveTrailingAttributes()
+    {
+        $markdown = '[External](https://www.google.com){[href=https://evil.com] [target=_self] [rel=noopener] [style=color:red] .safe #ok [data-track=1]}';
+        $html = $this->parsedownExtended->text($markdown);
+
+        $this->assertStringContainsString('href="https://www.google.com"', $html);
+        $this->assertStringContainsString('target="_blank"', $html);
+        $this->assertStringContainsString('rel="nofollow noopener noreferrer"', $html);
+        $this->assertStringContainsString('class="safe"', $html);
+        $this->assertStringContainsString('id="ok"', $html);
+        $this->assertStringContainsString('data-track="1"', $html);
+        $this->assertStringNotContainsString('href="https://evil.com"', $html);
+        $this->assertStringNotContainsString('target="_self"', $html);
+        $this->assertStringNotContainsString('style="color:red"', $html);
+    }
+
     // Email Links
     // ----------------------------
 
