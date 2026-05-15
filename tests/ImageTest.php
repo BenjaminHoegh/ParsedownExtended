@@ -35,4 +35,22 @@ class ImageTest extends TestCase
 
         $this->assertEquals($expectedHtml, trim($result));
     }
+
+    public function testImageWithTrailingAttributes()
+    {
+        $markdown = '![some image](image.png){.shadow.center [data-zoom] #hero}';
+        $expectedHtml = '<p><img src="image.png" alt="some image" class="shadow center" data-zoom="data-zoom" id="hero" /></p>';
+        $result = $this->parsedownExtended->text($markdown);
+
+        $this->assertEquals($expectedHtml, trim($result));
+    }
+
+    public function testImageWithInvalidTrailingAttributesFallsBackToText()
+    {
+        $markdown = '![some image](image.png){.shadow.center [data-zoom] #hero';
+        $expectedHtml = '<p><img src="image.png" alt="some image" />{.shadow.center [data-zoom] #hero</p>';
+        $result = $this->parsedownExtended->text($markdown);
+
+        $this->assertEquals($expectedHtml, trim($result));
+    }
 }

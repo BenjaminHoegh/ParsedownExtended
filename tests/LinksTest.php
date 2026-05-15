@@ -42,6 +42,15 @@ class LinksTest extends TestCase
         $this->assertStringNotContainsString('<a href="https://www.example.com">Link</a>', $html);
     }
 
+    public function testInlineLinkWithTrailingAttributes()
+    {
+        $markdown = '[Link](link.png){.shadow.center [data-zoom] #hero}';
+        $expectedHtml = '<p><a href="link.png" class="shadow center" data-zoom="data-zoom" id="hero">Link</a></p>';
+        $html = $this->parsedownExtended->text($markdown);
+
+        $this->assertEquals($expectedHtml, trim($html));
+    }
+
     // Email Links
     // ----------------------------
 

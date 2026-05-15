@@ -1680,12 +1680,96 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
      */
     protected function parseAttributeData($attributeString)
     {
-        // Check if special attributes for headings are enabled
-        if ($this->config()->get('headings.special_attributes')) {
-            return parent::parseAttributeData($attributeString); // Delegate to parent class
+        if (!$this->config()->get('headings.special_attributes')) {
+            return [];
         }
 
-        return []; // Return an empty array if the feature is disabled
+        if (!is_string($attributeString)) {
+            return [];
+        }
+
+        $attributeString = trim($attributeString);
+        if ($attributeString === '') {
+            return [];
+        }
+
+        if ($attributeString[0] === '{' && substr($attributeString, -1) === '}') {
+            $attributeString = trim(substr($attributeString, 1, -1));
+        }
+
+        if ($attributeString === '') {
+            return [];
+        }
+
+        $attributes = [];
+        $offset = 0;
+        $length = strlen($attributeString);
+
+        while ($offset < $length) {
+            if (preg_match('/\G\s+/A', $attributeString, $matches, 0, $offset)) {
+                $offset += strlen($matches[0]);
+                continue;
+            }
+
+            if (!preg_match('/\G(\.[^\s\[\]{}]+|#[^\s\[\]{}]+|\[(?:\\.|[^\]])+\])/A', $attributeString, $matches, 0, $offset)) {
+                return [];
+            }
+
+            $token = $matches[1];
+            $offset += strlen($matches[0]);
+
+            if ($token[0] === '.') {
+                $classNames = array_values(array_filter(explode('.', substr($token, 1)), static function ($className) {
+                    return $className !== '';
+                }));
+
+                if ($classNames === []) {
+                    return [];
+                }
+
+                foreach ($classNames as $className) {
+                    if (isset($attributes['class']) && $attributes['class'] !== '') {
+                        $attributes['class'] .= ' ' . $className;
+                    } else {
+                        $attributes['class'] = $className;
+                    }
+                }
+
+                continue;
+            }
+
+            if ($token[0] === '#') {
+                $attributes['id'] = substr($token, 1);
+                continue;
+            }
+
+            $attributeToken = trim(substr($token, 1, -1));
+            if ($attributeToken === '') {
+                return [];
+            }
+
+            if (!preg_match('/^([A-Za-z_:][-A-Za-z0-9_:.]*)(?:\s*=\s*(.*))?$/s', $attributeToken, $attributeMatches)) {
+                return [];
+            }
+
+            $name = $attributeMatches[1];
+            $value = $attributeMatches[2] ?? $name;
+            $value = trim($value);
+
+            if ($value !== '' && ((substr($value, 0, 1) === '"' && substr($value, -1) === '"') || (substr($value, 0, 1) === "'" && substr($value, -1) === "'"))) {
+                $quote = substr($value, 0, 1);
+                $value = substr($value, 1, -1);
+                $value = str_replace(['\\\\', '\\' . $quote], ['\\', $quote], $value);
+            }
+
+            if ($value === '') {
+                $value = $name;
+            }
+
+            $attributes[$name] = $value;
+        }
+
+        return $attributes;
     }
 
     /**
@@ -3638,6 +3722,8 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
                     $Inline['position'] = $markerPosition;
                 }
 
+                $Inline = $this->applyInlineAttributeData($Inline, substr($text, $Inline['position'] + $Inline['extent']));
+
                 // Propagate non-nestable markers through nested elements.
                 $Inline['element']['nonNestables'] = isset($Inline['element']['nonNestables'])
                     ? array_merge($Inline['element']['nonNestables'], $nonNestables)
@@ -3672,5 +3758,45 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
         unset($Element);
 
         return $Elements;
+    }
+
+    /**
+     * Applies trailing attribute data to an inline element when present.
+     *
+     * @param array $Inline The inline element result.
+     * @param string $remainder The text that follows the inline element.
+     * @return array The inline element with trailing attributes applied when possible.
+     */
+    private function applyInlineAttributeData(array $Inline, string $remainder): array
+    {
+        if (!$this->config()->get('headings.special_attributes')) {
+            return $Inline;
+        }
+
+        if (!preg_match('/^[ ]*\{((?:\\.|[^{}])+)\}/', $remainder, $matches)) {
+            return $Inline;
+        }
+
+        $attributes = $this->parseAttributeData($matches[1]);
+        if ($attributes === []) {
+            return $Inline;
+        }
+
+        if (!isset($Inline['element']['attributes'])) {
+            $Inline['element']['attributes'] = [];
+        }
+
+        foreach ($attributes as $name => $value) {
+            if ($name === 'class' && isset($Inline['element']['attributes']['class']) && $Inline['element']['attributes']['class'] !== '') {
+                $Inline['element']['attributes']['class'] .= ' ' . $value;
+                continue;
+            }
+
+            $Inline['element']['attributes'][$name] = $value;
+        }
+
+        $Inline['extent'] += strlen($matches[0]);
+
+        return $Inline;
     }
 }
