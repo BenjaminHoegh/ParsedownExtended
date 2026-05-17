@@ -237,6 +237,33 @@ class HeadingsTest extends TestCase
     }
 
     /**
+     * Empty headings should fall back to id="heading".
+     */
+    public function testEmptyHeadingProducesNoId()
+    {
+        $this->parsedownExtended->config()->set('headings.auto_anchors', true);
+
+        $markdown = '# ';
+        $actual = $this->parsedownExtended->text($markdown);
+
+        $this->assertStringContainsString(' id="heading"', $actual);
+    }
+
+    /**
+     * Headings consisting only of characters stripped during sanitization should fall back
+     * to id="heading".
+     */
+    public function testHeadingWithOnlyStrippedCharsProducesNoId()
+    {
+        $this->parsedownExtended->config()->set('headings.auto_anchors', true);
+
+        $markdown = '# ---';
+        $actual = $this->parsedownExtended->text($markdown);
+
+        $this->assertStringContainsString(' id="heading"', $actual);
+    }
+
+    /**
      * Test case for heading with custom logic using callback.
      */
     public function testHeadingUsingCallback()

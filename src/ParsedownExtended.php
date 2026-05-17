@@ -2755,6 +2755,11 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
         // Sanitize the text to make it a valid anchor ID
         $text = $this->sanitizeAnchor($text);
 
+        // Fall back to "heading" if sanitization produced an empty string
+        if ($text === '') {
+            $text = 'heading';
+        }
+
         // Ensure the generated anchor ID is unique
         return $this->uniquifyAnchorID($text);
     }
