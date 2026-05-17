@@ -38,6 +38,8 @@ class ImageTest extends TestCase
 
     public function testImageWithTrailingAttributes()
     {
+        $this->parsedownExtended->config()->set('attributes.data_attributes', true);
+
         $markdown = '![some image](image.png){.shadow.center [data-zoom] #hero}';
         $expectedHtml = '<p><img src="image.png" alt="some image" class="shadow center" data-zoom="data-zoom" id="hero" /></p>';
         $result = $this->parsedownExtended->text($markdown);
@@ -56,6 +58,8 @@ class ImageTest extends TestCase
 
     public function testImageDisallowsSensitiveTrailingAttributes()
     {
+        $this->parsedownExtended->config()->set('attributes.data_attributes', true);
+
         $markdown = '![some image](image.png){[src=evil.png] [style=color:red] .safe #ok [data-track=1]}';
         $result = $this->parsedownExtended->text($markdown);
 

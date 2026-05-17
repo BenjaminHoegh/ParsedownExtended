@@ -89,7 +89,7 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
                 'transliterate' => false,
                 'blacklist'     => [],
             ],
-            'special_attributes' => true,
+            'attributes' => true,
         ],
         'images' => true,
         'links' => [
@@ -146,6 +146,19 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
         ],
         'typographer' => true,
         'references'  => true,
+        'attributes' => [
+            'data_attributes' => false,
+            'denylist' => [
+                'classes'         => [],
+                'ids'             => [],
+                'data_attributes' => [],
+            ],
+            'allowlist' => [
+                'classes'         => [],
+                'ids'             => [],
+                'data_attributes' => [],
+            ],
+        ],
     ];
 
 
@@ -1680,7 +1693,7 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
      */
     protected function parseAttributeData($attributeString)
     {
-        if (!$this->config()->get('headings.special_attributes')) {
+        if (!$this->config()->get('headings.attributes')) {
             return [];
         }
 
@@ -1767,6 +1780,89 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
             }
 
             $attributes[$name] = $value;
+        }
+
+        return $this->filterSpecialAttributes($attributes);
+    }
+
+    /**
+     * Filters parsed special-attribute values against the configured allowlist and denylist.
+     *
+     * For each attribute type (classes, id, data-* attributes):
+     * - If an allowlist is non-empty, only values present in the list are kept.
+     * - Otherwise, values present in the denylist are removed.
+     * When both lists are populated the allowlist takes priority.
+     *
+     * @param array $attributes Parsed attribute map (e.g. ['class' => 'foo bar', 'id' => 'my-id']).
+     * @return array Filtered attribute map.
+     */
+    private function filterSpecialAttributes(array $attributes): array
+    {
+        $config = $this->config();
+
+        $allowlistClasses = $config->get('attributes.allowlist.classes');
+        $denylistClasses  = $config->get('attributes.denylist.classes');
+        $allowlistIds     = $config->get('attributes.allowlist.ids');
+        $denylistIds      = $config->get('attributes.denylist.ids');
+        $allowlistData    = $config->get('attributes.allowlist.data_attributes');
+        $denylistData     = $config->get('attributes.denylist.data_attributes');
+
+        // Filter class attribute
+        if (isset($attributes['class']) && $attributes['class'] !== '') {
+            $classes = explode(' ', $attributes['class']);
+
+            if ($allowlistClasses !== []) {
+                if (!in_array('*', $allowlistClasses, true)) {
+                    $classes = array_values(array_filter($classes, static function ($c) use ($allowlistClasses) {
+                        return in_array($c, $allowlistClasses, true);
+                    }));
+                }
+                // '*' in allowlist means allow all — no filtering needed
+            } elseif ($denylistClasses !== []) {
+                if (in_array('*', $denylistClasses, true)) {
+                    $classes = [];
+                } else {
+                    $classes = array_values(array_filter($classes, static function ($c) use ($denylistClasses) {
+                        return !in_array($c, $denylistClasses, true);
+                    }));
+                }
+            }
+
+            if ($classes === []) {
+                unset($attributes['class']);
+            } else {
+                $attributes['class'] = implode(' ', $classes);
+            }
+        }
+
+        // Filter id attribute
+        if (isset($attributes['id'])) {
+            $id = $attributes['id'];
+            if ($allowlistIds !== []) {
+                if (!in_array('*', $allowlistIds, true) && !in_array($id, $allowlistIds, true)) {
+                    unset($attributes['id']);
+                }
+            } elseif ($denylistIds !== []) {
+                if (in_array('*', $denylistIds, true) || in_array($id, $denylistIds, true)) {
+                    unset($attributes['id']);
+                }
+            }
+        }
+
+        // Filter data-* attributes
+        foreach (array_keys($attributes) as $name) {
+            if (strpos($name, 'data-') !== 0) {
+                continue;
+            }
+            if ($allowlistData !== []) {
+                if (!in_array('*', $allowlistData, true) && !in_array($name, $allowlistData, true)) {
+                    unset($attributes[$name]);
+                }
+            } elseif ($denylistData !== []) {
+                if (in_array('*', $denylistData, true) || in_array($name, $denylistData, true)) {
+                    unset($attributes[$name]);
+                }
+            }
         }
 
         return $attributes;
@@ -2431,12 +2527,18 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
             }
 
             // Generate an anchor ID for the header element
-            // If an ID attribute is not set, use the text to create the ID
-            $id = $Block['element']['attributes']['id'] ?? $text;
-            $id = $this->createAnchorID($id);
+            // Preserve any other special attributes (class, data-*) already parsed by the parent
+            $existingAttributes = $Block['element']['attributes'] ?? [];
+            $explicitId = $existingAttributes['id'] ?? null;
+            $id = $this->createAnchorID($explicitId ?? $text);
 
-            // Set the 'id' attribute for the header element
-            $Block['element']['attributes'] = ['id' => $id];
+            if ($id !== null) {
+                $existingAttributes['id'] = $id;
+            } elseif ($explicitId === null) {
+                // Auto-anchors are off and no explicit id was set via special attributes
+                unset($existingAttributes['id']);
+            }
+            $Block['element']['attributes'] = $existingAttributes;
 
             // Check if the heading level should be included in the Table of Contents (TOC)
             // Also ensure we skip adding it to TOC if it is disabled in the config
@@ -2488,12 +2590,18 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
             }
 
             // Generate an anchor ID for the header element
-            // If an ID attribute is not set, use the text to create the ID
-            $id = $Block['element']['attributes']['id'] ?? $text;
-            $id = $this->createAnchorID($id);
+            // Preserve any other special attributes (class, data-*) already parsed by the parent
+            $existingAttributes = $Block['element']['attributes'] ?? [];
+            $explicitId = $existingAttributes['id'] ?? null;
+            $id = $this->createAnchorID($explicitId ?? $text);
 
-            // Set the 'id' attribute for the header element
-            $Block['element']['attributes'] = ['id' => $id];
+            if ($id !== null) {
+                $existingAttributes['id'] = $id;
+            } elseif ($explicitId === null) {
+                // Auto-anchors are off and no explicit id was set via special attributes
+                unset($existingAttributes['id']);
+            }
+            $Block['element']['attributes'] = $existingAttributes;
 
             // Check if the heading level should be included in the Table of Contents (TOC)
             // Also ensure we skip adding it to TOC if it is disabled in the config
@@ -3519,8 +3627,36 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
                 /* -------------------- helpers --------------------------- */
                 private function normalisePath(string $p): string
                 {
+                    $p = $this->resolveDeprecatedAlias($p);
                     if (!isset($this->schema[$p]) && isset($this->schema[$p . '.enabled'])) {
                         return $p . '.enabled';
+                    }
+                    return $p;
+                }
+
+                private function resolveDeprecatedAlias(string $p): string
+                {
+                    static $aliases = [
+                        'headings.special_attributes'                        => 'headings.attributes',
+                        'special_attributes'                                 => 'attributes',
+                        'special_attributes.enabled'                         => 'attributes.enabled',
+                        'special_attributes.allowlist'                       => 'attributes.allowlist',
+                        'special_attributes.denylist'                        => 'attributes.denylist',
+                        'special_attributes.allowlist.classes'               => 'attributes.allowlist.classes',
+                        'special_attributes.allowlist.ids'                   => 'attributes.allowlist.ids',
+                        'special_attributes.allowlist.data_attributes'       => 'attributes.allowlist.data_attributes',
+                        'special_attributes.denylist.classes'                => 'attributes.denylist.classes',
+                        'special_attributes.denylist.ids'                    => 'attributes.denylist.ids',
+                        'special_attributes.denylist.data_attributes'        => 'attributes.denylist.data_attributes',
+                    ];
+
+                    if (isset($aliases[$p])) {
+                        $new = $aliases[$p];
+                        @trigger_error(
+                            "ParsedownExtended: config path \"{$p}\" is deprecated, use \"{$new}\" instead.",
+                            E_USER_DEPRECATED
+                        );
+                        return $new;
                     }
                     return $p;
                 }
@@ -3769,7 +3905,7 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
      */
     private function applyInlineAttributeData(array $Inline, string $remainder): array
     {
-        if (!$this->config()->get('headings.special_attributes')) {
+        if (!$this->config()->get('headings.attributes')) {
             return $Inline;
         }
 
@@ -3778,6 +3914,9 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
         }
 
         $attributes = $this->parseAttributeData($matches[1]);
+
+        $Inline['extent'] += strlen($matches[0]);
+
         if ($attributes === []) {
             return $Inline;
         }
@@ -3800,8 +3939,6 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
             $Inline['element']['attributes'][$normalizedName] = $value;
         }
 
-        $Inline['extent'] += strlen($matches[0]);
-
         return $Inline;
     }
 
@@ -3817,6 +3954,10 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
             return true;
         }
 
-        return strpos($name, 'data-') === 0;
+        if (strpos($name, 'data-') === 0) {
+            return $this->config()->get('attributes.data_attributes');
+        }
+
+        return false;
     }
 }
