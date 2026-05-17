@@ -34,6 +34,26 @@ class HeadingsTest extends TestCase
     }
 
     /**
+     * Test case for heading without anchor ID attributes when auto anchors are disabled.
+     */
+    public function testHeadingWithoutAnchorDoesNotRenderEmptyIdAttribute()
+    {
+        $this->parsedownExtended->config()->set('headings.auto_anchors', false);
+
+        $markdown = <<<MARKDOWN
+            # Heading 1
+
+            Setext Heading
+            ===
+            MARKDOWN;
+
+        $actual = $this->parsedownExtended->text($markdown);
+
+        $this->assertStringNotContainsString(' id=""', $actual);
+        $this->assertStringNotContainsString(' id', $actual);
+    }
+
+    /**
      * Test case for heading with anchor.
      */
     public function testHeadingWithAnchor()

@@ -2352,8 +2352,10 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
             $id = $Block['element']['attributes']['id'] ?? $text;
             $id = $this->createAnchorID($id);
 
-            // Set the 'id' attribute for the header element
-            $Block['element']['attributes'] = ['id' => $id];
+            // Set the 'id' attribute only when an anchor ID is generated
+            if ($id !== null) {
+                $Block['element']['attributes']['id'] = $id;
+            }
 
             // Check if the heading level should be included in the Table of Contents (TOC)
             // Also ensure we skip adding it to TOC if it is disabled in the config
@@ -2409,8 +2411,10 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
             $id = $Block['element']['attributes']['id'] ?? $text;
             $id = $this->createAnchorID($id);
 
-            // Set the 'id' attribute for the header element
-            $Block['element']['attributes'] = ['id' => $id];
+            // Set the 'id' attribute only when an anchor ID is generated
+            if ($id !== null) {
+                $Block['element']['attributes']['id'] = $id;
+            }
 
             // Check if the heading level should be included in the Table of Contents (TOC)
             // Also ensure we skip adding it to TOC if it is disabled in the config
