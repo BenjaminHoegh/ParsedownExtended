@@ -44,6 +44,8 @@ class LinksTest extends TestCase
 
     public function testInlineLinkWithTrailingAttributes()
     {
+        $this->parsedownExtended->config()->set('attributes.data_attributes', true);
+
         $markdown = '[Link](link.png){.shadow.center [data-zoom] #hero}';
         $expectedHtml = '<p><a href="link.png" class="shadow center" data-zoom="data-zoom" id="hero">Link</a></p>';
         $html = $this->parsedownExtended->text($markdown);
@@ -53,6 +55,8 @@ class LinksTest extends TestCase
 
     public function testInlineLinkDisallowsSensitiveTrailingAttributes()
     {
+        $this->parsedownExtended->config()->set('attributes.data_attributes', true);
+
         $markdown = '[External](https://www.google.com){[href=https://evil.com] [target=_self] [rel=noopener] [style=color:red] .safe #ok [data-track=1]}';
         $html = $this->parsedownExtended->text($markdown);
 
