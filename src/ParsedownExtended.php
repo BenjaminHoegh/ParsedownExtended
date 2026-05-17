@@ -2224,14 +2224,19 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
 
         // Define custom handlers for specific code block extensions like Mermaid and Chart.js
         $extensions = [
-            'mermaid' => ['div', 'mermaid'], // Mermaid diagrams rendered inside a <div> with class "mermaid"
-            'chart' => ['canvas', 'chartjs'], // Chart.js diagrams rendered inside a <canvas> with class "chartjs"
+            'mermaid' => ['div', 'mermaid', 'diagrams.mermaid'], // Mermaid diagrams rendered inside a <div> with class "mermaid"
+            'chart' => ['canvas', 'chartjs', 'diagrams.chartjs'], // Chart.js diagrams rendered inside a <canvas> with class "chartjs"
+            'chartjs' => ['canvas', 'chartjs', 'diagrams.chartjs'],
             // Additional languages can be added here as needed
         ];
 
         // If the specified language matches one of the configured extensions, customize the element
         if (isset($extensions[$language])) {
-            [$elementName, $class] = $extensions[$language]; // Extract the element name and class for the language
+            [$elementName, $class, $diagramConfigPath] = $extensions[$language]; // Extract element details and the feature flag path
+
+            if (!$config->get($diagramConfigPath)) {
+                return $Block;
+            }
 
             return [
                 'char' => $marker, // Store the marker character

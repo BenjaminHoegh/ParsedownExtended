@@ -41,4 +41,30 @@ class DiagramsTest extends TestCase
 
         $this->assertEquals($expectedHtml, $result);
     }
+
+    public function testDisableMermaidDiagramType()
+    {
+        $this->parsedownExtended->config()->set('diagrams', true);
+        $this->parsedownExtended->config()->set('diagrams.mermaid', false);
+
+        $markdown = "```mermaid\ngraph TD;\n    A-->B;\n```";
+        $expectedHtml = "<pre><code class=\"language-mermaid\">graph TD;\n    A--&gt;B;</code></pre>";
+
+        $result = $this->parsedownExtended->text($markdown);
+
+        $this->assertEquals($expectedHtml, $result);
+    }
+
+    public function testDisableChartjsDiagramType()
+    {
+        $this->parsedownExtended->config()->set('diagrams', true);
+        $this->parsedownExtended->config()->set('diagrams.chartjs', false);
+
+        $markdown = "```chart\n{\"type\":\"line\",\"data\":{}}\n```";
+        $expectedHtml = "<pre><code class=\"language-chart\">{\"type\":\"line\",\"data\":{}}</code></pre>";
+
+        $result = $this->parsedownExtended->text($markdown);
+
+        $this->assertEquals($expectedHtml, $result);
+    }
 }
