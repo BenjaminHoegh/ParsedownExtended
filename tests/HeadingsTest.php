@@ -34,6 +34,26 @@ class HeadingsTest extends TestCase
     }
 
     /**
+     * Test case for heading without anchor ID attributes when auto anchors are disabled.
+     */
+    public function testHeadingWithoutAnchorDoesNotRenderEmptyIdAttribute()
+    {
+        $this->parsedownExtended->config()->set('headings.auto_anchors', false);
+
+        $markdown = <<<MARKDOWN
+            # Heading 1
+
+            Setext Heading
+            ===
+            MARKDOWN;
+
+        $actual = $this->parsedownExtended->text($markdown);
+
+        $this->assertStringNotContainsString(' id=""', $actual);
+        $this->assertStringNotContainsString(' id', $actual);
+    }
+
+    /**
      * Test case for heading with anchor.
      */
     public function testHeadingWithAnchor()
@@ -214,6 +234,33 @@ class HeadingsTest extends TestCase
         $expected = '<h1 id="deading-1">Heading 1</h1>';
         $actual = $this->parsedownExtended->text($markdown);
         $this->assertEquals($expected, $actual);
+    }
+
+    /**
+     * Empty headings should fall back to id="heading".
+     */
+    public function testEmptyHeadingProducesNoId()
+    {
+        $this->parsedownExtended->config()->set('headings.auto_anchors', true);
+
+        $markdown = '# ';
+        $actual = $this->parsedownExtended->text($markdown);
+
+        $this->assertStringContainsString(' id="heading"', $actual);
+    }
+
+    /**
+     * Headings consisting only of characters stripped during sanitization should fall back
+     * to id="heading".
+     */
+    public function testHeadingWithOnlyStrippedCharsProducesNoId()
+    {
+        $this->parsedownExtended->config()->set('headings.auto_anchors', true);
+
+        $markdown = '# ---';
+        $actual = $this->parsedownExtended->text($markdown);
+
+        $this->assertStringContainsString(' id="heading"', $actual);
     }
 
     /**

@@ -991,26 +991,27 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
             $ellipses = $ellipsesKey === '...' ? '...' : html_entity_decode($ellipsesKey);
 
             $substitutions = [
-                '/\(c\)/i'      => '©',
-                '/\(r\)/i'      => '®',
-                '/\(tm\)/i'     => '™',
-                '/\(p\)/i'      => '¶',
-                '/\+-/i'        => '±',
-                '/\!\.{3,}/i'   => '!..',
-                '/\?\.{3,}/i'   => '?..',
-                '/\.{2,}/i'     => $ellipses,
+                '/^\(c\)/i'      => '©',
+                '/^\(r\)/i'      => '®',
+                '/^\(tm\)/i'     => '™',
+                '/^\(p\)/i'      => '¶',
+                '/^\+-/i'        => '±',
+                '/^!\.{3,}/i'    => '!..',
+                '/^\?\.{3,}/i'   => '?..',
+                '/^\.{2,}/i'     => $ellipses,
             ];
         }
 
-        $result = preg_replace(array_keys($substitutions), array_values($substitutions), $Excerpt['text'], -1, $count);
-
-        if ($count > 0 && $result !== $Excerpt['text']) {
-            return [
-                'extent' => strlen($Excerpt['text']),
-                'element' => [
-                    'text' => $result,
-                ],
-            ];
+        foreach ($substitutions as $pattern => $replacement) {
+            if (preg_match($pattern, $Excerpt['text'], $matches)) {
+                $match = $matches[0];
+                return [
+                    'extent' => strlen($match),
+                    'element' => [
+                        'text' => $replacement,
+                    ],
+                ];
+            }
         }
 
         return null;
@@ -2403,14 +2404,19 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
 
         // Define custom handlers for specific code block extensions like Mermaid and Chart.js
         $extensions = [
-            'mermaid' => ['div', 'mermaid'], // Mermaid diagrams rendered inside a <div> with class "mermaid"
-            'chart' => ['canvas', 'chartjs'], // Chart.js diagrams rendered inside a <canvas> with class "chartjs"
+            'mermaid' => ['div', 'mermaid', 'diagrams.mermaid'], // Mermaid diagrams rendered inside a <div> with class "mermaid"
+            'chart' => ['canvas', 'chartjs', 'diagrams.chartjs'], // Chart.js diagrams rendered inside a <canvas> with class "chartjs"
+            'chartjs' => ['canvas', 'chartjs', 'diagrams.chartjs'],
             // Additional languages can be added here as needed
         ];
 
         // If the specified language matches one of the configured extensions, customize the element
         if (isset($extensions[$language])) {
-            [$elementName, $class] = $extensions[$language]; // Extract the element name and class for the language
+            [$elementName, $class, $diagramConfigPath] = $extensions[$language]; // Extract element details and the feature flag path
+
+            if (!$config->get($diagramConfigPath)) {
+                return $Block;
+            }
 
             return [
                 'char' => $marker, // Store the marker character
@@ -2527,18 +2533,14 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
             }
 
             // Generate an anchor ID for the header element
-            // Preserve any other special attributes (class, data-*) already parsed by the parent
-            $existingAttributes = $Block['element']['attributes'] ?? [];
-            $explicitId = $existingAttributes['id'] ?? null;
-            $id = $this->createAnchorID($explicitId ?? $text);
+            // If an ID attribute is not set, use the text to create the ID
+            $id = $Block['element']['attributes']['id'] ?? $text;
+            $id = $this->createAnchorID($id);
 
+            // Set the 'id' attribute only when an anchor ID is generated
             if ($id !== null) {
-                $existingAttributes['id'] = $id;
-            } elseif ($explicitId === null) {
-                // Auto-anchors are off and no explicit id was set via special attributes
-                unset($existingAttributes['id']);
+                $Block['element']['attributes']['id'] = $id;
             }
-            $Block['element']['attributes'] = $existingAttributes;
 
             // Check if the heading level should be included in the Table of Contents (TOC)
             // Also ensure we skip adding it to TOC if it is disabled in the config
@@ -2590,18 +2592,14 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
             }
 
             // Generate an anchor ID for the header element
-            // Preserve any other special attributes (class, data-*) already parsed by the parent
-            $existingAttributes = $Block['element']['attributes'] ?? [];
-            $explicitId = $existingAttributes['id'] ?? null;
-            $id = $this->createAnchorID($explicitId ?? $text);
+            // If an ID attribute is not set, use the text to create the ID
+            $id = $Block['element']['attributes']['id'] ?? $text;
+            $id = $this->createAnchorID($id);
 
+            // Set the 'id' attribute only when an anchor ID is generated
             if ($id !== null) {
-                $existingAttributes['id'] = $id;
-            } elseif ($explicitId === null) {
-                // Auto-anchors are off and no explicit id was set via special attributes
-                unset($existingAttributes['id']);
+                $Block['element']['attributes']['id'] = $id;
             }
-            $Block['element']['attributes'] = $existingAttributes;
 
             // Check if the heading level should be included in the Table of Contents (TOC)
             // Also ensure we skip adding it to TOC if it is disabled in the config
@@ -2936,6 +2934,11 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
 
         // Sanitize the text to make it a valid anchor ID
         $text = $this->sanitizeAnchor($text);
+
+        // Fall back to "heading" if sanitization produced an empty string
+        if ($text === '') {
+            $text = 'heading';
+        }
 
         // Ensure the generated anchor ID is unique
         return $this->uniquifyAnchorID($text);
