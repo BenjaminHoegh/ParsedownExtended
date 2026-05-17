@@ -978,26 +978,27 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
             $ellipses = $ellipsesKey === '...' ? '...' : html_entity_decode($ellipsesKey);
 
             $substitutions = [
-                '/\(c\)/i'      => '©',
-                '/\(r\)/i'      => '®',
-                '/\(tm\)/i'     => '™',
-                '/\(p\)/i'      => '¶',
-                '/\+-/i'        => '±',
-                '/\!\.{3,}/i'   => '!..',
-                '/\?\.{3,}/i'   => '?..',
-                '/\.{2,}/i'     => $ellipses,
+                '/^\(c\)/i'      => '©',
+                '/^\(r\)/i'      => '®',
+                '/^\(tm\)/i'     => '™',
+                '/^\(p\)/i'      => '¶',
+                '/^\+-/i'        => '±',
+                '/^!\.{3,}/i'    => '!..',
+                '/^\?\.{3,}/i'   => '?..',
+                '/^\.{2,}/i'     => $ellipses,
             ];
         }
 
-        $result = preg_replace(array_keys($substitutions), array_values($substitutions), $Excerpt['text'], -1, $count);
-
-        if ($count > 0 && $result !== $Excerpt['text']) {
-            return [
-                'extent' => strlen($Excerpt['text']),
-                'element' => [
-                    'text' => $result,
-                ],
-            ];
+        foreach ($substitutions as $pattern => $replacement) {
+            if (preg_match($pattern, $Excerpt['text'], $matches)) {
+                $match = $matches[0];
+                return [
+                    'extent' => strlen($match),
+                    'element' => [
+                        'text' => $replacement,
+                    ],
+                ];
+            }
         }
 
         return null;
