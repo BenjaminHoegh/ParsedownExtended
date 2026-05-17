@@ -35,4 +35,39 @@ class ImageTest extends TestCase
 
         $this->assertEquals($expectedHtml, trim($result));
     }
+
+    public function testImageWithTrailingAttributes()
+    {
+        $this->parsedownExtended->config()->set('attributes.data_attributes', true);
+
+        $markdown = '![some image](image.png){.shadow.center [data-zoom] #hero}';
+        $expectedHtml = '<p><img src="image.png" alt="some image" class="shadow center" data-zoom="data-zoom" id="hero" /></p>';
+        $result = $this->parsedownExtended->text($markdown);
+
+        $this->assertEquals($expectedHtml, trim($result));
+    }
+
+    public function testImageWithInvalidTrailingAttributesFallsBackToText()
+    {
+        $markdown = '![some image](image.png){.shadow.center [data-zoom] #hero';
+        $expectedHtml = '<p><img src="image.png" alt="some image" />{.shadow.center [data-zoom] #hero</p>';
+        $result = $this->parsedownExtended->text($markdown);
+
+        $this->assertEquals($expectedHtml, trim($result));
+    }
+
+    public function testImageDisallowsSensitiveTrailingAttributes()
+    {
+        $this->parsedownExtended->config()->set('attributes.data_attributes', true);
+
+        $markdown = '![some image](image.png){[src=evil.png] [style=color:red] .safe #ok [data-track=1]}';
+        $result = $this->parsedownExtended->text($markdown);
+
+        $this->assertStringContainsString('src="image.png"', $result);
+        $this->assertStringContainsString('class="safe"', $result);
+        $this->assertStringContainsString('id="ok"', $result);
+        $this->assertStringContainsString('data-track="1"', $result);
+        $this->assertStringNotContainsString('src="evil.png"', $result);
+        $this->assertStringNotContainsString('style="color:red"', $result);
+    }
 }

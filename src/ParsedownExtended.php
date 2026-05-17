@@ -16,7 +16,7 @@ class_alias(class_exists('ParsedownExtra') ? 'ParsedownExtra' : 'Parsedown', 'Pa
 // @psalm-suppress UndefinedClass
 class ParsedownExtended extends \ParsedownExtendedParentAlias
 {
-    public const VERSION = '2.2.0';
+    public const VERSION = '2.3.0';
     public const VERSION_PARSEDOWN_REQUIRED = '1.8.0';
     public const VERSION_PARSEDOWN_EXTRA_REQUIRED = '0.9.0';
     public const MIN_PHP_VERSION = '7.4';
@@ -89,7 +89,7 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
                 'transliterate' => false,
                 'blacklist'     => [],
             ],
-            'special_attributes' => true,
+            'attributes' => true,
         ],
         'images' => true,
         'links' => [
@@ -146,6 +146,19 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
         ],
         'typographer' => true,
         'references'  => true,
+        'attributes' => [
+            'data_attributes' => false,
+            'denylist' => [
+                'classes'         => [],
+                'ids'             => [],
+                'data_attributes' => [],
+            ],
+            'allowlist' => [
+                'classes'         => [],
+                'ids'             => [],
+                'data_attributes' => [],
+            ],
+        ],
     ];
 
 
@@ -1681,12 +1694,179 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
      */
     protected function parseAttributeData($attributeString)
     {
-        // Check if special attributes for headings are enabled
-        if ($this->config()->get('headings.special_attributes')) {
-            return parent::parseAttributeData($attributeString); // Delegate to parent class
+        if (!$this->config()->get('headings.attributes')) {
+            return [];
         }
 
-        return []; // Return an empty array if the feature is disabled
+        if (!is_string($attributeString)) {
+            return [];
+        }
+
+        $attributeString = trim($attributeString);
+        if ($attributeString === '') {
+            return [];
+        }
+
+        if ($attributeString[0] === '{' && substr($attributeString, -1) === '}') {
+            $attributeString = trim(substr($attributeString, 1, -1));
+        }
+
+        if ($attributeString === '') {
+            return [];
+        }
+
+        $attributes = [];
+        $offset = 0;
+        $length = strlen($attributeString);
+
+        while ($offset < $length) {
+            if (preg_match('/\G\s+/A', $attributeString, $matches, 0, $offset)) {
+                $offset += strlen($matches[0]);
+                continue;
+            }
+
+            if (!preg_match('/\G(\.[^\s\[\]{}]+|#[^\s\[\]{}]+|\[(?:\\.|[^\]])+\])/A', $attributeString, $matches, 0, $offset)) {
+                return [];
+            }
+
+            $token = $matches[1];
+            $offset += strlen($matches[0]);
+
+            if ($token[0] === '.') {
+                $classNames = array_values(array_filter(explode('.', substr($token, 1)), static function ($className) {
+                    return $className !== '';
+                }));
+
+                if ($classNames === []) {
+                    return [];
+                }
+
+                foreach ($classNames as $className) {
+                    if (isset($attributes['class']) && $attributes['class'] !== '') {
+                        $attributes['class'] .= ' ' . $className;
+                    } else {
+                        $attributes['class'] = $className;
+                    }
+                }
+
+                continue;
+            }
+
+            if ($token[0] === '#') {
+                $attributes['id'] = substr($token, 1);
+                continue;
+            }
+
+            $attributeToken = trim(substr($token, 1, -1));
+            if ($attributeToken === '') {
+                return [];
+            }
+
+            if (!preg_match('/^([A-Za-z_:][-A-Za-z0-9_:.]*)(?:\s*=\s*(.*))?$/s', $attributeToken, $attributeMatches)) {
+                return [];
+            }
+
+            $name = $attributeMatches[1];
+            $value = $attributeMatches[2] ?? $name;
+            $value = trim($value);
+
+            if ($value !== '' && ((substr($value, 0, 1) === '"' && substr($value, -1) === '"') || (substr($value, 0, 1) === "'" && substr($value, -1) === "'"))) {
+                $quote = substr($value, 0, 1);
+                $value = substr($value, 1, -1);
+                $value = str_replace(['\\\\', '\\' . $quote], ['\\', $quote], $value);
+            }
+
+            if ($value === '') {
+                $value = $name;
+            }
+
+            $attributes[$name] = $value;
+        }
+
+        return $this->filterSpecialAttributes($attributes);
+    }
+
+    /**
+     * Filters parsed special-attribute values against the configured allowlist and denylist.
+     *
+     * For each attribute type (classes, id, data-* attributes):
+     * - If an allowlist is non-empty, only values present in the list are kept.
+     * - Otherwise, values present in the denylist are removed.
+     * When both lists are populated the allowlist takes priority.
+     *
+     * @param array $attributes Parsed attribute map (e.g. ['class' => 'foo bar', 'id' => 'my-id']).
+     * @return array Filtered attribute map.
+     */
+    private function filterSpecialAttributes(array $attributes): array
+    {
+        $config = $this->config();
+
+        $allowlistClasses = $config->get('attributes.allowlist.classes');
+        $denylistClasses  = $config->get('attributes.denylist.classes');
+        $allowlistIds     = $config->get('attributes.allowlist.ids');
+        $denylistIds      = $config->get('attributes.denylist.ids');
+        $allowlistData    = $config->get('attributes.allowlist.data_attributes');
+        $denylistData     = $config->get('attributes.denylist.data_attributes');
+
+        // Filter class attribute
+        if (isset($attributes['class']) && $attributes['class'] !== '') {
+            $classes = explode(' ', $attributes['class']);
+
+            if ($allowlistClasses !== []) {
+                if (!in_array('*', $allowlistClasses, true)) {
+                    $classes = array_values(array_filter($classes, static function ($c) use ($allowlistClasses) {
+                        return in_array($c, $allowlistClasses, true);
+                    }));
+                }
+                // '*' in allowlist means allow all — no filtering needed
+            } elseif ($denylistClasses !== []) {
+                if (in_array('*', $denylistClasses, true)) {
+                    $classes = [];
+                } else {
+                    $classes = array_values(array_filter($classes, static function ($c) use ($denylistClasses) {
+                        return !in_array($c, $denylistClasses, true);
+                    }));
+                }
+            }
+
+            if ($classes === []) {
+                unset($attributes['class']);
+            } else {
+                $attributes['class'] = implode(' ', $classes);
+            }
+        }
+
+        // Filter id attribute
+        if (isset($attributes['id'])) {
+            $id = $attributes['id'];
+            if ($allowlistIds !== []) {
+                if (!in_array('*', $allowlistIds, true) && !in_array($id, $allowlistIds, true)) {
+                    unset($attributes['id']);
+                }
+            } elseif ($denylistIds !== []) {
+                if (in_array('*', $denylistIds, true) || in_array($id, $denylistIds, true)) {
+                    unset($attributes['id']);
+                }
+            }
+        }
+
+        // Filter data-* attributes
+        foreach (array_keys($attributes) as $name) {
+            if (strpos($name, 'data-') !== 0) {
+                continue;
+            }
+            if ($allowlistData !== []) {
+                if (!in_array('*', $allowlistData, true) && !in_array($name, $allowlistData, true)) {
+                    unset($attributes[$name]);
+                }
+            } elseif ($denylistData !== []) {
+                if (in_array('*', $denylistData, true) || in_array($name, $denylistData, true)) {
+                    unset($attributes[$name]);
+                }
+            }
+        }
+
+        return $attributes;
     }
 
     /**
@@ -3450,8 +3630,36 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
                 /* -------------------- helpers --------------------------- */
                 private function normalisePath(string $p): string
                 {
+                    $p = $this->resolveDeprecatedAlias($p);
                     if (!isset($this->schema[$p]) && isset($this->schema[$p . '.enabled'])) {
                         return $p . '.enabled';
+                    }
+                    return $p;
+                }
+
+                private function resolveDeprecatedAlias(string $p): string
+                {
+                    static $aliases = [
+                        'headings.special_attributes'                        => 'headings.attributes',
+                        'special_attributes'                                 => 'attributes',
+                        'special_attributes.enabled'                         => 'attributes.enabled',
+                        'special_attributes.allowlist'                       => 'attributes.allowlist',
+                        'special_attributes.denylist'                        => 'attributes.denylist',
+                        'special_attributes.allowlist.classes'               => 'attributes.allowlist.classes',
+                        'special_attributes.allowlist.ids'                   => 'attributes.allowlist.ids',
+                        'special_attributes.allowlist.data_attributes'       => 'attributes.allowlist.data_attributes',
+                        'special_attributes.denylist.classes'                => 'attributes.denylist.classes',
+                        'special_attributes.denylist.ids'                    => 'attributes.denylist.ids',
+                        'special_attributes.denylist.data_attributes'        => 'attributes.denylist.data_attributes',
+                    ];
+
+                    if (isset($aliases[$p])) {
+                        $new = $aliases[$p];
+                        @trigger_error(
+                            "ParsedownExtended: config path \"{$p}\" is deprecated, use \"{$new}\" instead.",
+                            E_USER_DEPRECATED
+                        );
+                        return $new;
                     }
                     return $p;
                 }
@@ -3653,6 +3861,8 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
                     $Inline['position'] = $markerPosition;
                 }
 
+                $Inline = $this->applyInlineAttributeData($Inline, substr($text, $Inline['position'] + $Inline['extent']));
+
                 // Propagate non-nestable markers through nested elements.
                 $Inline['element']['nonNestables'] = isset($Inline['element']['nonNestables'])
                     ? array_merge($Inline['element']['nonNestables'], $nonNestables)
@@ -3687,5 +3897,70 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
         unset($Element);
 
         return $Elements;
+    }
+
+    /**
+     * Applies trailing attribute data to an inline element when present.
+     *
+     * @param array $Inline The inline element result.
+     * @param string $remainder The text that follows the inline element.
+     * @return array The inline element with trailing attributes applied when possible.
+     */
+    private function applyInlineAttributeData(array $Inline, string $remainder): array
+    {
+        if (!$this->config()->get('headings.attributes')) {
+            return $Inline;
+        }
+
+        if (!preg_match('/^[ ]*\{((?:\\.|[^{}])+)\}/', $remainder, $matches)) {
+            return $Inline;
+        }
+
+        $attributes = $this->parseAttributeData($matches[1]);
+
+        $Inline['extent'] += strlen($matches[0]);
+
+        if ($attributes === []) {
+            return $Inline;
+        }
+
+        if (!isset($Inline['element']['attributes'])) {
+            $Inline['element']['attributes'] = [];
+        }
+
+        foreach ($attributes as $name => $value) {
+            $normalizedName = strtolower($name);
+            if (!$this->isAllowedInlineAttributeName($normalizedName)) {
+                continue;
+            }
+
+            if ($normalizedName === 'class' && isset($Inline['element']['attributes']['class']) && $Inline['element']['attributes']['class'] !== '') {
+                $Inline['element']['attributes']['class'] .= ' ' . $value;
+                continue;
+            }
+
+            $Inline['element']['attributes'][$normalizedName] = $value;
+        }
+
+        return $Inline;
+    }
+
+    /**
+     * Limits inline trailing attributes to safe allowlisted names.
+     *
+     * @param string $name Attribute name.
+     * @return bool True when the attribute may be applied.
+     */
+    private function isAllowedInlineAttributeName(string $name): bool
+    {
+        if ($name === 'class' || $name === 'id') {
+            return true;
+        }
+
+        if (strpos($name, 'data-') === 0) {
+            return $this->config()->get('attributes.data_attributes');
+        }
+
+        return false;
     }
 }
