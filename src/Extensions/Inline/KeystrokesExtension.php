@@ -19,10 +19,8 @@ trait KeystrokesExtension
      */
     protected function inlineKeystrokes(array $Excerpt): ?array
     {
-        $config = $this->config();
-
         // Check if keystrokes are enabled in the configuration settings
-        if (!$config->get('emphasis.keystrokes') || !$config->get('emphasis')) {
+        if (!$this->configEnabled('emphasis.keystrokes') || !$this->configEnabled('emphasis')) {
             return null; // Return null if keystrokes or general emphasis is disabled
         }
 

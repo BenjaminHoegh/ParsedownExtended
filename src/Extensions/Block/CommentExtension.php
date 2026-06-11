@@ -17,7 +17,7 @@ trait CommentExtension
     protected function blockComment($Line)
     {
         // Check if HTML comments are enabled
-        if ($this->config()->get('comments')) {
+        if ($this->configEnabled('comments')) {
             return parent::blockComment($Line); // Delegate to parent class
         }
 

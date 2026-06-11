@@ -23,7 +23,7 @@ trait EmojiExtension
     protected function inlineEmojis(array $Excerpt): ?array
     {
         // Check if emoji processing is enabled in the configuration settings
-        if (!$this->config()->get('emojis')) {
+        if (!$this->configEnabled('emojis')) {
             return null; // Return null if emoji replacement is disabled
         }
 

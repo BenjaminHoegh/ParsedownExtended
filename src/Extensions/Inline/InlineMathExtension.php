@@ -22,10 +22,8 @@ trait InlineMathExtension
      */
     protected function inlineMathNotation($Excerpt)
     {
-        $config = $this->config();
-
         // Check if parsing of math notation is enabled in the configuration settings
-        if (!$config->get('math') || !$config->get('math.inline')) {
+        if (!$this->configEnabled('math') || !$this->configEnabled('math.inline')) {
             return null; // Return null if math or inline math is disabled
         }
 
@@ -40,7 +38,7 @@ trait InlineMathExtension
         }
 
         // Iterate through the inline math delimiters (e.g., `$...$`, `\\(...\\)`).
-        $patterns = $this->getInlineMathPatterns($config->get('math.inline.delimiters'));
+        $patterns = $this->getInlineMathPatterns($this->configValue('math.inline.delimiters'));
         foreach ($patterns as $regex) {
             if (preg_match($regex, $Excerpt['text'], $matches)) {
                 // Return the parsed math element

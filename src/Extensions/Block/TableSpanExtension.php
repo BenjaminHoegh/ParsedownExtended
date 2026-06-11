@@ -21,7 +21,7 @@ trait TableSpanExtension
     protected function blockTableComplete(array $block): array
     {
         // Check if table spanning (colspan and rowspan) is enabled
-        if (!$this->config()->get('tables.tablespan')) {
+        if (!$this->configEnabled('tables.tablespan')) {
             return $block; // Return the original block if spanning is not enabled
         }
 

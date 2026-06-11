@@ -18,7 +18,7 @@ trait ListExtension
     protected function blockList($Line, ?array $CurrentBlock = null)
     {
         // Check if lists are enabled
-        if ($this->config()->get('lists')) {
+        if ($this->configEnabled('lists')) {
             return parent::blockList($Line, $CurrentBlock); // Delegate to parent class
         }
 

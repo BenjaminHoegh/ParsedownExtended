@@ -18,7 +18,7 @@ trait BlockCodeExtension
     protected function blockCode($Line, $Block = null)
     {
         // Check if code blocks are enabled
-        if ($this->config()->get('code') && $this->config()->get('code.blocks')) {
+        if ($this->configEnabled('code') && $this->configEnabled('code.blocks')) {
             return parent::blockCode($Line, $Block); // Delegate to parent class
         }
 

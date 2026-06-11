@@ -42,20 +42,19 @@ trait AnchorExtension
      */
     protected function createAnchorID(string $text): ?string
     {
-        $config = $this->config();
-
         // Check if automatic anchor generation is enabled in the settings
-        if (!$config->get('headings.auto_anchors')) {
+        if (!$this->configEnabled('headings.auto_anchors')) {
             return null; // Return null if auto anchors are disabled
         }
 
         // If a user-defined callback is provided, use it to generate the anchor ID
         if (is_callable($this->createAnchorIDCallback)) {
+            $config = $this->config();
             return ($this->createAnchorIDCallback)($text, $config);
         }
 
         // Convert text to lowercase if configured to do so
-        if ($config->get('headings.auto_anchors.lowercase')) {
+        if ($this->configEnabled('headings.auto_anchors.lowercase')) {
             if (extension_loaded('mbstring')) {
                 $text = mb_strtolower($text);
             } else {
@@ -64,7 +63,7 @@ trait AnchorExtension
         }
 
         // Apply replacements to the text based on the configuration settings
-        $replacements = $config->get('headings.auto_anchors.replacements');
+        $replacements = $this->configValue('headings.auto_anchors.replacements');
         if (!empty($replacements)) {
             $text = preg_replace(array_keys($replacements), $replacements, $text);
         }
@@ -73,7 +72,7 @@ trait AnchorExtension
         $text = $this->normalizeString($text);
 
         // Transliterate text if configured to do so
-        if ($config->get('headings.auto_anchors.transliterate')) {
+        if ($this->configEnabled('headings.auto_anchors.transliterate')) {
             $text = $this->transliterate($text);
         }
 
@@ -103,16 +102,22 @@ trait AnchorExtension
      */
     protected function sanitizeAnchor(string $text): string
     {
-        $config = $this->config();
+        static $lastDelimiter = null;
+        static $collapseDelimiterPattern = null;
 
         // Get the delimiter used to replace non-alphanumeric characters (e.g., '-')
-        $delimiter = $config->get('headings.auto_anchors.delimiter');
+        $delimiter = $this->configValue('headings.auto_anchors.delimiter');
 
         // Replace any character that is not a letter or number with the delimiter
         $text = preg_replace('/[^\p{L}\p{Nd}]+/u', $delimiter, $text);
 
+        if ($lastDelimiter !== $delimiter) {
+            $lastDelimiter = $delimiter;
+            $collapseDelimiterPattern = '/(' . preg_quote($delimiter, '/') . '){2,}/';
+        }
+
         // Collapse consecutive delimiters into a single delimiter
-        $text = preg_replace('/(' . preg_quote($delimiter, '/') . '){2,}/', '$1', $text);
+        $text = preg_replace($collapseDelimiterPattern, '$1', $text);
 
         // Trim any leading or trailing delimiters
         return trim($text, $delimiter);
@@ -132,8 +137,7 @@ trait AnchorExtension
     protected function uniquifyAnchorID(string $text): string
     {
         // Retrieve the blacklist of forbidden anchor IDs from the configuration
-        $config = $this->config();
-        $blacklist = $config->get('headings.auto_anchors.blacklist');
+        $blacklist = $this->configValue('headings.auto_anchors.blacklist');
 
         // Store the original text to use as the base for creating unique variants
         $originalText = $text;

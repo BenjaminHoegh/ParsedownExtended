@@ -17,7 +17,7 @@ trait ReferenceExtension
     protected function blockReference($Line)
     {
         // Check if references are enabled
-        if ($this->config()->get('references')) {
+        if ($this->configEnabled('references')) {
             return parent::blockReference($Line); // Delegate to parent class
         }
 

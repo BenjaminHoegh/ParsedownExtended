@@ -17,7 +17,7 @@ trait QuoteExtension
     protected function blockQuote($Line)
     {
         // Check if block quotes are enabled
-        if ($this->config()->get('quotes')) {
+        if ($this->configEnabled('quotes')) {
             return parent::blockQuote($Line); // Delegate to parent class
         }
 

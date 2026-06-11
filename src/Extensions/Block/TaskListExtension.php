@@ -19,10 +19,8 @@ trait TaskListExtension
      */
     protected function li($lines)
     {
-        $config = $this->config();
-
         // Check if task lists are enabled in the configuration settings
-        if (!$config->get('lists.tasks')) {
+        if (!$this->configEnabled('lists.tasks')) {
             return parent::li($lines); // Return the default list item if task lists are not enabled
         }
 

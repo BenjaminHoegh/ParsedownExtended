@@ -20,10 +20,8 @@ trait DiagramExtension
      */
     protected function blockFencedCode($Line)
     {
-        $config = $this->config();
-
         // Check if code block parsing is enabled in the configuration settings
-        if (!$config->get('code') || !$config->get('code.blocks')) {
+        if (!$this->configEnabled('code') || !$this->configEnabled('code.blocks')) {
             return null; // Return null if code block parsing is disabled
         }
 
@@ -33,17 +31,17 @@ trait DiagramExtension
             return $Block;
         }
 
+        // Check if diagram support is enabled in the configuration
+        if (!$this->configEnabled('diagrams')) {
+            return $Block; // Return the standard code block if diagrams are disabled
+        }
+
         $marker = $Line['text'][0]; // Identify the marker character (e.g., backticks)
         $openerLength = strspn($Line['text'], $marker); // Determine the length of the opening markers
 
         // Extract the language identifier from the fenced code line
         $parts = explode(' ', trim(substr($Line['text'], $openerLength)), 2);
         $language = strtolower($parts[0] ?? ''); // Convert the language identifier to lowercase
-
-        // Check if diagram support is enabled in the configuration
-        if (!$config->get('diagrams')) {
-            return $Block; // Return the standard code block if diagrams are disabled
-        }
 
         // Define custom handlers for specific code block extensions like Mermaid and Chart.js
         $extensions = [
@@ -57,7 +55,7 @@ trait DiagramExtension
         if (isset($extensions[$language])) {
             [$elementName, $class, $diagramConfigPath] = $extensions[$language]; // Extract element details and the feature flag path
 
-            if (!$config->get($diagramConfigPath)) {
+            if (!$this->configEnabled($diagramConfigPath)) {
                 return $Block;
             }
 

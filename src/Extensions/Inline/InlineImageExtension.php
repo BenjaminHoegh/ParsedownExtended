@@ -18,9 +18,7 @@ trait InlineImageExtension
      */
     protected function inlineImage($Excerpt)
     {
-        $config = $this->config();
-
-        if ($config->get('images')) {
+        if ($this->configEnabled('images')) {
             return parent::inlineImage($Excerpt);
         }
 

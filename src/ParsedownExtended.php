@@ -90,6 +90,12 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
     /** @var array $payload Stores non-boolean settings for the instance. */
     private array $payload;   // non‑boolean settings
 
+    /** @var string $activeInlineMarkerList Cached marker list for currently enabled inline handlers. */
+    private string $activeInlineMarkerList = '';
+
+    /** @var bool $activeInlineMarkerListValid Whether the active inline marker list reflects current config. */
+    private bool $activeInlineMarkerListValid = false;
+
     /**
      * Constructor for ParsedownExtended.
      *
@@ -194,10 +200,118 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
     public function config(): object
     {
         if ($this->configHandler === null) {
-            $this->configHandler = new Configuration(self::$BOOLEAN_PATHS, self::$FLAT_SCHEMA);
+            $this->configHandler = new Configuration(
+                self::$BOOLEAN_PATHS,
+                self::$FLAT_SCHEMA,
+                function (): void {
+                    $this->configurationChanged();
+                }
+            );
+            $this->configHandler->bind($this->features, $this->payload);
         }
-        $this->configHandler->bind($this->features, $this->payload);
         return $this->configHandler;
+    }
+
+    /**
+     * Reads an internal boolean config flag without creating or rebinding the public config handler.
+     */
+    protected function configEnabled(string $path): bool
+    {
+        if (isset($this->features[$path])) {
+            return $this->features[$path];
+        }
+
+        $enabledPath = $path . '.enabled';
+        return $this->features[$enabledPath] ?? false;
+    }
+
+    /**
+     * Reads an internal payload config value without creating or rebinding the public config handler.
+     */
+    protected function configValue(string $path)
+    {
+        return $this->payload[$path] ?? null;
+    }
+
+    /**
+     * Invalidates derived parser state after public runtime configuration changes.
+     */
+    private function configurationChanged(): void
+    {
+        $this->activeInlineMarkerList = '';
+        $this->activeInlineMarkerListValid = false;
+    }
+
+    /**
+     * Determines whether an inline handler is enabled by the current configuration.
+     */
+    private function inlineTypeEnabled(string $inlineType): bool
+    {
+        switch ($inlineType) {
+            case 'Code':
+                return $this->configEnabled('code') && $this->configEnabled('code.inline');
+            case 'Image':
+                return $this->configEnabled('images');
+            case 'Markup':
+                return $this->configEnabled('allow_raw_html');
+            case 'Link':
+            case 'Url':
+            case 'UrlTag':
+                return $this->configEnabled('links');
+            case 'EmailTag':
+                return $this->configEnabled('links') && $this->configEnabled('links.email_links');
+            case 'FootnoteMarker':
+                return $this->configEnabled('footnotes');
+            case 'Emphasis':
+                return $this->configEnabled('emphasis');
+            case 'Strikethrough':
+                return $this->configEnabled('emphasis') && $this->configEnabled('emphasis.strikethroughs');
+            case 'Marking':
+                return $this->configEnabled('emphasis') && $this->configEnabled('emphasis.mark');
+            case 'Insertions':
+                return $this->configEnabled('emphasis') && $this->configEnabled('emphasis.insertions');
+            case 'Keystrokes':
+                return $this->configEnabled('emphasis') && $this->configEnabled('emphasis.keystrokes');
+            case 'Superscript':
+                return $this->configEnabled('emphasis') && $this->configEnabled('emphasis.superscript');
+            case 'Subscript':
+                return $this->configEnabled('emphasis') && $this->configEnabled('emphasis.subscript');
+            case 'MathNotation':
+                return $this->configEnabled('math') && $this->configEnabled('math.inline');
+            case 'Emojis':
+                return $this->configEnabled('emojis');
+            case 'Smartypants':
+                return $this->configEnabled('smartypants');
+            case 'Typographer':
+                return $this->configEnabled('typographer');
+            default:
+                return true;
+        }
+    }
+
+    /**
+     * Builds the marker list used by strpbrk from enabled inline handlers only.
+     */
+    private function getActiveInlineMarkerList(): string
+    {
+        if ($this->activeInlineMarkerListValid) {
+            return $this->activeInlineMarkerList;
+        }
+
+        $markerList = '';
+        foreach (str_split($this->inlineMarkerList) as $marker) {
+            foreach ($this->InlineTypes[$marker] as $inlineType) {
+                if ($this->inlineTypeEnabled($inlineType)) {
+                    $markerList .= $marker;
+                    continue 2;
+                }
+            }
+        }
+
+        $this->activeInlineMarkerList = $markerList;
+        $this->activeInlineMarkerListValid = true;
+
+        return $this->activeInlineMarkerList;
     }
 
     /**
@@ -265,8 +379,6 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
      */
     protected function lineElements($text, $nonNestables = []): array
     {
-        $this->initializePredefinedAbbreviations();
-
         // Standardize line breaks.
         $text = str_replace(["\r\n", "\r"], "\n", $text);
 
@@ -275,7 +387,9 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
             ? []
             : array_fill_keys($nonNestables, true);
 
-        while ($ExcerptStr = strpbrk($text, $this->inlineMarkerList)) {
+        $inlineMarkerList = $this->getActiveInlineMarkerList();
+
+        while ($ExcerptStr = strpbrk($text, $inlineMarkerList)) {
             $marker = $ExcerptStr[0];
             $markerPosition = strlen($text) - strlen($ExcerptStr);
 
@@ -286,6 +400,10 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
             ];
 
             foreach ($this->InlineTypes[$marker] as $inlineType) {
+                if (!$this->inlineTypeEnabled($inlineType)) {
+                    continue;
+                }
+
                 if (isset($nonNestables[$inlineType])) {
                     continue;
                 }

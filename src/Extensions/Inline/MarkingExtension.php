@@ -19,10 +19,8 @@ trait MarkingExtension
      */
     protected function inlineMarking(array $Excerpt): ?array
     {
-        $config = $this->config();
-
         // Check if marking is enabled in the configuration settings
-        if (!$config->get('emphasis.mark') || !$config->get('emphasis')) {
+        if (!$this->configEnabled('emphasis.mark') || !$this->configEnabled('emphasis')) {
             return null; // Return null if marking or emphasis is disabled
         }
 

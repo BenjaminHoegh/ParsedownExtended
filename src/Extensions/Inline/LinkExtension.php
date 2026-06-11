@@ -24,6 +24,10 @@ trait LinkExtension
      */
     protected function inlineLink($Excerpt)
     {
+        if (!$this->configEnabled('links')) {
+            return null;
+        }
+
         return $this->processLinkElement(parent::inlineLink($Excerpt));
     }
 
@@ -39,6 +43,10 @@ trait LinkExtension
      */
     protected function inlineUrl($Excerpt)
     {
+        if (!$this->configEnabled('links')) {
+            return null;
+        }
+
         return $this->processLinkElement(parent::inlineUrl($Excerpt));
     }
 
@@ -54,6 +62,10 @@ trait LinkExtension
      */
     protected function inlineUrlTag($Excerpt)
     {
+        if (!$this->configEnabled('links')) {
+            return null;
+        }
+
         return $this->processLinkElement(parent::inlineUrlTag($Excerpt));
     }
 
@@ -69,9 +81,7 @@ trait LinkExtension
      */
     protected function inlineEmailTag($Excerpt)
     {
-        $config = $this->config();
-
-        if (!$config->get('links') || !$config->get('links.email_links')) {
+        if (!$this->configEnabled('links') || !$this->configEnabled('links.email_links')) {
             return null;
         }
 
@@ -98,10 +108,8 @@ trait LinkExtension
      */
     protected function processLinkElement($Excerpt)
     {
-        $config = $this->config();
-
         // Fast fail for missing config or href
-        if (!$config->get('links') || !$Excerpt || empty($Excerpt['element']['attributes']['href'])) {
+        if (!$this->configEnabled('links') || !$Excerpt || empty($Excerpt['element']['attributes']['href'])) {
             return null;
         }
 
@@ -109,24 +117,24 @@ trait LinkExtension
 
         // Only process external links if enabled
         if ($this->isExternalLink($href)) {
-            if (!$config->get('links.external_links')) {
+            if (!$this->configEnabled('links.external_links')) {
                 return null;
             }
 
             // Only build rel if needed
             $rel = [];
 
-            if ($config->get('links.external_links.nofollow')) {
+            if ($this->configEnabled('links.external_links.nofollow')) {
                 $rel[] = 'nofollow';
             }
-            if ($config->get('links.external_links.noopener')) {
+            if ($this->configEnabled('links.external_links.noopener')) {
                 $rel[] = 'noopener';
             }
-            if ($config->get('links.external_links.noreferrer')) {
+            if ($this->configEnabled('links.external_links.noreferrer')) {
                 $rel[] = 'noreferrer';
             }
 
-            if ($config->get('links.external_links.open_in_new_window')) {
+            if ($this->configEnabled('links.external_links.open_in_new_window')) {
                 $Excerpt['element']['attributes']['target'] = '_blank';
             }
 
@@ -217,7 +225,7 @@ trait LinkExtension
      */
     private function getInternalHostsSet(): array
     {
-        $internalHosts = $this->config()->get('links.external_links.internal_hosts');
+        $internalHosts = $this->configValue('links.external_links.internal_hosts');
         $cacheKey = json_encode($internalHosts);
         if (!is_string($cacheKey)) {
             $cacheKey = md5(print_r($internalHosts, true));

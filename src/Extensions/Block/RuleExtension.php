@@ -17,7 +17,7 @@ trait RuleExtension
     protected function blockRule($Line)
     {
         // Check if thematic breaks (horizontal rules) are enabled
-        if ($this->config()->get('thematic_breaks')) {
+        if ($this->configEnabled('thematic_breaks')) {
             return parent::blockRule($Line); // Delegate to parent class
         }
 

@@ -20,11 +20,9 @@ trait EscapeSequenceExtension
      */
     protected function inlineEscapeSequence($Excerpt)
     {
-        $config = $this->config();
-
         // If math is enabled, check for any inline math delimiters that might need special handling.
-        if ($config->get('math')) {
-            foreach ($this->getInlineMathPatterns($config->get('math.inline.delimiters')) as $regex) {
+        if ($this->configEnabled('math')) {
+            foreach ($this->getInlineMathPatterns($this->configValue('math.inline.delimiters')) as $regex) {
                 // If a math notation match is found, return null as it's not an escape sequence
                 if (preg_match($regex, $Excerpt['text'])) {
                     return null;

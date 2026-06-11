@@ -15,6 +15,9 @@ trait TableOfContentsExtension
     /** @var string $contentsListString String representation of the table of contents */
     private string $contentsListString = '';
 
+    /** @var bool $contentsListStringDirty Whether the string representation needs rebuilding. */
+    private bool $contentsListStringDirty = false;
+
     /**
      * Parses the provided text and handles escaping/unescaping of ToC tags.
      *
@@ -36,9 +39,8 @@ trait TableOfContentsExtension
         $this->anchorRegister = [];
         $this->contentsListArray = [];
         $this->contentsListString = '';
+        $this->contentsListStringDirty = false;
         $this->firstHeadLevel = 0;
-        $this->predefinedAbbreviationsAdded = false;
-        $this->initializePredefinedAbbreviations();
 
         $text = $this->encodeTag($text); // Escapes ToC tag temporarily
         $html = parent::text($text);     // Parses the markdown text
@@ -86,7 +88,8 @@ trait TableOfContentsExtension
 
         switch (strtolower($type_return)) {
             case 'string':
-                return $this->contentsListString ? $this->body($this->contentsListString) : '';
+                $contentsListString = $this->getContentsListString();
+                return $contentsListString ? $this->body($contentsListString) : '';
             case 'json':
                 $json = json_encode($this->contentsListArray);
                 return is_string($json) ? $json : '[]';
@@ -111,9 +114,8 @@ trait TableOfContentsExtension
      */
     protected function decodeTag(string $text): string
     {
-        $config = $this->config();
         $salt = $this->getSalt(); // Retrieve the salt used for hashing
-        $tag_origin = $config->get('toc.tag'); // Get the original ToC tag
+        $tag_origin = $this->configValue('toc.tag'); // Get the original ToC tag
         $tag_hashed = hash('sha256', $salt . $tag_origin); // Generate the hashed version of the ToC tag
 
         // If the hashed tag is not found, return the original text
@@ -138,9 +140,8 @@ trait TableOfContentsExtension
      */
     protected function encodeTag(string $text): string
     {
-        $config = $this->config();
         $salt = $this->getSalt(); // Retrieve the salt used for hashing
-        $tag_origin = $config->get('toc.tag'); // Get the original ToC tag
+        $tag_origin = $this->configValue('toc.tag'); // Get the original ToC tag
 
         // If the original tag is not found, return the original text
         if (strpos($text, $tag_origin) === false) {
@@ -205,8 +206,7 @@ trait TableOfContentsExtension
     {
         // Stores content as an array
         $this->setContentsListAsArray($Content);
-        // Stores content as a string in Markdown list format
-        $this->setContentsListAsString($Content);
+        $this->contentsListStringDirty = true;
     }
 
     /**
@@ -236,7 +236,31 @@ trait TableOfContentsExtension
      * @param array $Content The content entry containing 'text', 'id', and 'level' keys.
      * @return void
      */
-    protected function setContentsListAsString(array $Content): void
+    protected function getContentsListString(): string
+    {
+        if (!$this->contentsListStringDirty) {
+            return $this->contentsListString;
+        }
+
+        $this->contentsListString = '';
+        $this->firstHeadLevel = 0;
+
+        foreach ($this->contentsListArray as $Content) {
+            $this->appendContentsListString($Content);
+        }
+
+        $this->contentsListStringDirty = false;
+
+        return $this->contentsListString;
+    }
+
+    /**
+     * Adds the given content entry to the Table of Contents string.
+     *
+     * @param array $Content The content entry containing 'text', 'id', and 'level' keys.
+     * @return void
+     */
+    protected function appendContentsListString(array $Content): void
     {
         $text = $this->fetchText($Content['text']); // Fetch the plain text of the content
         $id = $Content['id']; // Get the ID of the content
@@ -269,23 +293,22 @@ trait TableOfContentsExtension
      */
     public function text($text): string
     {
-        $config = $this->config();
         $html = $this->body($text); // Parse the Markdown text into HTML
 
         // If ToC functionality is disabled in the config, return the parsed HTML as is
-        if (!$config->get('toc')) {
+        if (!$this->configEnabled('toc')) {
             return $html;
         }
 
         // Get the original ToC tag and check if it is in the input text
-        $tag_origin = $config->get('toc.tag');
+        $tag_origin = $this->configValue('toc.tag');
         if (strpos($text, $tag_origin) === false) {
             return $html; // Return HTML if the ToC tag is not found
         }
 
         // Replace the ToC placeholder with the actual ToC content
         $toc_data = $this->contentsList();
-        $toc_id = $config->get('toc.id');
+        $toc_id = $this->configValue('toc.id');
         return str_replace("<p>{$tag_origin}</p>", "<div id=\"{$toc_id}\">{$toc_data}</div>", $html);
     }
 }

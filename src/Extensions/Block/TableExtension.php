@@ -18,7 +18,7 @@ trait TableExtension
     protected function blockTable($Line, $Block = null)
     {
         // Check if tables are enabled
-        if ($this->config()->get('tables')) {
+        if ($this->configEnabled('tables')) {
             return parent::blockTable($Line, $Block); // Delegate to parent class
         }
 

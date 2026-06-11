@@ -18,9 +18,7 @@ trait InlineMarkupExtension
      */
     protected function inlineMarkup($Excerpt)
     {
-        $config = $this->config();
-
-        if ($config->get('allow_raw_html')) {
+        if ($this->configEnabled('allow_raw_html')) {
             return parent::inlineMarkup($Excerpt);
         }
 

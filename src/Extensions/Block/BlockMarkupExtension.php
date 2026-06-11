@@ -17,7 +17,7 @@ trait BlockMarkupExtension
     protected function blockMarkup($Line)
     {
         // Check if raw HTML is allowed
-        if ($this->config()->get('allow_raw_html')) {
+        if ($this->configEnabled('allow_raw_html')) {
             return parent::blockMarkup($Line); // Delegate to parent class
         }
 

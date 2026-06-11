@@ -18,9 +18,7 @@ trait StrikethroughExtension
      */
     protected function inlineStrikethrough($Excerpt)
     {
-        $config = $this->config();
-
-        if ($config->get('emphasis.strikethroughs') && $config->get('emphasis')) {
+        if ($this->configEnabled('emphasis.strikethroughs') && $this->configEnabled('emphasis')) {
             return parent::inlineStrikethrough($Excerpt);
         }
 

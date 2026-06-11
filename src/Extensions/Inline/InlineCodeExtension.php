@@ -18,9 +18,7 @@ trait InlineCodeExtension
      */
     protected function inlineCode($Excerpt)
     {
-        $config = $this->config();
-
-        if ($config->get('code') && $config->get('code.inline')) {
+        if ($this->configEnabled('code') && $this->configEnabled('code.inline')) {
             return parent::inlineCode($Excerpt);
         }
 

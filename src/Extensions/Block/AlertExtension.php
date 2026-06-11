@@ -20,7 +20,7 @@ trait AlertExtension
     protected function blockAlert($Line): ?array
     {
         // Check if alerts are enabled in the configuration settings
-        if (!$this->config()->get('alerts')) {
+        if (!$this->configEnabled('alerts') || strncmp($Line['text'], '> [!', 4) !== 0) {
             return null; // Return null if alert blocks are disabled
         }
 
@@ -39,7 +39,7 @@ trait AlertExtension
             $title = ucfirst($type); // Capitalize the first letter for the alert title
 
             // Get class name for alerts from the configuration
-            $class = $this->config()->get('alerts.class');
+            $class = $this->configValue('alerts.class');
 
             // Build the alert block with appropriate HTML attributes and content
             return [
@@ -182,9 +182,17 @@ trait AlertExtension
      */
     private function buildAlertTypesPattern(): ?string
     {
-        $alertTypes = $this->config()->get('alerts.types');
+        static $cacheKey = '';
+        static $cachedPattern = null;
+
+        $alertTypes = $this->configValue('alerts.types');
         if (!is_array($alertTypes) || $alertTypes === []) {
             return null;
+        }
+
+        $newCacheKey = implode("\0", $alertTypes);
+        if ($cacheKey === $newCacheKey) {
+            return $cachedPattern;
         }
 
         $escapedTypes = [];
@@ -197,9 +205,14 @@ trait AlertExtension
         }
 
         if ($escapedTypes === []) {
+            $cacheKey = $newCacheKey;
+            $cachedPattern = null;
             return null;
         }
 
-        return implode('|', $escapedTypes);
+        $cacheKey = $newCacheKey;
+        $cachedPattern = implode('|', $escapedTypes);
+
+        return $cachedPattern;
     }
 }

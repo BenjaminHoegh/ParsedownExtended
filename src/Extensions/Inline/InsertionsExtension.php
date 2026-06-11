@@ -19,10 +19,8 @@ trait InsertionsExtension
      */
     protected function inlineInsertions(array $Excerpt): ?array
     {
-        $config = $this->config();
-
         // Check if insertions are enabled in the configuration settings
-        if (!$config->get('emphasis.insertions') || !$config->get('emphasis')) {
+        if (!$this->configEnabled('emphasis.insertions') || !$this->configEnabled('emphasis')) {
             return null; // Return null if insertions or general emphasis is disabled
         }
 

@@ -96,6 +96,21 @@ class TocTest extends TestCase
         $this->assertEquals($expected, $actual);
     }
 
+    public function testContentsListAvailableAfterTextWithoutTocTag()
+    {
+        $this->parsedownExtended->config()->set('headings.auto_anchors', true);
+
+        $this->parsedownExtended->text('# Heading 1');
+
+        $expected = <<<HTML
+            <ul>
+            <li><a href="#heading-1">Heading 1</a></li>
+            </ul>
+            HTML;
+
+        $this->assertEquals($expected, $this->parsedownExtended->contentsList());
+    }
+
     /**
      * Test case for table of contents with custom heading levels.
      */

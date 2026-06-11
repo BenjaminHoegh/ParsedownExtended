@@ -18,20 +18,18 @@ trait EmphasisExtension
      */
     protected function inlineEmphasis($Excerpt)
     {
-        $config = $this->config();
-
-        if (!$config->get('emphasis') || !isset($Excerpt['text'][1])) {
+        if (!$this->configEnabled('emphasis') || !isset($Excerpt['text'][1])) {
             return null; // If emphasis is disabled or the excerpt is too short, return null
         }
 
         $marker = $Excerpt['text'][0]; // Extract the marker character ('*', '_', etc.)
 
         // Check if the text matches bold emphasis using the marker
-        if ($config->get('emphasis.bold') && preg_match($this->StrongRegex[$marker], $Excerpt['text'], $matches)) {
+        if ($this->configEnabled('emphasis.bold') && preg_match($this->StrongRegex[$marker], $Excerpt['text'], $matches)) {
             $emphasis = 'strong'; // Use 'strong' for bold text
         }
         // Check if the text matches italic emphasis using the marker
-        elseif ($config->get('emphasis.italic') && preg_match($this->EmRegex[$marker], $Excerpt['text'], $matches)) {
+        elseif ($this->configEnabled('emphasis.italic') && preg_match($this->EmRegex[$marker], $Excerpt['text'], $matches)) {
             $emphasis = 'em'; // Use 'em' for italic text
         } else {
             return null; // No valid emphasis match found

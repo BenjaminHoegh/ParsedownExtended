@@ -47,4 +47,17 @@ class SmartypantsTest extends TestCase
 
         $this->assertEquals($expected, $this->parsedownExtended->text($markdown));
     }
+
+    public function testSmartypantsCanBeEnabledAfterParsing()
+    {
+        $markdown = <<<MARKDOWN
+            "Hello," he said.
+            MARKDOWN;
+
+        $this->assertEquals('<p>"Hello," he said.</p>', $this->parsedownExtended->text($markdown));
+
+        $this->parsedownExtended->config()->set('smartypants', true);
+
+        $this->assertEquals('<p>“Hello,” he said.</p>', $this->parsedownExtended->text($markdown));
+    }
 }

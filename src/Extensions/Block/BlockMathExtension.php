@@ -21,15 +21,13 @@ trait BlockMathExtension
      */
     protected function blockMathNotation($Line)
     {
-        $config = $this->config();
-
         // Check if math notation block-level parsing is enabled in the configuration settings
-        if (!$config->get('math') || !$config->get('math.block')) {
+        if (!$this->configEnabled('math') || !$this->configEnabled('math.block')) {
             return null; // Return null if math block parsing is disabled
         }
 
         // Iterate over each configured math block delimiter (e.g., `$$`, `\\[`)
-        $delimiters = $config->get('math.block.delimiters');
+        $delimiters = $this->configValue('math.block.delimiters');
         foreach ($delimiters as $dConfig) {
 
             // Escape the math delimiters for regex usage

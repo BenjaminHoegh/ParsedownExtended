@@ -19,7 +19,7 @@ trait HeadingExtension
     protected function parseAttributeData($attributeString)
     {
         // Check if special attributes for headings are enabled
-        if ($this->config()->get('headings.special_attributes')) {
+        if ($this->configEnabled('headings.special_attributes')) {
             return parent::parseAttributeData($attributeString); // Delegate to parent class
         }
 
@@ -39,10 +39,8 @@ trait HeadingExtension
      */
     protected function blockHeader($Line)
     {
-        $config = $this->config();
-
         // Check if headings are enabled in the configuration settings
-        if (!$config->get('headings')) {
+        if (!$this->configEnabled('headings')) {
             return null; // Return null if headings are disabled
         }
 
@@ -55,7 +53,7 @@ trait HeadingExtension
             $level = $Block['element']['name'];
 
             // Check if the header level is allowed (e.g., h1, h2, etc.)
-            if (!in_array($level, $config->get('headings.allowed_levels'))) {
+            if (!in_array($level, $this->configValue('headings.allowed_levels'))) {
                 return null; // Return null if the heading level is not allowed
             }
 
@@ -71,7 +69,7 @@ trait HeadingExtension
 
             // Check if the heading level should be included in the Table of Contents (TOC)
             // Also ensure we skip adding it to TOC if it is disabled in the config
-            if (!$config->get('toc') || !in_array($level, $config->get('toc.levels'))) {
+            if (!$this->configEnabled('toc') || !in_array($level, $this->configValue('toc.levels'))) {
                 return $Block; // Return the block if it should not be part of the TOC
             }
 
@@ -98,10 +96,8 @@ trait HeadingExtension
      */
     protected function blockSetextHeader($Line, $Block = null)
     {
-        $config = $this->config();
-
         // Check if headings are enabled in the configuration settings
-        if (!$config->get('headings')) {
+        if (!$this->configEnabled('headings')) {
             return null; // Return null if headings are disabled
         }
 
@@ -114,7 +110,7 @@ trait HeadingExtension
             $level = $Block['element']['name'];
 
             // Check if the header level is allowed (e.g., h1, h2, etc.)
-            if (!in_array($level, $config->get('headings.allowed_levels'))) {
+            if (!in_array($level, $this->configValue('headings.allowed_levels'))) {
                 return null; // Return null if the heading level is not allowed
             }
 
@@ -130,7 +126,7 @@ trait HeadingExtension
 
             // Check if the heading level should be included in the Table of Contents (TOC)
             // Also ensure we skip adding it to TOC if it is disabled in the config
-            if (!$config->get('toc') || !in_array($level, $config->get('toc.levels'))) {
+            if (!$this->configEnabled('toc') || !in_array($level, $this->configValue('toc.levels'))) {
                 return $Block; // Return the block if it should not be part of the TOC
             }
 

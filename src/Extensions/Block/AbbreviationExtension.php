@@ -23,13 +23,11 @@ trait AbbreviationExtension
      */
     protected function blockAbbreviation($Line)
     {
-        $config = $this->config();
-
         // Check if abbreviation support is enabled in the configuration settings
-        if ($config->get('abbreviations')) {
+        if ($this->configEnabled('abbreviations')) {
 
             // If custom abbreviations are allowed, delegate to the parent class to handle parsing
-            if ($config->get('abbreviations.allow_custom')) {
+            if ($this->configEnabled('abbreviations.allow_custom')) {
                 return parent::blockAbbreviation($Line); // Parse custom abbreviation using parent method
             }
 
@@ -48,13 +46,11 @@ trait AbbreviationExtension
      */
     private function initializePredefinedAbbreviations(): void
     {
-        $config = $this->config();
-
-        if ($this->predefinedAbbreviationsAdded || !$config->get('abbreviations')) {
+        if ($this->predefinedAbbreviationsAdded || !$this->configEnabled('abbreviations')) {
             return;
         }
 
-        foreach ($config->get('abbreviations.predefined') as $abbreviation => $description) {
+        foreach ($this->configValue('abbreviations.predefined') as $abbreviation => $description) {
             $this->DefinitionData['Abbreviation'][$abbreviation] = $description;
         }
 
@@ -69,7 +65,6 @@ trait AbbreviationExtension
      */
     protected function unmarkedText($text)
     {
-        $this->initializePredefinedAbbreviations();
         return parent::unmarkedText($text);
     }
 }

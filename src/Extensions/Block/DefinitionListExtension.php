@@ -18,7 +18,7 @@ trait DefinitionListExtension
     protected function blockDefinitionList($Line, $Block)
     {
         // Check if definition lists are enabled
-        if ($this->config()->get('definition_lists')) {
+        if ($this->configEnabled('definition_lists')) {
             return parent::blockDefinitionList($Line, $Block); // Delegate to parent class
         }
 

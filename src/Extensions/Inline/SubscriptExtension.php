@@ -19,10 +19,8 @@ trait SubscriptExtension
      */
     protected function inlineSubscript(array $Excerpt): ?array
     {
-        $config = $this->config();
-
         // Check if subscript is enabled in the configuration settings
-        if (!$config->get('emphasis.subscript') || !$config->get('emphasis')) {
+        if (!$this->configEnabled('emphasis.subscript') || !$this->configEnabled('emphasis')) {
             return null; // Return null if subscript or general emphasis is disabled
         }
 

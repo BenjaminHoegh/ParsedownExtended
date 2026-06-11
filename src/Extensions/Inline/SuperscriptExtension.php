@@ -19,10 +19,8 @@ trait SuperscriptExtension
      */
     protected function inlineSuperscript(array $Excerpt): ?array
     {
-        $config = $this->config();
-
         // Check if superscript is enabled in the configuration settings
-        if (!$config->get('emphasis.superscript') || !$config->get('emphasis')) {
+        if (!$this->configEnabled('emphasis.superscript') || !$this->configEnabled('emphasis')) {
             return null; // Return null if superscript or general emphasis is disabled
         }
 

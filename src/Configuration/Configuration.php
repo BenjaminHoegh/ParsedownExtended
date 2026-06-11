@@ -10,11 +10,13 @@ final class Configuration
     private array $schema;
     private array $features;
     private array $payload;
+    private $onChange;
 
-    public function __construct(array $booleanPaths, array $schema)
+    public function __construct(array $booleanPaths, array $schema, ?callable $onChange = null)
     {
         $this->booleanPaths = $booleanPaths;
         $this->schema = $schema;
+        $this->onChange = $onChange;
     }
 
     public function bind(array &$features, array &$payload): void
@@ -75,6 +77,11 @@ final class Configuration
         } else {
             $this->payload[$path] = $value;
         }
+
+        if ($this->onChange !== null) {
+            ($this->onChange)();
+        }
+
         return $this;
     }
 

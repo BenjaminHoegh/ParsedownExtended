@@ -42,6 +42,17 @@ class EmojiTest extends TestCase
         $this->assertEquals($expectedHtml, $result);
     }
 
+    public function testEmojiCanBeReEnabledAfterParsing()
+    {
+        $markdown = ':grinning_face:';
+
+        $this->parsedownExtended->config()->set('emojis', false);
+        $this->assertEquals('<p>:grinning_face:</p>', $this->parsedownExtended->text($markdown));
+
+        $this->parsedownExtended->config()->set('emojis', true);
+        $this->assertEquals('<p>😀</p>', $this->parsedownExtended->text($markdown));
+    }
+
     # Test that we dont parse emojis in code blocks
     public function testEmojiInCodeBlock()
     {

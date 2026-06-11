@@ -20,10 +20,8 @@ trait TypographerExtension
      */
     protected function inlineTypographer(array $Excerpt): ?array
     {
-        $config = $this->config();
-
         if (
-            !$config->get('typographer') ||
+            !$this->configEnabled('typographer') ||
             empty($Excerpt['text'])
         ) {
             return null;
@@ -33,8 +31,8 @@ trait TypographerExtension
         static $lastEllipsesKey = null;
 
         // Only update ellipses if config changes
-        $ellipsesKey = $config->get('smartypants') && $config->get('smartypants.smart_ellipses')
-            ? $config->get('smartypants.substitutions.ellipses')
+        $ellipsesKey = $this->configEnabled('smartypants') && $this->configEnabled('smartypants.smart_ellipses')
+            ? $this->configValue('smartypants.substitutions.ellipses')
             : '...';
 
         if ($substitutions === null || $ellipsesKey !== $lastEllipsesKey) {

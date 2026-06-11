@@ -21,12 +21,22 @@ trait TransliterationExtension
     protected function normalizeString(string $text)
     {
         static $mbstringLoaded = null;
+        static $encodings = null;
+
         if ($mbstringLoaded === null) {
             $mbstringLoaded = extension_loaded('mbstring');
         }
 
         if ($mbstringLoaded) {
-            return mb_convert_encoding($text, 'UTF-8', mb_list_encodings());
+            if (mb_check_encoding($text, 'UTF-8')) {
+                return $text;
+            }
+
+            if ($encodings === null) {
+                $encodings = mb_list_encodings();
+            }
+
+            return mb_convert_encoding($text, 'UTF-8', $encodings);
         } else {
             return $text; // Return raw text as there is no good alternative for mb_convert_encoding
         }
