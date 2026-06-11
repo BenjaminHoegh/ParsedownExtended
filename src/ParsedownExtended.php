@@ -315,15 +315,16 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
     }
 
     /**
-     * Recursively applies configuration overrides to the current configuration.
+     * Recursively applies configuration overrides.
      *
-     * This method traverses the provided associative array of overrides, optionally using a prefix
-     * to build dot-notated paths for nested configuration keys. If a value is an array and does not
-     * correspond to a flat schema entry, the method recurses into that array. Otherwise, it sets the
-     * configuration value at the computed path.
+     * Traverses the provided associative array of overrides, building dot-notated
+     * paths for nested configuration keys. If a value is an array and the computed
+     * path is not defined as a flat schema entry, the method recurses into that
+     * array. Otherwise, it sets the value on the provided configuration handler.
      *
-     * @param array $ovr    The associative array of configuration overrides.
-     * @param string $prefix The prefix for nested configuration keys, used for dot notation (optional).
+     * @param array $ovr The associative array of configuration overrides.
+     * @param string $prefix The prefix for nested configuration keys.
+     * @param object|null $configHandler The configuration handler to apply values to.
      *
      * @return void
      */
