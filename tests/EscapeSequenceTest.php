@@ -3,14 +3,14 @@
 use BenjaminHoegh\ParsedownExtended\ParsedownExtended;
 use PHPUnit\Framework\TestCase;
 
-class QuotesTest extends TestCase
+class EscapeSequenceTest extends TestCase
 {
     protected ParsedownExtended $parsedownExtended;
 
     protected function setUp(): void
     {
         $this->parsedownExtended = new ParsedownExtended();
-        $this->parsedownExtended->setSafeMode(true); // As we always want to support safe mode
+        $this->parsedownExtended->setSafeMode(true);
     }
 
     protected function tearDown(): void
@@ -18,21 +18,21 @@ class QuotesTest extends TestCase
         unset($this->parsedownExtended);
     }
 
-    public function testBlockQuote()
+    public function testEscapeSequence()
     {
-        $markdown = "> This is a quote.";
-        $expectedHtml = "<blockquote>\n<p>This is a quote.</p>\n</blockquote>";
+        $markdown = '\\*literal\\*';
+        $expectedHtml = '<p>literal</p>';
         $result = $this->parsedownExtended->text($markdown);
 
         $this->assertEquals($expectedHtml, trim($result));
     }
 
-    public function testBlockQuotesDisabled()
+    public function testEscapeSequenceWithMathDelimiters()
     {
-        $this->parsedownExtended->config()->set('quotes', false);
+        $this->parsedownExtended->config()->set('math', true);
 
-        $markdown = "> This is a quote.";
-        $expectedHtml = "<p>&gt; This is a quote.</p>";
+        $markdown = '\\$not math\\$ and $math$';
+        $expectedHtml = '<p>not math and $math$</p>';
         $result = $this->parsedownExtended->text($markdown);
 
         $this->assertEquals($expectedHtml, trim($result));

@@ -84,6 +84,18 @@ class TocTest extends TestCase
         $this->assertEquals($expected, $actual);
     }
 
+    public function testTextWithoutTocTag()
+    {
+        $this->parsedownExtended->config()->set('headings.auto_anchors', true);
+
+        $markdown = '# Heading 1';
+        $expected = '<h1 id="heading-1">Heading 1</h1>';
+
+        $actual = $this->parsedownExtended->text($markdown);
+
+        $this->assertEquals($expected, $actual);
+    }
+
     /**
      * Test case for table of contents with custom heading levels.
      */
@@ -169,6 +181,28 @@ class TocTest extends TestCase
         $this->assertEquals($expected, $actual);
     }
 
+    public function testTocWithCustomId()
+    {
+        $this->parsedownExtended->config()->set('headings.auto_anchors', true);
+        $this->parsedownExtended->config()->set('toc.tag', '[toc]');
+        $this->parsedownExtended->config()->set('toc.id', 'contents');
+
+        $markdown = <<<MARKDOWN
+            [toc]
+            # Heading 1
+            MARKDOWN;
+
+        $expected = <<<HTML
+            <div id="contents"><ul>
+            <li><a href="#heading-1">Heading 1</a></li>
+            </ul></div>
+            <h1 id="heading-1">Heading 1</h1>
+            HTML;
+
+        $actual = $this->parsedownExtended->text($markdown);
+        $this->assertEquals($expected, $actual);
+    }
+
     /**
      * Test case for table of contents with multiple settings at once.
      */
@@ -226,5 +260,51 @@ class TocTest extends TestCase
         $actual = $this->parsedownExtended->contentsList('json');
 
         $this->assertSame('[]', $actual);
+    }
+
+    public function testContentsListJson()
+    {
+        $markdown = <<<MARKDOWN
+            # Heading 1
+            ## Heading 2
+            MARKDOWN;
+
+        $this->parsedownExtended->body($markdown);
+
+        $expected = '[{"text":"Heading 1","id":"heading-1","level":"h1"},{"text":"Heading 2","id":"heading-2","level":"h2"}]';
+        $actual = $this->parsedownExtended->contentsList('json');
+
+        $this->assertSame($expected, $actual);
+    }
+
+    public function testTocStateResetsBetweenParses()
+    {
+        $this->parsedownExtended->config()->set('headings.auto_anchors', true);
+
+        $this->parsedownExtended->text('# Heading');
+
+        $markdown = <<<MARKDOWN
+            [TOC]
+            # Heading
+            MARKDOWN;
+
+        $expected = <<<HTML
+            <div id="toc"><ul>
+            <li><a href="#heading">Heading</a></li>
+            </ul></div>
+            <h1 id="heading">Heading</h1>
+            HTML;
+
+        $actual = $this->parsedownExtended->text($markdown);
+
+        $this->assertEquals($expected, $actual);
+    }
+
+    public function testContentsListInvalidReturnType()
+    {
+        $this->expectException(InvalidArgumentException::class);
+        $this->expectExceptionMessage("Unknown return type 'xml' given while parsing ToC.");
+
+        $this->parsedownExtended->contentsList('xml');
     }
 }

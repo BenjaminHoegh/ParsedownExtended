@@ -237,6 +237,20 @@ class HeadingsTest extends TestCase
     }
 
     /**
+     * Test case for heading transliteration.
+     */
+    public function testHeadingWithTransliteration()
+    {
+        $this->parsedownExtended->config()->set('headings.auto_anchors', true);
+        $this->parsedownExtended->config()->set('headings.auto_anchors.transliterate', true);
+
+        $markdown = '# Café';
+        $expected = '<h1 id="cafe">Café</h1>';
+        $actual = $this->parsedownExtended->text($markdown);
+        $this->assertEquals($expected, $actual);
+    }
+
+    /**
      * Empty headings should fall back to id="heading".
      */
     public function testEmptyHeadingProducesNoId()

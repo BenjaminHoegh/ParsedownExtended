@@ -1,0 +1,145 @@
+<?php
+
+declare(strict_types=1);
+
+namespace BenjaminHoegh\ParsedownExtended\Extensions\Block;
+
+trait HeadingExtension
+{
+    /**
+     * Parses attribute data for headings.
+     *
+     * Handles parsing of attribute data for headings if the feature is enabled.
+     *
+     * @since 0.1.0
+     *
+     * @param string $attributeString The attribute string to be parsed.
+     * @return array The parsed attributes or an empty array if not applicable.
+     */
+    protected function parseAttributeData($attributeString)
+    {
+        // Check if special attributes for headings are enabled
+        if ($this->config()->get('headings.special_attributes')) {
+            return parent::parseAttributeData($attributeString); // Delegate to parent class
+        }
+
+        return []; // Return an empty array if the feature is disabled
+    }
+
+    /**
+     * Processes ATX-style headers (e.g., `# Header Text`).
+     *
+     * This function processes ATX-style headers, checks if the heading levels are allowed, generates an anchor ID for the
+     * header, and adds it to the Table of Contents (TOC) if applicable.
+     *
+     * @since 0.1.0
+     *
+     * @param array $Line The line being processed to determine if it is a header.
+     * @return array|null The parsed header block with added attributes or null if the header is not allowed.
+     */
+    protected function blockHeader($Line)
+    {
+        $config = $this->config();
+
+        // Check if headings are enabled in the configuration settings
+        if (!$config->get('headings')) {
+            return null; // Return null if headings are disabled
+        }
+
+        // Use the parent class to parse the header block
+        $Block = parent::blockHeader($Line);
+
+        if (!empty($Block)) {
+            // Extract the text and level of the header
+            $text = $Block['element']['text'] ?? $Block['element']['handler']['argument'] ?? '';
+            $level = $Block['element']['name'];
+
+            // Check if the header level is allowed (e.g., h1, h2, etc.)
+            if (!in_array($level, $config->get('headings.allowed_levels'))) {
+                return null; // Return null if the heading level is not allowed
+            }
+
+            // Generate an anchor ID for the header element
+            // If an ID attribute is not set, use the text to create the ID
+            $id = $Block['element']['attributes']['id'] ?? $text;
+            $id = $this->createAnchorID($id);
+
+            // Set the 'id' attribute only when an anchor ID is generated
+            if ($id !== null) {
+                $Block['element']['attributes']['id'] = $id;
+            }
+
+            // Check if the heading level should be included in the Table of Contents (TOC)
+            // Also ensure we skip adding it to TOC if it is disabled in the config
+            if (!$config->get('toc') || !in_array($level, $config->get('toc.levels'))) {
+                return $Block; // Return the block if it should not be part of the TOC
+            }
+
+            // Add the heading to the Table of Contents
+            $this->setContentsList(['text' => $text, 'id' => $id, 'level' => $level]);
+
+            return $Block; // Return the modified header block
+        }
+
+        return null; // Return null if the header block is empty
+    }
+
+    /**
+     * Processes Setext-style headers (e.g., `Header Text` followed by `===` or `---`).
+     *
+     * This function processes Setext-style headers, checks if the heading levels are allowed, generates an anchor ID for the
+     * header, and adds it to the Table of Contents (TOC) if applicable.
+     *
+     * @since 0.1.0
+     *
+     * @param array $Line The line being processed for a Setext header.
+     * @param array|null $Block The existing block context (if any).
+     * @return array|null The parsed Setext header block with added attributes or null if the header is not allowed.
+     */
+    protected function blockSetextHeader($Line, $Block = null)
+    {
+        $config = $this->config();
+
+        // Check if headings are enabled in the configuration settings
+        if (!$config->get('headings')) {
+            return null; // Return null if headings are disabled
+        }
+
+        // Use the parent class to parse the Setext header block
+        $Block = parent::blockSetextHeader($Line, $Block);
+
+        if (!empty($Block)) {
+            // Extract the text and level of the header
+            $text = $Block['element']['text'] ?? $Block['element']['handler']['argument'] ?? '';
+            $level = $Block['element']['name'];
+
+            // Check if the header level is allowed (e.g., h1, h2, etc.)
+            if (!in_array($level, $config->get('headings.allowed_levels'))) {
+                return null; // Return null if the heading level is not allowed
+            }
+
+            // Generate an anchor ID for the header element
+            // If an ID attribute is not set, use the text to create the ID
+            $id = $Block['element']['attributes']['id'] ?? $text;
+            $id = $this->createAnchorID($id);
+
+            // Set the 'id' attribute only when an anchor ID is generated
+            if ($id !== null) {
+                $Block['element']['attributes']['id'] = $id;
+            }
+
+            // Check if the heading level should be included in the Table of Contents (TOC)
+            // Also ensure we skip adding it to TOC if it is disabled in the config
+            if (!$config->get('toc') || !in_array($level, $config->get('toc.levels'))) {
+                return $Block; // Return the block if it should not be part of the TOC
+            }
+
+            // Add the heading to the Table of Contents
+            $this->setContentsList(['text' => $text, 'id' => $id, 'level' => $level]);
+
+            return $Block; // Return the modified Setext header block
+        }
+
+        return null; // Return null if the Setext header block is empty
+    }
+}

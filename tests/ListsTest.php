@@ -27,6 +27,17 @@ class ListsTest extends TestCase
         $this->assertEquals($expectedHtml, trim($result));
     }
 
+    public function testBlockListsDisabled()
+    {
+        $this->parsedownExtended->config()->set('lists', false);
+
+        $markdown = "- Item 1\n- Item 2";
+        $expectedHtml = "<p>- Item 1\n- Item 2</p>";
+        $result = $this->parsedownExtended->text($markdown);
+
+        $this->assertEquals($expectedHtml, trim($result));
+    }
+
     public function testBlockOrderedList()
     {
         $markdown = "1. Item 1\n2. Item 2";

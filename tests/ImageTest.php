@@ -27,6 +27,17 @@ class ImageTest extends TestCase
         $this->assertEquals($expectedHtml, trim($result));
     }
 
+    public function testInlineImageDisabled()
+    {
+        $this->parsedownExtended->config()->set('images', false);
+
+        $markdown = "![alt text](image.png)";
+        $expectedHtml = '<p>!<a href="image.png">alt text</a></p>';
+        $result = $this->parsedownExtended->text($markdown);
+
+        $this->assertEquals($expectedHtml, trim($result));
+    }
+
     public function testImageWithAltText()
     {
         $markdown = "![alt text](image.png)";

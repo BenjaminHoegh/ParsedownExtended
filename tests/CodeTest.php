@@ -30,6 +30,42 @@ class CodeTest extends TestCase
         $this->assertEquals($expectedHtml, trim($result));
     }
 
+    public function testInlineCodeEnabled()
+    {
+        $this->parsedownExtended->config()->set('code.inline', true);
+
+        $markdown = 'Use `code` here';
+        $expectedHtml = '<p>Use <code>code</code> here</p>';
+
+        $result = $this->parsedownExtended->text($markdown);
+
+        $this->assertEquals($expectedHtml, trim($result));
+    }
+
+    public function testInlineCodeDisabled()
+    {
+        $this->parsedownExtended->config()->set('code.inline', false);
+
+        $markdown = 'Use `code` here';
+        $expectedHtml = '<p>Use `code` here</p>';
+
+        $result = $this->parsedownExtended->text($markdown);
+
+        $this->assertEquals($expectedHtml, trim($result));
+    }
+
+    public function testCodeBlocksDisabled()
+    {
+        $this->parsedownExtended->config()->set('code.blocks', false);
+
+        $markdown = "```php\necho 1;\n```";
+        $expectedHtml = '<p><code>php echo 1; </code></p>';
+
+        $result = $this->parsedownExtended->text($markdown);
+
+        $this->assertEquals($expectedHtml, trim($result));
+    }
+
     public function testDisableCode()
     {
         $this->parsedownExtended->config()->set('code', false); // Code blocks are turned into paragraphs
