@@ -69,9 +69,9 @@ class MathTest extends TestCase
         $markdown = '$E=mc^2$
 
 > This is a blockquote';
-        
+
         $result = $this->parsedownExtended->text($markdown);
-        
+
         // Should contain both the math expression and the blockquote
         $this->assertStringContainsString('$E=mc^2$', $result);
         $this->assertStringContainsString('<blockquote>', $result);
@@ -88,11 +88,11 @@ class MathTest extends TestCase
 > La matrice d\'observabilité s\'écrit donc :';
 
         $result = $this->parsedownExtended->text($markdown);
-        
+
         // Should preserve all 4 math expressions
         $mathCount = substr_count($result, '$') / 2;
         $this->assertEquals(4, $mathCount, 'All math expressions should be preserved');
-        
+
         // Should render the blockquote correctly
         $this->assertStringContainsString('<blockquote>', $result);
         $this->assertStringContainsString('La matrice', $result);

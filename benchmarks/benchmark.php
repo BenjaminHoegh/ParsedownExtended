@@ -27,15 +27,15 @@ $options = getopt('', [
 
 if (isset($options['help'])) {
     echo <<<TXT
-Usage:
-  composer benchmark -- [--iterations=50] [--warmup=3] [--path=benchmarks/tests] [--memory] [--no-feature-groups] [--no-color]
+        Usage:
+          composer benchmark -- [--iterations=50] [--warmup=3] [--path=benchmarks/tests] [--memory] [--no-feature-groups] [--no-color]
 
-Examples:
-  composer benchmark
-  composer benchmark -- --iterations=100 --no-color
-  composer benchmark -- --path=benchmarks/tests --memory
+        Examples:
+          composer benchmark
+          composer benchmark -- --iterations=100 --no-color
+          composer benchmark -- --path=benchmarks/tests --memory
 
-TXT;
+        TXT;
     exit(0);
 }
 
