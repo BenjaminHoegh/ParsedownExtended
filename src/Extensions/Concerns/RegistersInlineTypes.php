@@ -13,56 +13,129 @@ trait RegistersInlineTypes
      */
     private function registerCustomInlineTypes(): void
     {
-        $this->addInlineType('=', 'Marking');
-        $this->addInlineType('+', 'Insertions');
-        $this->addInlineType('[', 'Keystrokes');
-        $this->addInlineType(['\\', '$'], 'MathNotation');
-        $this->addInlineType('^', 'Superscript');
-        $this->addInlineType('~', 'Subscript');
-        $this->addInlineType(':', 'Emojis');
-        $this->addInlineType(['<', '>', '-', '.', "'", '"', '`'], 'Smartypants');
-        $this->addInlineType(['(', '.', '+', '!', '?'], 'Typographer');
+        foreach ($this->customInlineExtensionDefinitions() as $definition) {
+            $this->registerInlineExtension(
+                $definition['markers'],
+                $definition['type'],
+                $definition['config'] ?? [],
+                $definition['priority'] ?? 100
+            );
+        }
     }
 
     /**
-     * Registers an inline type marker with a corresponding handler function.
-     *
-     * This function ensures that a given marker is registered for inline parsing, associating it with
-     * a handler function that will handle the inline behavior for that marker.
-     *
-     * @since 1.1.2
-     *
-     * @param mixed $markers One or more markers to register (can be a string or an array).
-     * @param string $funcName The name of the handler function associated with the marker(s).
-     * @return void
+     * @return list<array{type: string, markers: list<string>, config?: list<string>, priority?: int}>
      */
-    private function addInlineType($markers, string $funcName): void
+    private function customInlineExtensionDefinitions(): array
     {
-        // Ensure $markers is always an array, even if a single marker is passed as a string
-        $markers = (array) $markers;
+        return [
+            [
+                'type' => 'Marking',
+                'markers' => ['='],
+                'config' => ['emphasis', 'emphasis.mark'],
+            ],
+            [
+                'type' => 'Insertions',
+                'markers' => ['+'],
+                'config' => ['emphasis', 'emphasis.insertions'],
+            ],
+            [
+                'type' => 'Keystrokes',
+                'markers' => ['['],
+                'config' => ['emphasis', 'emphasis.keystrokes'],
+            ],
+            [
+                'type' => 'MathNotation',
+                'markers' => ['\\', '$'],
+                'config' => ['math', 'math.inline'],
+            ],
+            [
+                'type' => 'Superscript',
+                'markers' => ['^'],
+                'config' => ['emphasis', 'emphasis.superscript'],
+            ],
+            [
+                'type' => 'Subscript',
+                'markers' => ['~'],
+                'config' => ['emphasis', 'emphasis.subscript'],
+            ],
+            [
+                'type' => 'Emojis',
+                'markers' => [':'],
+                'config' => ['emojis'],
+            ],
+            [
+                'type' => 'Smartypants',
+                'markers' => ['<', '>', '-', '.', "'", '"', '`'],
+                'config' => ['smartypants'],
+                'priority' => 100,
+            ],
+            [
+                'type' => 'Typographer',
+                'markers' => ['(', '.', '+', '!', '?'],
+                'config' => ['typographer'],
+                'priority' => 110,
+            ],
+        ];
+    }
+
+    /**
+     * Registers an inline type marker with a corresponding handler.
+     *
+     * Higher priority handlers run before lower priority handlers for the same marker.
+     *
+     * @param mixed $markers One or more single-character markers.
+     * @param list<string> $configPaths Boolean config paths that must be enabled before the handler runs.
+     * @return $this
+     */
+    public function registerInlineExtension($markers, string $type, array $configPaths = [], int $priority = 100): self
+    {
+        $this->assertExtensionHandlerExists('inline', $type);
+        $markers = $this->normalizeExtensionMarkers($markers);
+        $this->registerInlineExtensionMetadata($type, $configPaths);
 
         foreach ($markers as $marker) {
-            // If the marker is not already registered, initialize it
             if (!isset($this->InlineTypes[$marker])) {
                 $this->InlineTypes[$marker] = [];
             }
 
-            // Add the marker to the special characters array if it's not already present
+            $this->seedExtensionTypeOrder($marker, $this->InlineTypes, $this->inlineTypePriorities, $this->inlineTypeOrder);
+
             if (!in_array($marker, $this->specialCharacters, true)) {
                 $this->specialCharacters[] = $marker;
             }
 
-            // Add the function to the front while keeping a single instance in the handler chain.
-            $handlerIndex = array_search($funcName, $this->InlineTypes[$marker], true);
+            $handlerIndex = array_search($type, $this->InlineTypes[$marker], true);
             if ($handlerIndex !== false) {
                 unset($this->InlineTypes[$marker][$handlerIndex]);
             }
-            array_unshift($this->InlineTypes[$marker], $funcName);
 
-            // Keep a unique marker list for strpbrk scanning.
+            $this->InlineTypes[$marker][] = $type;
+            $this->inlineTypePriorities[$marker][$type] = $priority;
+            $this->inlineTypeOrder[$marker][$type] = $this->inlineTypeOrder[$marker][$type]
+                ?? ++$this->extensionRegistrationOrder;
+
+            $this->InlineTypes[$marker] = $this->sortExtensionTypes(
+                array_values($this->InlineTypes[$marker]),
+                $this->inlineTypePriorities[$marker],
+                $this->inlineTypeOrder[$marker]
+            );
+
             if (strpos($this->inlineMarkerList, $marker) === false) {
                 $this->inlineMarkerList .= $marker;
             }
         }
+
+        $this->configurationChanged();
+
+        return $this;
+    }
+
+    /**
+     * @param mixed $markers
+     */
+    protected function addInlineType($markers, string $funcName): void
+    {
+        $this->registerInlineExtension($markers, $funcName);
     }
 }

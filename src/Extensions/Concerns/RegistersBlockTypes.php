@@ -13,44 +13,87 @@ trait RegistersBlockTypes
      */
     private function registerCustomBlockTypes(): void
     {
-        $this->addBlockType(['\\', '$'], 'MathNotation');
-        $this->addBlockType('>', 'Alert');
+        foreach ($this->customBlockExtensionDefinitions() as $definition) {
+            $this->registerBlockExtension(
+                $definition['markers'],
+                $definition['type'],
+                $definition['config'] ?? [],
+                $definition['priority'] ?? 100
+            );
+        }
     }
 
     /**
-     * Registers a block type marker with a corresponding handler function.
-     *
-     * This function ensures that a given marker is registered for block parsing, associating it with
-     * a handler function that will handle the block behavior for that marker.
-     *
-     * @since 1.1.2
-     *
-     * @param mixed $markers One or more markers to register (can be a string or an array).
-     * @param string $funcName The name of the handler function associated with the marker(s).
-     * @return void
+     * @return list<array{type: string, markers: list<string>, config?: list<string>, priority?: int}>
      */
-    private function addBlockType($markers, string $funcName): void
+    private function customBlockExtensionDefinitions(): array
     {
-        // Ensure $markers is always an array, even if a single marker is passed as a string
-        $markers = (array) $markers;
+        return [
+            [
+                'type' => 'MathNotation',
+                'markers' => ['\\', '$'],
+                'config' => ['math', 'math.block'],
+            ],
+            [
+                'type' => 'Alert',
+                'markers' => ['>'],
+                'config' => ['alerts'],
+                'priority' => 110,
+            ],
+        ];
+    }
+
+    /**
+     * Registers a block type marker with a corresponding handler.
+     *
+     * Higher priority handlers run before lower priority handlers for the same marker.
+     *
+     * @param mixed $markers One or more single-character markers.
+     * @param list<string> $configPaths Boolean config paths that must be enabled before the handler runs.
+     * @return $this
+     */
+    public function registerBlockExtension($markers, string $type, array $configPaths = [], int $priority = 100): self
+    {
+        $this->assertExtensionHandlerExists('block', $type);
+        $markers = $this->normalizeExtensionMarkers($markers);
+        $this->registerBlockExtensionMetadata($type, $configPaths);
 
         foreach ($markers as $marker) {
-            // If the marker is not already registered, initialize it
             if (!isset($this->BlockTypes[$marker])) {
                 $this->BlockTypes[$marker] = [];
             }
 
-            // Add the marker to the special characters array if it's not already present
+            $this->seedExtensionTypeOrder($marker, $this->BlockTypes, $this->blockTypePriorities, $this->blockTypeOrder);
+
             if (!in_array($marker, $this->specialCharacters, true)) {
                 $this->specialCharacters[] = $marker;
             }
 
-            // Add the function to the front while keeping a single instance in the handler chain.
-            $handlerIndex = array_search($funcName, $this->BlockTypes[$marker], true);
+            $handlerIndex = array_search($type, $this->BlockTypes[$marker], true);
             if ($handlerIndex !== false) {
                 unset($this->BlockTypes[$marker][$handlerIndex]);
             }
-            array_unshift($this->BlockTypes[$marker], $funcName);
+
+            $this->BlockTypes[$marker][] = $type;
+            $this->blockTypePriorities[$marker][$type] = $priority;
+            $this->blockTypeOrder[$marker][$type] = $this->blockTypeOrder[$marker][$type]
+                ?? ++$this->extensionRegistrationOrder;
+
+            $this->BlockTypes[$marker] = $this->sortExtensionTypes(
+                array_values($this->BlockTypes[$marker]),
+                $this->blockTypePriorities[$marker],
+                $this->blockTypeOrder[$marker]
+            );
         }
+
+        return $this;
+    }
+
+    /**
+     * @param mixed $markers
+     */
+    protected function addBlockType($markers, string $funcName): void
+    {
+        $this->registerBlockExtension($markers, $funcName);
     }
 }

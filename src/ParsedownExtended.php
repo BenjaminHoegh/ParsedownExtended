@@ -243,53 +243,6 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
     }
 
     /**
-     * Determines whether an inline handler is enabled by the current configuration.
-     */
-    private function inlineTypeEnabled(string $inlineType): bool
-    {
-        switch ($inlineType) {
-            case 'Code':
-                return $this->configEnabled('code') && $this->configEnabled('code.inline');
-            case 'Image':
-                return $this->configEnabled('images');
-            case 'Markup':
-                return $this->configEnabled('allow_raw_html');
-            case 'Link':
-            case 'Url':
-            case 'UrlTag':
-                return $this->configEnabled('links');
-            case 'EmailTag':
-                return $this->configEnabled('links') && $this->configEnabled('links.email_links');
-            case 'FootnoteMarker':
-                return $this->configEnabled('footnotes');
-            case 'Emphasis':
-                return $this->configEnabled('emphasis');
-            case 'Strikethrough':
-                return $this->configEnabled('emphasis') && $this->configEnabled('emphasis.strikethroughs');
-            case 'Marking':
-                return $this->configEnabled('emphasis') && $this->configEnabled('emphasis.mark');
-            case 'Insertions':
-                return $this->configEnabled('emphasis') && $this->configEnabled('emphasis.insertions');
-            case 'Keystrokes':
-                return $this->configEnabled('emphasis') && $this->configEnabled('emphasis.keystrokes');
-            case 'Superscript':
-                return $this->configEnabled('emphasis') && $this->configEnabled('emphasis.superscript');
-            case 'Subscript':
-                return $this->configEnabled('emphasis') && $this->configEnabled('emphasis.subscript');
-            case 'MathNotation':
-                return $this->configEnabled('math') && $this->configEnabled('math.inline');
-            case 'Emojis':
-                return $this->configEnabled('emojis');
-            case 'Smartypants':
-                return $this->configEnabled('smartypants');
-            case 'Typographer':
-                return $this->configEnabled('typographer');
-            default:
-                return true;
-        }
-    }
-
-    /**
      * Builds the marker list used by strpbrk from enabled inline handlers only.
      */
     private function getActiveInlineMarkerList(): string
@@ -345,6 +298,125 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
 
     // Overwriting core Parsedown functions
     // -------------------------------------------------------------------------
+
+    /**
+     * Parses Markdown lines into block elements while honoring extension metadata.
+     *
+     * This mirrors Parsedown's block dispatch loop, with one extra guard: registered
+     * block types are skipped when their configured feature flags are disabled.
+     *
+     * @param array $lines Markdown source lines.
+     * @return array Parsed block elements.
+     */
+    protected function linesElements(array $lines): array
+    {
+        $Elements = [];
+        $CurrentBlock = null;
+
+        foreach ($lines as $line) {
+            if (chop($line) === '') {
+                if (isset($CurrentBlock)) {
+                    $CurrentBlock['interrupted'] = isset($CurrentBlock['interrupted'])
+                        ? $CurrentBlock['interrupted'] + 1
+                        : 1;
+                }
+
+                continue;
+            }
+
+            while (($beforeTab = strstr($line, "\t", true)) !== false) {
+                $shortage = 4 - mb_strlen($beforeTab, 'utf-8') % 4;
+
+                $line = $beforeTab
+                    . str_repeat(' ', $shortage)
+                    . substr($line, strlen($beforeTab) + 1);
+            }
+
+            $indent = strspn($line, ' ');
+            $text = $indent > 0 ? substr($line, $indent) : $line;
+            $Line = ['body' => $line, 'indent' => $indent, 'text' => $text];
+
+            if (isset($CurrentBlock['continuable'])) {
+                $methodName = 'block' . $CurrentBlock['type'] . 'Continue';
+                $Block = $this->$methodName($Line, $CurrentBlock);
+
+                if (isset($Block)) {
+                    $CurrentBlock = $Block;
+
+                    continue;
+                }
+
+                if ($this->isBlockCompletable($CurrentBlock['type'])) {
+                    $methodName = 'block' . $CurrentBlock['type'] . 'Complete';
+                    $CurrentBlock = $this->$methodName($CurrentBlock);
+                }
+            }
+
+            $marker = $text[0];
+            $blockTypes = $this->unmarkedBlockTypes;
+
+            if (isset($this->BlockTypes[$marker])) {
+                foreach ($this->BlockTypes[$marker] as $blockType) {
+                    $blockTypes[] = $blockType;
+                }
+            }
+
+            $Block = null;
+            foreach ($blockTypes as $blockType) {
+                if (!$this->blockTypeEnabled($blockType)) {
+                    continue;
+                }
+
+                $Block = $this->{"block$blockType"}($Line, $CurrentBlock);
+
+                if (isset($Block)) {
+                    $Block['type'] = $blockType;
+
+                    if (!isset($Block['identified'])) {
+                        if (isset($CurrentBlock)) {
+                            $Elements[] = $this->extractElement($CurrentBlock);
+                        }
+
+                        $Block['identified'] = true;
+                    }
+
+                    if ($this->isBlockContinuable($blockType)) {
+                        $Block['continuable'] = true;
+                    }
+
+                    $CurrentBlock = $Block;
+
+                    continue 2;
+                }
+            }
+
+            if (isset($CurrentBlock) && $CurrentBlock['type'] === 'Paragraph') {
+                $Block = $this->paragraphContinue($Line, $CurrentBlock);
+            }
+
+            if (isset($Block)) {
+                $CurrentBlock = $Block;
+            } else {
+                if (isset($CurrentBlock)) {
+                    $Elements[] = $this->extractElement($CurrentBlock);
+                }
+
+                $CurrentBlock = $this->paragraph($Line);
+                $CurrentBlock['identified'] = true;
+            }
+        }
+
+        if (isset($CurrentBlock['continuable']) && $this->isBlockCompletable($CurrentBlock['type'])) {
+            $methodName = 'block' . $CurrentBlock['type'] . 'Complete';
+            $CurrentBlock = $this->$methodName($CurrentBlock);
+        }
+
+        if (isset($CurrentBlock)) {
+            $Elements[] = $this->extractElement($CurrentBlock);
+        }
+
+        return $Elements;
+    }
 
     /**
      * Process a line of Markdown text and extract inline elements.

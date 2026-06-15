@@ -6,11 +6,203 @@ namespace BenjaminHoegh\ParsedownExtended\Extensions;
 
 trait ExtensionRegistrar
 {
+    /** @var array<string, list<string>> */
+    private array $inlineExtensionConfigPaths = [];
+
+    /** @var array<string, list<string>> */
+    private array $blockExtensionConfigPaths = [];
+
+    /** @var array<string, array<string, int>> */
+    private array $inlineTypePriorities = [];
+
+    /** @var array<string, array<string, int>> */
+    private array $blockTypePriorities = [];
+
+    /** @var array<string, array<string, int>> */
+    private array $inlineTypeOrder = [];
+
+    /** @var array<string, array<string, int>> */
+    private array $blockTypeOrder = [];
+
+    private int $extensionRegistrationOrder = 0;
+
     private function registerExtensions(): void
     {
+        $this->registerCoreExtensionMetadata();
         $this->registerCustomInlineTypes();
         $this->registerCustomBlockTypes();
         $this->moveSpecialCharacterHandlerToEnd($this->InlineTypes);
         $this->moveSpecialCharacterHandlerToEnd($this->BlockTypes);
+    }
+
+    private function registerCoreExtensionMetadata(): void
+    {
+        foreach ($this->coreInlineExtensionDefinitions() as $definition) {
+            $this->registerInlineExtensionMetadata($definition['type'], $definition['config'] ?? []);
+        }
+
+        foreach ($this->coreBlockExtensionDefinitions() as $definition) {
+            $this->registerBlockExtensionMetadata($definition['type'], $definition['config'] ?? []);
+        }
+    }
+
+    /**
+     * @return list<array{type: string, config?: list<string>}>
+     */
+    private function coreInlineExtensionDefinitions(): array
+    {
+        return [
+            ['type' => 'Code', 'config' => ['code', 'code.inline']],
+            ['type' => 'Image', 'config' => ['images']],
+            ['type' => 'Markup', 'config' => ['allow_raw_html']],
+            ['type' => 'Link', 'config' => ['links']],
+            ['type' => 'Url', 'config' => ['links']],
+            ['type' => 'UrlTag', 'config' => ['links']],
+            ['type' => 'EmailTag', 'config' => ['links', 'links.email_links']],
+            ['type' => 'FootnoteMarker', 'config' => ['footnotes']],
+            ['type' => 'Emphasis', 'config' => ['emphasis']],
+            ['type' => 'Strikethrough', 'config' => ['emphasis', 'emphasis.strikethroughs']],
+        ];
+    }
+
+    /**
+     * @return list<array{type: string, config?: list<string>}>
+     */
+    private function coreBlockExtensionDefinitions(): array
+    {
+        return [
+            ['type' => 'Code', 'config' => ['code', 'code.blocks']],
+            ['type' => 'FencedCode', 'config' => ['code', 'code.blocks']],
+            ['type' => 'Header', 'config' => ['headings']],
+            ['type' => 'SetextHeader', 'config' => ['headings']],
+            ['type' => 'Rule', 'config' => ['thematic_breaks']],
+            ['type' => 'List', 'config' => ['lists']],
+            ['type' => 'Table', 'config' => ['tables']],
+            ['type' => 'Comment', 'config' => ['comments']],
+            ['type' => 'Markup', 'config' => ['allow_raw_html']],
+            ['type' => 'Quote', 'config' => ['quotes']],
+            ['type' => 'Reference', 'config' => ['references']],
+            ['type' => 'DefinitionList', 'config' => ['definition_lists']],
+            ['type' => 'Abbreviation', 'config' => ['abbreviations']],
+            ['type' => 'Footnote', 'config' => ['footnotes']],
+        ];
+    }
+
+    /**
+     * @param list<string> $configPaths
+     */
+    private function registerInlineExtensionMetadata(string $type, array $configPaths): void
+    {
+        $this->inlineExtensionConfigPaths[$type] = $configPaths;
+    }
+
+    /**
+     * @param list<string> $configPaths
+     */
+    private function registerBlockExtensionMetadata(string $type, array $configPaths): void
+    {
+        $this->blockExtensionConfigPaths[$type] = $configPaths;
+    }
+
+    private function inlineTypeEnabled(string $inlineType): bool
+    {
+        return $this->extensionConfigEnabled($this->inlineExtensionConfigPaths[$inlineType] ?? []);
+    }
+
+    private function blockTypeEnabled(string $blockType): bool
+    {
+        return $this->extensionConfigEnabled($this->blockExtensionConfigPaths[$blockType] ?? []);
+    }
+
+    /**
+     * @param list<string> $configPaths
+     */
+    private function extensionConfigEnabled(array $configPaths): bool
+    {
+        foreach ($configPaths as $configPath) {
+            if (!$this->configEnabled($configPath)) {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    /**
+     * @param mixed $markers
+     * @return list<string>
+     */
+    private function normalizeExtensionMarkers($markers): array
+    {
+        $normalized = [];
+
+        foreach ((array) $markers as $marker) {
+            if (!is_string($marker) || strlen($marker) !== 1) {
+                throw new \InvalidArgumentException('Extension markers must be single-character strings.');
+            }
+
+            if (!in_array($marker, $normalized, true)) {
+                $normalized[] = $marker;
+            }
+        }
+
+        if ($normalized === []) {
+            throw new \InvalidArgumentException('At least one extension marker is required.');
+        }
+
+        return $normalized;
+    }
+
+    private function assertExtensionHandlerExists(string $kind, string $type): void
+    {
+        $method = $kind . $type;
+
+        if (!method_exists($this, $method)) {
+            throw new \InvalidArgumentException("Missing extension handler: {$method}");
+        }
+    }
+
+    /**
+     * @param array<string, list<string>> $typeMap
+     * @param array<string, array<string, int>> $priorities
+     * @param array<string, array<string, int>> $orders
+     */
+    private function seedExtensionTypeOrder(string $marker, array $typeMap, array &$priorities, array &$orders): void
+    {
+        if (!isset($typeMap[$marker])) {
+            return;
+        }
+
+        foreach ($typeMap[$marker] as $type) {
+            if (!isset($priorities[$marker][$type])) {
+                $priorities[$marker][$type] = 0;
+            }
+
+            if (!isset($orders[$marker][$type])) {
+                $orders[$marker][$type] = ++$this->extensionRegistrationOrder;
+            }
+        }
+    }
+
+    /**
+     * @param list<string> $types
+     * @param array<string, int> $priorities
+     * @param array<string, int> $orders
+     * @return list<string>
+     */
+    private function sortExtensionTypes(array $types, array $priorities, array $orders): array
+    {
+        usort($types, static function (string $left, string $right) use ($priorities, $orders): int {
+            $leftPriority = $priorities[$left] ?? 0;
+            $rightPriority = $priorities[$right] ?? 0;
+
+            if ($leftPriority !== $rightPriority) {
+                return $rightPriority <=> $leftPriority;
+            }
+
+            return ($orders[$left] ?? 0) <=> ($orders[$right] ?? 0);
+        });
+
+        return $types;
     }
 }
