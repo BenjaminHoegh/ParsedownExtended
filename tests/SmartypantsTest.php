@@ -60,4 +60,15 @@ class SmartypantsTest extends TestCase
 
         $this->assertEquals('<p>“Hello,” he said.</p>', $this->parsedownExtended->text($markdown));
     }
+
+    public function testSmartypantsSubstitutionsCanChangeAfterParsing(): void
+    {
+        $markdown = 'Before --- after';
+
+        $this->parsedownExtended->config()->set('smartypants', true);
+        $this->assertEquals('<p>Before — after</p>', $this->parsedownExtended->text($markdown));
+
+        $this->parsedownExtended->config()->set('smartypants.substitutions.mdash', '[dash]');
+        $this->assertEquals('<p>Before [dash] after</p>', $this->parsedownExtended->text($markdown));
+    }
 }

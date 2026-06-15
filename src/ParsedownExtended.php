@@ -240,6 +240,8 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
     {
         $this->activeInlineMarkerList = '';
         $this->activeInlineMarkerListValid = false;
+        $this->clearExtensionEnabledCache();
+        $this->clearSmartypantsSubstitutionCache();
     }
 
     /**

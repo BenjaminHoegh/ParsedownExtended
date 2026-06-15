@@ -24,6 +24,12 @@ trait ExtensionRegistrar
     /** @var array<string, array<string, int>> */
     private array $blockTypeOrder = [];
 
+    /** @var array<string, bool> */
+    private array $inlineTypeEnabledCache = [];
+
+    /** @var array<string, bool> */
+    private array $blockTypeEnabledCache = [];
+
     private int $extensionRegistrationOrder = 0;
 
     private function registerExtensions(): void
@@ -94,6 +100,7 @@ trait ExtensionRegistrar
     private function registerInlineExtensionMetadata(string $type, array $configPaths): void
     {
         $this->inlineExtensionConfigPaths[$type] = $configPaths;
+        unset($this->inlineTypeEnabledCache[$type]);
     }
 
     /**
@@ -102,16 +109,31 @@ trait ExtensionRegistrar
     private function registerBlockExtensionMetadata(string $type, array $configPaths): void
     {
         $this->blockExtensionConfigPaths[$type] = $configPaths;
+        unset($this->blockTypeEnabledCache[$type]);
     }
 
     private function inlineTypeEnabled(string $inlineType): bool
     {
-        return $this->extensionConfigEnabled($this->inlineExtensionConfigPaths[$inlineType] ?? []);
+        if (array_key_exists($inlineType, $this->inlineTypeEnabledCache)) {
+            return $this->inlineTypeEnabledCache[$inlineType];
+        }
+
+        return $this->inlineTypeEnabledCache[$inlineType] = $this->extensionConfigEnabled($this->inlineExtensionConfigPaths[$inlineType] ?? []);
     }
 
     private function blockTypeEnabled(string $blockType): bool
     {
-        return $this->extensionConfigEnabled($this->blockExtensionConfigPaths[$blockType] ?? []);
+        if (array_key_exists($blockType, $this->blockTypeEnabledCache)) {
+            return $this->blockTypeEnabledCache[$blockType];
+        }
+
+        return $this->blockTypeEnabledCache[$blockType] = $this->extensionConfigEnabled($this->blockExtensionConfigPaths[$blockType] ?? []);
+    }
+
+    private function clearExtensionEnabledCache(): void
+    {
+        $this->inlineTypeEnabledCache = [];
+        $this->blockTypeEnabledCache = [];
     }
 
     /**

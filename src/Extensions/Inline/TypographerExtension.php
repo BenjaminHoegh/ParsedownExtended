@@ -27,37 +27,72 @@ trait TypographerExtension
             return null;
         }
 
-        static $substitutions = null;
-        static $lastEllipsesKey = null;
+        $text = $Excerpt['text'];
+        $first = $text[0];
 
-        // Only update ellipses if config changes
-        $ellipsesKey = $this->configEnabled('smartypants') && $this->configEnabled('smartypants.smart_ellipses')
-            ? $this->configValue('smartypants.substitutions.ellipses')
-            : '...';
+        if ($first === '(') {
+            $lower = strtolower(substr($text, 0, 4));
+            $replacement = null;
+            $extent = 3;
 
-        if ($substitutions === null || $ellipsesKey !== $lastEllipsesKey) {
-            $lastEllipsesKey = $ellipsesKey;
-            $ellipses = $ellipsesKey === '...' ? '...' : html_entity_decode($ellipsesKey);
+            if (strncmp($lower, '(c)', 3) === 0) {
+                $replacement = '©';
+            } elseif (strncmp($lower, '(r)', 3) === 0) {
+                $replacement = '®';
+            } elseif (strncmp($lower, '(p)', 3) === 0) {
+                $replacement = '¶';
+            } elseif ($lower === '(tm)') {
+                $replacement = '™';
+                $extent = 4;
+            }
 
-            $substitutions = [
-                '/^\(c\)/i'      => '©',
-                '/^\(r\)/i'      => '®',
-                '/^\(tm\)/i'     => '™',
-                '/^\(p\)/i'      => '¶',
-                '/^\+-/i'        => '±',
-                '/^!\.{3,}/i'    => '!..',
-                '/^\?\.{3,}/i'   => '?..',
-                '/^\.{2,}/i'     => $ellipses,
-            ];
-        }
-
-        foreach ($substitutions as $pattern => $replacement) {
-            if (preg_match($pattern, $Excerpt['text'], $matches)) {
-                $match = $matches[0];
+            if ($replacement !== null) {
                 return [
-                    'extent' => strlen($match),
+                    'extent' => $extent,
                     'element' => [
                         'text' => $replacement,
+                    ],
+                ];
+            }
+        } elseif ($first === '+') {
+            if (isset($text[1]) && $text[1] === '-') {
+                return [
+                    'extent' => 2,
+                    'element' => [
+                        'text' => '±',
+                    ],
+                ];
+            }
+        } elseif ($first === '!' || $first === '?') {
+            $dots = strspn($text, '.', 1);
+            if ($dots >= 3) {
+                return [
+                    'extent' => $dots + 1,
+                    'element' => [
+                        'text' => $first . '..',
+                    ],
+                ];
+            }
+        } elseif ($first === '.') {
+            $dots = strspn($text, '.');
+            if ($dots >= 2) {
+                static $lastEllipsesKey = null;
+                static $ellipses = '...';
+
+                // Only update ellipses if config changes.
+                $ellipsesKey = $this->configEnabled('smartypants') && $this->configEnabled('smartypants.smart_ellipses')
+                    ? $this->configValue('smartypants.substitutions.ellipses')
+                    : '...';
+
+                if ($ellipsesKey !== $lastEllipsesKey) {
+                    $lastEllipsesKey = $ellipsesKey;
+                    $ellipses = $ellipsesKey === '...' ? '...' : html_entity_decode($ellipsesKey);
+                }
+
+                return [
+                    'extent' => $dots,
+                    'element' => [
+                        'text' => $ellipses,
                     ],
                 ];
             }

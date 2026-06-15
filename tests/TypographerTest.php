@@ -52,4 +52,14 @@ class TypographerTest extends TestCase
         $this->assertEquals($expected, $result);
     }
 
+    public function testTypographerCanBeDisabledAfterParsing(): void
+    {
+        $markdown = '(c)';
+
+        $this->parsedownExtended->config()->set('typographer', true);
+        $this->assertEquals('<p>©</p>', $this->parsedownExtended->text($markdown));
+
+        $this->parsedownExtended->config()->set('typographer', false);
+        $this->assertEquals('<p>(c)</p>', $this->parsedownExtended->text($markdown));
+    }
 }
