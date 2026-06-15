@@ -65,7 +65,22 @@ echo "Iterations: {$iterations}" . PHP_EOL;
 echo "Warmup: {$warmup}" . PHP_EOL;
 echo 'Files: ' . count($markdownFiles) . PHP_EOL . PHP_EOL;
 
-$parserFactories = [
+$parserFactories = parserComparisonFactories();
+$parserComparison = benchmarkParsers($markdownFiles, $parserFactories, $iterations, $warmup, $includeMemory);
+printParserComparison($parserComparison, $parserFactories, $useColor, $includeMemory);
+
+echo PHP_EOL;
+
+$extensionFactories = extensionImpactFactories();
+$extensionComparison = benchmarkParsers($markdownFiles, $extensionFactories, $iterations, $warmup, $includeMemory);
+printExtensionImpact($extensionComparison, array_keys($extensionFactories), $useColor, $includeMemory);
+
+/**
+ * @return array<string, callable(): object>
+ */
+function parserComparisonFactories(): array
+{
+    return [
     'Parsedown' => function (): Parsedown {
         return new Parsedown();
     },
@@ -75,10 +90,213 @@ $parserFactories = [
     'ParsedownExtended' => function (): ParsedownExtended {
         return new ParsedownExtended();
     },
-];
+    ];
+}
 
-$comparison = benchmarkParsers($markdownFiles, $parserFactories, $iterations, $warmup, $includeMemory);
-printParserComparison($comparison, $parserFactories, $useColor, $includeMemory);
+/**
+ * @return array<string, callable(): object>
+ */
+function extensionImpactFactories(): array
+{
+    $optionalDisabled = optionalExtensionsDisabledConfig();
+    $allEnabled = mergeConfig($optionalDisabled, allOptionalExtensionsEnabledConfig());
+
+    $factories = [
+        'Baseline parser' => function (): ParsedownExtra {
+            return new ParsedownExtra();
+        },
+        'ParsedownExtended defaults' => function (): ParsedownExtended {
+            return new ParsedownExtended();
+        },
+        'All optional disabled' => function () use ($optionalDisabled): ParsedownExtended {
+            return new ParsedownExtended($optionalDisabled);
+        },
+        'All optional enabled' => function () use ($allEnabled): ParsedownExtended {
+            return new ParsedownExtended($allEnabled);
+        },
+    ];
+
+    foreach (individualExtensionConfigs() as $name => $config) {
+        $scenarioConfig = mergeConfig($optionalDisabled, $config);
+        $factories[$name] = function () use ($scenarioConfig): ParsedownExtended {
+            return new ParsedownExtended($scenarioConfig);
+        };
+    }
+
+    return $factories;
+}
+
+function optionalExtensionsDisabledConfig(): array
+{
+    return [
+        'alerts' => false,
+        'diagrams' => false,
+        'emojis' => false,
+        'emphasis' => [
+            'insertions' => false,
+            'keystrokes' => false,
+            'mark' => false,
+            'strikethroughs' => false,
+            'subscript' => false,
+            'superscript' => false,
+        ],
+        'headings' => [
+            'auto_anchors' => false,
+            'special_attributes' => false,
+        ],
+        'links' => [
+            'external_links' => false,
+        ],
+        'lists' => [
+            'tasks' => false,
+        ],
+        'math' => false,
+        'smartypants' => false,
+        'tables' => [
+            'tablespan' => false,
+        ],
+        'toc' => false,
+        'typographer' => false,
+    ];
+}
+
+function allOptionalExtensionsEnabledConfig(): array
+{
+    return [
+        'alerts' => true,
+        'diagrams' => [
+            'enabled' => true,
+            'chartjs' => true,
+            'mermaid' => true,
+        ],
+        'emojis' => true,
+        'emphasis' => [
+            'insertions' => true,
+            'keystrokes' => true,
+            'mark' => true,
+            'strikethroughs' => true,
+            'subscript' => true,
+            'superscript' => true,
+        ],
+        'headings' => [
+            'auto_anchors' => true,
+            'special_attributes' => true,
+        ],
+        'links' => [
+            'external_links' => true,
+        ],
+        'lists' => [
+            'tasks' => true,
+        ],
+        'math' => true,
+        'smartypants' => true,
+        'tables' => [
+            'tablespan' => true,
+        ],
+        'toc' => true,
+        'typographer' => true,
+    ];
+}
+
+function individualExtensionConfigs(): array
+{
+    return [
+        'Abbreviations predefined' => [
+            'abbreviations' => [
+                'predefined' => [
+                    'HTML' => 'HyperText Markup Language',
+                ],
+            ],
+        ],
+        'Alerts' => ['alerts' => true],
+        'Diagrams' => [
+            'diagrams' => [
+                'enabled' => true,
+                'chartjs' => true,
+                'mermaid' => true,
+            ],
+        ],
+        'Emoji' => ['emojis' => true],
+        'External link processing' => [
+            'links' => [
+                'external_links' => true,
+            ],
+        ],
+        'Heading anchors' => [
+            'headings' => [
+                'auto_anchors' => true,
+            ],
+        ],
+        'Heading attributes' => [
+            'headings' => [
+                'special_attributes' => true,
+            ],
+        ],
+        'Insertions' => [
+            'emphasis' => [
+                'insertions' => true,
+            ],
+        ],
+        'Keystrokes' => [
+            'emphasis' => [
+                'keystrokes' => true,
+            ],
+        ],
+        'Marking' => [
+            'emphasis' => [
+                'mark' => true,
+            ],
+        ],
+        'Math' => ['math' => true],
+        'Smartypants' => ['smartypants' => true],
+        'Strikethrough' => [
+            'emphasis' => [
+                'strikethroughs' => true,
+            ],
+        ],
+        'Subscript' => [
+            'emphasis' => [
+                'subscript' => true,
+            ],
+        ],
+        'Superscript' => [
+            'emphasis' => [
+                'superscript' => true,
+            ],
+        ],
+        'Tablespan' => [
+            'tables' => [
+                'tablespan' => true,
+            ],
+        ],
+        'Task lists' => [
+            'lists' => [
+                'tasks' => true,
+            ],
+        ],
+        'TOC' => [
+            'toc' => true,
+            'headings' => [
+                'auto_anchors' => true,
+            ],
+        ],
+        'Typographer' => ['typographer' => true],
+    ];
+}
+
+function mergeConfig(array $base, array $overrides): array
+{
+    foreach ($overrides as $key => $value) {
+        if (is_array($value) && isset($base[$key]) && is_array($base[$key])) {
+            $base[$key] = mergeConfig($base[$key], $value);
+            continue;
+        }
+
+        $base[$key] = $value;
+    }
+
+    return $base;
+}
 
 function isAbsolutePath(string $path): bool
 {
@@ -236,6 +454,47 @@ function printParserComparison(array $comparison, array $parserFactories, bool $
     printTable($headers, $rows);
 }
 
+/**
+ * @param list<string> $scenarioNames
+ */
+function printExtensionImpact(array $comparison, array $scenarioNames, bool $useColor, bool $includeMemory): void
+{
+    echo colorize('Extension Impact', 'bold', $useColor) . PHP_EOL;
+
+    $baselineName = 'Baseline parser';
+    $baselineTime = $comparison['averages'][$baselineName]['time'];
+    $baselineMemory = $comparison['averages'][$baselineName]['memory'];
+
+    $headers = ['Scenario', 'Average', 'Overhead', 'Impact', 'Relative'];
+    if ($includeMemory) {
+        $headers[] = 'Memory delta';
+    }
+
+    $rows = [];
+    foreach ($scenarioNames as $scenarioName) {
+        $average = $comparison['averages'][$scenarioName];
+        $time = $average['time'];
+        $overhead = $time - $baselineTime;
+        $impact = $baselineTime > 0 ? ($overhead / $baselineTime) * 100 : 0.0;
+
+        $row = [
+            $scenarioName,
+            formatMs($time),
+            formatSignedMs($overhead),
+            formatSignedPercent($impact),
+            $scenarioName === $baselineName ? 'baseline' : formatComparison($time, $baselineTime, $useColor),
+        ];
+
+        if ($includeMemory) {
+            $row[] = formatSignedBytes($average['memory'] - $baselineMemory);
+        }
+
+        $rows[] = $row;
+    }
+
+    printTable($headers, $rows);
+}
+
 function colorize(string $text, string $color, bool $enabled): string
 {
     if (!$enabled) {
@@ -269,6 +528,18 @@ function formatMs(float $seconds): string
     return '~ ' . number_format($seconds * 1000, 2) . ' ms';
 }
 
+function formatSignedMs(float $seconds): string
+{
+    $sign = $seconds >= 0 ? '+' : '-';
+    return $sign . number_format(abs($seconds) * 1000, 2) . ' ms';
+}
+
+function formatSignedPercent(float $percent): string
+{
+    $sign = $percent >= 0 ? '+' : '-';
+    return $sign . number_format(abs($percent), 1) . '%';
+}
+
 function formatBytes(int $bytes): string
 {
     if ($bytes >= 1048576) {
@@ -280,6 +551,12 @@ function formatBytes(int $bytes): string
     }
 
     return $bytes . ' B';
+}
+
+function formatSignedBytes(int $bytes): string
+{
+    $sign = $bytes >= 0 ? '+' : '-';
+    return $sign . formatBytes(abs($bytes));
 }
 
 function formatComparison(float $time, float $baseTime, bool $useColor): string
