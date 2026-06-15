@@ -88,6 +88,17 @@ class HeadingsTest extends TestCase
         $this->assertEquals($expected, $actual);
     }
 
+    public function testDuplicateAnchorStateResetsBetweenParses()
+    {
+        $this->parsedownExtended->config()->set('headings.auto_anchors', true);
+
+        $this->parsedownExtended->text("# Title\n# Title");
+
+        $actual = $this->parsedownExtended->text('# Title');
+
+        $this->assertEquals('<h1 id="title">Title</h1>', $actual);
+    }
+
     /**
      * Test case for heading with custom anchor.
      */

@@ -315,6 +315,16 @@ class TocTest extends TestCase
         $this->assertEquals($expected, $actual);
     }
 
+    public function testTocStateDoesNotLeakBetweenParses()
+    {
+        $first = $this->parsedownExtended->text("[TOC]\n\n# First");
+        $second = $this->parsedownExtended->text("[TOC]\n\n# Second");
+
+        $this->assertStringContainsString('#first', $first);
+        $this->assertStringNotContainsString('#first', $second);
+        $this->assertStringContainsString('#second', $second);
+    }
+
     public function testContentsListInvalidReturnType()
     {
         $this->expectException(InvalidArgumentException::class);

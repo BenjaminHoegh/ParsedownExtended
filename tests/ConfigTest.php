@@ -206,4 +206,15 @@ class ConfigTest extends TestCase
         $this->assertFalse($first->config()->get('emojis'), 'First instance should reflect its own config change');
         $this->assertTrue($second->config()->get('emojis'), 'Second instance should not be affected by first instance changes');
     }
+
+    public function testRuntimeConfigSetAffectsLaterParses()
+    {
+        $parsedownExtended = new ParsedownExtended();
+
+        $this->assertEquals('<p>Use <code>code</code> here</p>', $parsedownExtended->text('Use `code` here'));
+
+        $parsedownExtended->config()->set('code.inline', false);
+
+        $this->assertEquals('<p>Use `code` here</p>', $parsedownExtended->text('Use `code` here'));
+    }
 }
