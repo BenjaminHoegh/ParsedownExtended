@@ -90,11 +90,23 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
     /** @var array $payload Stores non-boolean settings for the instance. */
     private array $payload;   // non‑boolean settings
 
+    /** @var array<string, list<string>> Cached inline handlers for currently enabled features. */
+    private array $activeInlineTypes = [];
+
     /** @var string $activeInlineMarkerList Cached marker list for currently enabled inline handlers. */
     private string $activeInlineMarkerList = '';
 
-    /** @var bool $activeInlineMarkerListValid Whether the active inline marker list reflects current config. */
-    private bool $activeInlineMarkerListValid = false;
+    /** @var bool $activeInlineTypesValid Whether the active inline handler cache reflects current config. */
+    private bool $activeInlineTypesValid = false;
+
+    /** @var array<string, list<string>> Cached block handlers for currently enabled features. */
+    private array $activeBlockTypes = [];
+
+    /** @var list<string> Cached unmarked block handlers for currently enabled features. */
+    private array $activeUnmarkedBlockTypes = [];
+
+    /** @var bool $activeBlockTypesValid Whether the active block handler cache reflects current config. */
+    private bool $activeBlockTypesValid = false;
 
     /**
      * Constructor for ParsedownExtended.
@@ -238,35 +250,80 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
      */
     private function configurationChanged(): void
     {
+        $this->activeInlineTypes = [];
         $this->activeInlineMarkerList = '';
-        $this->activeInlineMarkerListValid = false;
+        $this->activeInlineTypesValid = false;
+        $this->activeBlockTypes = [];
+        $this->activeUnmarkedBlockTypes = [];
+        $this->activeBlockTypesValid = false;
         $this->clearExtensionEnabledCache();
         $this->clearSmartypantsSubstitutionCache();
     }
 
     /**
-     * Builds the marker list used by strpbrk from enabled inline handlers only.
+     * Builds the inline handler map and marker list used by strpbrk from enabled handlers only.
      */
-    private function getActiveInlineMarkerList(): string
+    private function getActiveInlineTypes(): array
     {
-        if ($this->activeInlineMarkerListValid) {
-            return $this->activeInlineMarkerList;
+        if ($this->activeInlineTypesValid) {
+            return $this->activeInlineTypes;
         }
 
+        $activeInlineTypes = [];
         $markerList = '';
         foreach (str_split($this->inlineMarkerList) as $marker) {
+            if (!isset($this->InlineTypes[$marker])) {
+                continue;
+            }
+
             foreach ($this->InlineTypes[$marker] as $inlineType) {
                 if ($this->inlineTypeEnabled($inlineType)) {
-                    $markerList .= $marker;
-                    continue 2;
+                    $activeInlineTypes[$marker][] = $inlineType;
+                }
+            }
+
+            if (isset($activeInlineTypes[$marker])) {
+                $markerList .= $marker;
+            }
+        }
+
+        $this->activeInlineTypes = $activeInlineTypes;
+        $this->activeInlineMarkerList = $markerList;
+        $this->activeInlineTypesValid = true;
+
+        return $this->activeInlineTypes;
+    }
+
+    /**
+     * Builds block handler maps from currently enabled handlers only.
+     */
+    private function getActiveBlockTypes(): array
+    {
+        if ($this->activeBlockTypesValid) {
+            return $this->activeBlockTypes;
+        }
+
+        $activeBlockTypes = [];
+        foreach ($this->BlockTypes as $marker => $blockTypes) {
+            foreach ($blockTypes as $blockType) {
+                if ($this->blockTypeEnabled($blockType)) {
+                    $activeBlockTypes[$marker][] = $blockType;
                 }
             }
         }
 
-        $this->activeInlineMarkerList = $markerList;
-        $this->activeInlineMarkerListValid = true;
+        $activeUnmarkedBlockTypes = [];
+        foreach ($this->unmarkedBlockTypes as $blockType) {
+            if ($this->blockTypeEnabled($blockType)) {
+                $activeUnmarkedBlockTypes[] = $blockType;
+            }
+        }
 
-        return $this->activeInlineMarkerList;
+        $this->activeBlockTypes = $activeBlockTypes;
+        $this->activeUnmarkedBlockTypes = $activeUnmarkedBlockTypes;
+        $this->activeBlockTypesValid = true;
+
+        return $this->activeBlockTypes;
     }
 
     /**
@@ -314,6 +371,8 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
     {
         $Elements = [];
         $CurrentBlock = null;
+        $activeBlockTypes = $this->getActiveBlockTypes();
+        $activeUnmarkedBlockTypes = $this->activeUnmarkedBlockTypes;
 
         foreach ($lines as $line) {
             if (chop($line) === '') {
@@ -355,20 +414,16 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
             }
 
             $marker = $text[0];
-            $blockTypes = $this->unmarkedBlockTypes;
+            $blockTypes = $activeUnmarkedBlockTypes;
 
-            if (isset($this->BlockTypes[$marker])) {
-                foreach ($this->BlockTypes[$marker] as $blockType) {
+            if (isset($activeBlockTypes[$marker])) {
+                foreach ($activeBlockTypes[$marker] as $blockType) {
                     $blockTypes[] = $blockType;
                 }
             }
 
             $Block = null;
             foreach ($blockTypes as $blockType) {
-                if (!$this->blockTypeEnabled($blockType)) {
-                    continue;
-                }
-
                 $Block = $this->{"block$blockType"}($Line, $CurrentBlock);
 
                 if (isset($Block)) {
@@ -462,9 +517,10 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
             ? []
             : array_fill_keys($nonNestables, true);
 
-        $inlineMarkerList = $this->getActiveInlineMarkerList();
+        $activeInlineTypes = $this->getActiveInlineTypes();
+        $inlineMarkerList = $this->activeInlineMarkerList;
 
-        while ($ExcerptStr = strpbrk($text, $inlineMarkerList)) {
+        while ($inlineMarkerList !== '' && ($ExcerptStr = strpbrk($text, $inlineMarkerList))) {
             $marker = $ExcerptStr[0];
             $markerPosition = strlen($text) - strlen($ExcerptStr);
 
@@ -474,11 +530,7 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
                 'before' => $markerPosition > 0 ? $text[$markerPosition - 1] : '',
             ];
 
-            foreach ($this->InlineTypes[$marker] as $inlineType) {
-                if (!$this->inlineTypeEnabled($inlineType)) {
-                    continue;
-                }
-
+            foreach ($activeInlineTypes[$marker] as $inlineType) {
                 if (isset($nonNestables[$inlineType])) {
                     continue;
                 }

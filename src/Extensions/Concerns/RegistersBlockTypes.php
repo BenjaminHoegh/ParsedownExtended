@@ -86,6 +86,8 @@ trait RegistersBlockTypes
             );
         }
 
+        $this->configurationChanged();
+
         return $this;
     }
 
