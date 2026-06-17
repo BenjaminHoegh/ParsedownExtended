@@ -18,6 +18,11 @@ trait InlineCodeExtension
      */
     protected function inlineCode($Excerpt)
     {
+        $marker = $Excerpt['text'][0];
+        if (!isset($Excerpt['text'][1]) || strpos($Excerpt['text'], $marker, 1) === false) {
+            return null;
+        }
+
         if ($this->configEnabled('code') && $this->configEnabled('code.inline')) {
             return parent::inlineCode($Excerpt);
         }

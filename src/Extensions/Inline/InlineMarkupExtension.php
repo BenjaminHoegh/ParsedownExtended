@@ -18,6 +18,10 @@ trait InlineMarkupExtension
      */
     protected function inlineMarkup($Excerpt)
     {
+        if (strpos($Excerpt['text'], '>') === false) {
+            return null;
+        }
+
         if ($this->configEnabled('allow_raw_html')) {
             return parent::inlineMarkup($Excerpt);
         }

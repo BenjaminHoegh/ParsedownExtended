@@ -57,14 +57,15 @@ trait HeadingExtension
                 return null; // Return null if the heading level is not allowed
             }
 
-            // Generate an anchor ID for the header element
-            // If an ID attribute is not set, use the text to create the ID
-            $id = $Block['element']['attributes']['id'] ?? $text;
-            $id = $this->createAnchorID($id);
+            $id = null;
+            if ($this->configEnabled('headings.auto_anchors')) {
+                // If an ID attribute is not set, use the text to create the ID.
+                $id = $Block['element']['attributes']['id'] ?? $text;
+                $id = $this->createAnchorID($id);
 
-            // Set the 'id' attribute only when an anchor ID is generated
-            if ($id !== null) {
-                $Block['element']['attributes']['id'] = $id;
+                if ($id !== null) {
+                    $Block['element']['attributes']['id'] = $id;
+                }
             }
 
             // Check if the heading level should be included in the Table of Contents (TOC)
@@ -114,14 +115,15 @@ trait HeadingExtension
                 return null; // Return null if the heading level is not allowed
             }
 
-            // Generate an anchor ID for the header element
-            // If an ID attribute is not set, use the text to create the ID
-            $id = $Block['element']['attributes']['id'] ?? $text;
-            $id = $this->createAnchorID($id);
+            $id = null;
+            if ($this->configEnabled('headings.auto_anchors')) {
+                // If an ID attribute is not set, use the text to create the ID.
+                $id = $Block['element']['attributes']['id'] ?? $text;
+                $id = $this->createAnchorID($id);
 
-            // Set the 'id' attribute only when an anchor ID is generated
-            if ($id !== null) {
-                $Block['element']['attributes']['id'] = $id;
+                if ($id !== null) {
+                    $Block['element']['attributes']['id'] = $id;
+                }
             }
 
             // Check if the heading level should be included in the Table of Contents (TOC)

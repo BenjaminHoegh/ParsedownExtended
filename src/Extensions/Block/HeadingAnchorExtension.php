@@ -141,9 +141,6 @@ trait HeadingAnchorExtension
      */
     protected function uniquifyAnchorID(string $text): string
     {
-        // Retrieve the blacklist of forbidden anchor IDs from the configuration
-        $blacklist = $this->configValue('headings.auto_anchors.blacklist');
-
         // Store the original text to use as the base for creating unique variants
         $originalText = $text;
 
@@ -160,7 +157,7 @@ trait HeadingAnchorExtension
             $potentialId = $originalText . ($this->anchorRegister[$text] > 0 ? '-' . $this->anchorRegister[$text] : '');
 
             // Check if the potential ID is not blacklisted
-            if (!in_array($potentialId, $blacklist)) {
+            if (!$this->configValueSetContains('headings.auto_anchors.blacklist', $potentialId)) {
                 break; // The ID is valid and not blacklisted, so we can use it
             }
 

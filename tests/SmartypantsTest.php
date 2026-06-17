@@ -71,4 +71,24 @@ class SmartypantsTest extends TestCase
         $this->parsedownExtended->config()->set('smartypants.substitutions.mdash', '[dash]');
         $this->assertEquals('<p>Before [dash] after</p>', $this->parsedownExtended->text($markdown));
     }
+
+    public function testSmartypantsDashesAndEllipses(): void
+    {
+        $this->parsedownExtended->config()->set('smartypants', true);
+
+        $markdown = 'a -- b --- c ...';
+
+        $this->assertEquals('<p>a – b — c …</p>', $this->parsedownExtended->text($markdown));
+    }
+
+    public function testSmartypantsDashAndEllipsisRulesCanBeDisabled(): void
+    {
+        $this->parsedownExtended->config()->set('smartypants', true);
+        $this->parsedownExtended->config()->set('smartypants.smart_dashes', false);
+        $this->parsedownExtended->config()->set('smartypants.smart_ellipses', false);
+
+        $markdown = 'a -- b --- c ...';
+
+        $this->assertEquals('<p>a -- b --- c ...</p>', $this->parsedownExtended->text($markdown));
+    }
 }

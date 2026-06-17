@@ -24,7 +24,7 @@ trait LinkExtension
      */
     protected function inlineLink($Excerpt)
     {
-        if (!$this->configEnabled('links')) {
+        if (strpos($Excerpt['text'], ']') === false || !$this->configEnabled('links')) {
             return null;
         }
 
@@ -43,7 +43,7 @@ trait LinkExtension
      */
     protected function inlineUrl($Excerpt)
     {
-        if (!$this->configEnabled('links')) {
+        if (!isset($Excerpt['text'][2]) || $Excerpt['text'][2] !== '/' || !$this->configEnabled('links')) {
             return null;
         }
 
@@ -62,7 +62,7 @@ trait LinkExtension
      */
     protected function inlineUrlTag($Excerpt)
     {
-        if (!$this->configEnabled('links')) {
+        if (strpos($Excerpt['text'], '>') === false || !$this->configEnabled('links')) {
             return null;
         }
 
@@ -81,7 +81,11 @@ trait LinkExtension
      */
     protected function inlineEmailTag($Excerpt)
     {
-        if (!$this->configEnabled('links') || !$this->configEnabled('links.email_links')) {
+        if (
+            strpos($Excerpt['text'], '>') === false ||
+            !$this->configEnabled('links') ||
+            !$this->configEnabled('links.email_links')
+        ) {
             return null;
         }
 

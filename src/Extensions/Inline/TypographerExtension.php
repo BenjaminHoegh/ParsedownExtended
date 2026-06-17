@@ -64,6 +64,10 @@ trait TypographerExtension
                 ];
             }
         } elseif ($first === '!' || $first === '?') {
+            if (!isset($text[1]) || $text[1] !== '.') {
+                return null;
+            }
+
             $dots = strspn($text, '.', 1);
             if ($dots >= 3) {
                 return [
@@ -74,6 +78,10 @@ trait TypographerExtension
                 ];
             }
         } elseif ($first === '.') {
+            if (!isset($text[1]) || $text[1] !== '.') {
+                return null;
+            }
+
             $dots = strspn($text, '.');
             if ($dots >= 2) {
                 static $lastEllipsesKey = null;

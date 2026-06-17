@@ -18,7 +18,7 @@ trait EmphasisExtension
      */
     protected function inlineEmphasis($Excerpt)
     {
-        if (!$this->configEnabled('emphasis') || !isset($Excerpt['text'][1])) {
+        if (!isset($Excerpt['text'][1]) || !$this->configEnabled('emphasis')) {
             return null; // If emphasis is disabled or the excerpt is too short, return null
         }
 

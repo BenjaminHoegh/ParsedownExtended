@@ -18,6 +18,10 @@ trait InlineImageExtension
      */
     protected function inlineImage($Excerpt)
     {
+        if (!isset($Excerpt['text'][1]) || $Excerpt['text'][1] !== '[') {
+            return null;
+        }
+
         if ($this->configEnabled('images')) {
             return parent::inlineImage($Excerpt);
         }

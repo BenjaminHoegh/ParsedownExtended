@@ -30,28 +30,34 @@ trait SmartypantsExtension
 
         $text = $Excerpt['text'];
         $first = $text[0] ?? '';
-        $supportedMarker = $first === '`' || $first === '"' || $first === "'" || $first === '<' || $first === '-' || $first === '.';
 
         if (
-            ($first === '`' && !$this->configEnabled('smartypants.smart_backticks')) ||
-            (($first === '"' || $first === "'") && !$this->configEnabled('smartypants.smart_quotes')) ||
-            ($first === '<' && !$this->configEnabled('smartypants.smart_angled_quotes')) ||
-            ($first === '-' && !$this->configEnabled('smartypants.smart_dashes')) ||
-            ($first === '.' && !$this->configEnabled('smartypants.smart_ellipses')) ||
-            !$supportedMarker
+            $first !== '`' &&
+            $first !== '"' &&
+            $first !== "'" &&
+            $first !== '<' &&
+            $first !== '-' &&
+            $first !== '.'
         ) {
             return null;
         }
 
-        $substitutions = $this->getSmartypantsSubstitutions();
+        $before = $Excerpt['before'] ?? '';
+        $hasNonWhitespaceBefore = $before !== '' && trim($before) !== '';
 
         // ``like this''
         if ('`' === $first) {
-            if (preg_match('/^``(?!\s)([^"\'`]+)\'\'/i', $text, $matches)) {
-                if (strlen(trim($Excerpt['before'])) > 0) {
-                    return null;
-                }
+            if (
+                !$this->configEnabled('smartypants.smart_backticks') ||
+                $hasNonWhitespaceBefore ||
+                !isset($text[1]) ||
+                $text[1] !== '`'
+            ) {
+                return null;
+            }
 
+            $substitutions = $this->getSmartypantsSubstitutions();
+            if (preg_match('/^``(?!\s)([^"\'`]+)\'\'/i', $text, $matches)) {
                 return [
                     'extent' => strlen($matches[0]),
                     'element' => [
@@ -63,11 +69,18 @@ trait SmartypantsExtension
 
         // "like this" or 'like this'
         if ('"' === $first || "'" === $first) {
-            if (preg_match('/^(\")(?!\s)([^\"]+)\"|^(?<!\w)(\')(?!\s)([^\']+)\'/i', $text, $matches)) {
-                if (strlen(trim($Excerpt['before'])) > 0) {
-                    return null;
-                }
+            if (
+                !$this->configEnabled('smartypants.smart_quotes') ||
+                $hasNonWhitespaceBefore ||
+                !isset($text[1]) ||
+                ctype_space($text[1]) ||
+                strpos($text, $first, 1) === false
+            ) {
+                return null;
+            }
 
+            $substitutions = $this->getSmartypantsSubstitutions();
+            if (preg_match('/^(\")(?!\s)([^\"]+)\"|^(?<!\w)(\')(?!\s)([^\']+)\'/i', $text, $matches)) {
                 if (isset($matches[3]) && $matches[3] === "'") {
                     return [
                         'extent' => strlen($matches[0]),
@@ -88,11 +101,17 @@ trait SmartypantsExtension
 
         // <<like this>>
         if ('<' === $first) {
-            if (preg_match('/^<{2}(?!\s)([^<>]+)>{2}/i', $text, $matches)) {
-                if (strlen(trim($Excerpt['before'])) > 0) {
-                    return null;
-                }
+            if (
+                !$this->configEnabled('smartypants.smart_angled_quotes') ||
+                $hasNonWhitespaceBefore ||
+                !isset($text[1]) ||
+                $text[1] !== '<'
+            ) {
+                return null;
+            }
 
+            $substitutions = $this->getSmartypantsSubstitutions();
+            if (preg_match('/^<{2}(?!\s)([^<>]+)>{2}/i', $text, $matches)) {
                 return [
                     'extent' => strlen($matches[0]),
                     'element' => [
@@ -104,32 +123,43 @@ trait SmartypantsExtension
 
         // -- or ---
         if ('-' === $first) {
-            if (preg_match('/^(-{2,3})(?!-)/', $text, $matches)) {
-                if ('---' === $matches[1]) {
-                    return [
-                        'extent' => strlen($matches[1]),
-                        'element' => [
-                            'text' => $substitutions['mdash'],
-                        ],
-                    ];
-                }
+            if (!$this->configEnabled('smartypants.smart_dashes') || !isset($text[1]) || $text[1] !== '-') {
+                return null;
+            }
 
-                if ('--' === $matches[1]) {
-                    return [
-                        'extent' => 2,
-                        'element' => [
-                            'text' => $substitutions['ndash'],
-                        ],
-                    ];
-                }
+            $substitutions = $this->getSmartypantsSubstitutions();
+            if (isset($text[2]) && $text[2] === '-' && (!isset($text[3]) || $text[3] !== '-')) {
+                return [
+                    'extent' => 3,
+                    'element' => [
+                        'text' => $substitutions['mdash'],
+                    ],
+                ];
+            }
+
+            if (!isset($text[2]) || $text[2] !== '-') {
+                return [
+                    'extent' => 2,
+                    'element' => [
+                        'text' => $substitutions['ndash'],
+                    ],
+                ];
             }
         }
 
         // ...
         if ('.' === $first) {
-            if (preg_match('/^(?<!\.)(\.{3})(?!\.)/i', $text, $matches)) {
+            if (
+                $this->configEnabled('smartypants.smart_ellipses') &&
+                isset($text[1], $text[2]) &&
+                $text[1] === '.' &&
+                $text[2] === '.' &&
+                (!isset($text[3]) || $text[3] !== '.')
+            ) {
+                $substitutions = $this->getSmartypantsSubstitutions();
+
                 return [
-                    'extent' => strlen($matches[0]),
+                    'extent' => 3,
                     'element' => [
                         'text' => $substitutions['ellipses'],
                     ],

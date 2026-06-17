@@ -17,6 +17,13 @@ trait BlockCodeExtension
      */
     protected function blockCode($Line, $Block = null)
     {
+        if (
+            (isset($Block) && $Block['type'] === 'Paragraph' && !isset($Block['interrupted'])) ||
+            $Line['indent'] < 4
+        ) {
+            return null;
+        }
+
         // Check if code blocks are enabled
         if ($this->configEnabled('code') && $this->configEnabled('code.blocks')) {
             return parent::blockCode($Line, $Block); // Delegate to parent class
