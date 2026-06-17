@@ -75,6 +75,12 @@ $extensionFactories = extensionImpactFactories();
 $extensionComparison = benchmarkParsers($markdownFiles, $extensionFactories, $iterations, $warmup, $includeMemory);
 printExtensionImpact($extensionComparison, array_keys($extensionFactories), $useColor, $includeMemory);
 
+echo PHP_EOL;
+
+$coreFactories = coreFeatureImpactFactories();
+$coreComparison = benchmarkParsers($markdownFiles, $coreFactories, $iterations, $warmup, $includeMemory);
+printExtensionImpact($coreComparison, array_keys($coreFactories), $useColor, $includeMemory, 'Core Feature Impact', 'All optional disabled');
+
 /**
  * @return array<string, callable(): object>
  */
@@ -117,6 +123,29 @@ function extensionImpactFactories(): array
     ];
 
     foreach (individualExtensionConfigs() as $name => $config) {
+        $scenarioConfig = mergeConfig($optionalDisabled, $config);
+        $factories[$name] = function () use ($scenarioConfig): ParsedownExtended {
+            return new ParsedownExtended($scenarioConfig);
+        };
+    }
+
+    return $factories;
+}
+
+/**
+ * @return array<string, callable(): object>
+ */
+function coreFeatureImpactFactories(): array
+{
+    $optionalDisabled = optionalExtensionsDisabledConfig();
+
+    $factories = [
+        'All optional disabled' => function () use ($optionalDisabled): ParsedownExtended {
+            return new ParsedownExtended($optionalDisabled);
+        },
+    ];
+
+    foreach (coreFeatureDisabledConfigs() as $name => $config) {
         $scenarioConfig = mergeConfig($optionalDisabled, $config);
         $factories[$name] = function () use ($scenarioConfig): ParsedownExtended {
             return new ParsedownExtended($scenarioConfig);
@@ -281,6 +310,52 @@ function individualExtensionConfigs(): array
             ],
         ],
         'Typographer' => ['typographer' => true],
+    ];
+}
+
+function coreFeatureDisabledConfigs(): array
+{
+    return [
+        'No abbreviations' => ['abbreviations' => false],
+        'No code' => ['code' => false],
+        'No inline code' => [
+            'code' => [
+                'inline' => false,
+            ],
+        ],
+        'No block code' => [
+            'code' => [
+                'blocks' => false,
+            ],
+        ],
+        'No comments' => ['comments' => false],
+        'No definition lists' => ['definition_lists' => false],
+        'No emphasis' => ['emphasis' => false],
+        'No bold emphasis' => [
+            'emphasis' => [
+                'bold' => false,
+            ],
+        ],
+        'No italic emphasis' => [
+            'emphasis' => [
+                'italic' => false,
+            ],
+        ],
+        'No footnotes' => ['footnotes' => false],
+        'No headings' => ['headings' => false],
+        'No images' => ['images' => false],
+        'No links' => ['links' => false],
+        'No email links' => [
+            'links' => [
+                'email_links' => false,
+            ],
+        ],
+        'No lists' => ['lists' => false],
+        'No raw HTML' => ['allow_raw_html' => false],
+        'No quotes' => ['quotes' => false],
+        'No references' => ['references' => false],
+        'No tables' => ['tables' => false],
+        'No thematic breaks' => ['thematic_breaks' => false],
     ];
 }
 
@@ -457,11 +532,17 @@ function printParserComparison(array $comparison, array $parserFactories, bool $
 /**
  * @param list<string> $scenarioNames
  */
-function printExtensionImpact(array $comparison, array $scenarioNames, bool $useColor, bool $includeMemory): void
+function printExtensionImpact(
+    array $comparison,
+    array $scenarioNames,
+    bool $useColor,
+    bool $includeMemory,
+    string $title = 'Extension Impact',
+    string $baselineName = 'Baseline parser'
+): void
 {
-    echo colorize('Extension Impact', 'bold', $useColor) . PHP_EOL;
+    echo colorize($title, 'bold', $useColor) . PHP_EOL;
 
-    $baselineName = 'Baseline parser';
     $baselineTime = $comparison['averages'][$baselineName]['time'];
     $baselineMemory = $comparison['averages'][$baselineName]['memory'];
 
