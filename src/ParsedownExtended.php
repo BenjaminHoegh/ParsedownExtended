@@ -69,6 +69,9 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
     /** @var list<string> Cached unmarked block handlers for currently enabled features. */
     private array $activeUnmarkedBlockTypes = [];
 
+    /** @var array<string, list<string>> Cached block dispatch candidates keyed by marker. */
+    private array $activeBlockCandidateTypes = [];
+
     /** @var bool $activeBlockTypesValid Whether the active block handler cache reflects current config. */
     private bool $activeBlockTypesValid = false;
 
@@ -251,6 +254,7 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
         $this->activeInlineTypesValid = false;
         $this->activeBlockTypes = [];
         $this->activeUnmarkedBlockTypes = [];
+        $this->activeBlockCandidateTypes = [];
         $this->activeBlockTypesValid = false;
         $this->configValueSetCache = [];
         $this->clearExtensionEnabledCache();
@@ -324,8 +328,14 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
             }
         }
 
+        $activeBlockCandidateTypes = [];
+        foreach ($activeBlockTypes as $marker => $blockTypes) {
+            $activeBlockCandidateTypes[$marker] = array_merge($activeUnmarkedBlockTypes, $blockTypes);
+        }
+
         $this->activeBlockTypes = $activeBlockTypes;
         $this->activeUnmarkedBlockTypes = $activeUnmarkedBlockTypes;
+        $this->activeBlockCandidateTypes = $activeBlockCandidateTypes;
         $this->activeBlockTypesValid = true;
 
         return $this->activeBlockTypes;
@@ -379,7 +389,8 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
     {
         $Elements = [];
         $CurrentBlock = null;
-        $activeBlockTypes = $this->getActiveBlockTypes();
+        $this->getActiveBlockTypes();
+        $activeBlockTypes = $this->activeBlockCandidateTypes;
         $activeUnmarkedBlockTypes = $this->activeUnmarkedBlockTypes;
 
         foreach ($lines as $line) {
@@ -422,13 +433,7 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
             }
 
             $marker = $text[0];
-            $blockTypes = $activeUnmarkedBlockTypes;
-
-            if (isset($activeBlockTypes[$marker])) {
-                foreach ($activeBlockTypes[$marker] as $blockType) {
-                    $blockTypes[] = $blockType;
-                }
-            }
+            $blockTypes = $activeBlockTypes[$marker] ?? $activeUnmarkedBlockTypes;
 
             $Block = null;
             foreach ($blockTypes as $blockType) {
