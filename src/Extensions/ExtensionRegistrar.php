@@ -44,54 +44,28 @@ trait ExtensionRegistrar
     private function registerCoreExtensionMetadata(): void
     {
         foreach ($this->coreInlineExtensionDefinitions() as $definition) {
-            $this->registerInlineExtensionMetadata($definition['type'], $definition['config'] ?? []);
+            $this->registerInlineExtensionMetadata($definition->type(), $definition->configPaths());
         }
 
         foreach ($this->coreBlockExtensionDefinitions() as $definition) {
-            $this->registerBlockExtensionMetadata($definition['type'], $definition['config'] ?? []);
+            $this->registerBlockExtensionMetadata($definition->type(), $definition->configPaths());
         }
     }
 
     /**
-     * @return list<array{type: string, config?: list<string>}>
+     * @return list<InlineExtensionDefinition>
      */
     private function coreInlineExtensionDefinitions(): array
     {
-        return [
-            ['type' => 'Code', 'config' => ['code', 'code.inline']],
-            ['type' => 'Image', 'config' => ['images']],
-            ['type' => 'Markup', 'config' => ['allow_raw_html']],
-            ['type' => 'Link', 'config' => ['links']],
-            ['type' => 'Url', 'config' => ['links']],
-            ['type' => 'UrlTag', 'config' => ['links']],
-            ['type' => 'EmailTag', 'config' => ['links', 'links.email_links']],
-            ['type' => 'FootnoteMarker', 'config' => ['footnotes']],
-            ['type' => 'Emphasis', 'config' => ['emphasis']],
-            ['type' => 'Strikethrough', 'config' => ['emphasis', 'emphasis.strikethroughs']],
-        ];
+        return ExtensionDefinitions::coreInline();
     }
 
     /**
-     * @return list<array{type: string, config?: list<string>}>
+     * @return list<BlockExtensionDefinition>
      */
     private function coreBlockExtensionDefinitions(): array
     {
-        return [
-            ['type' => 'Code', 'config' => ['code', 'code.blocks']],
-            ['type' => 'FencedCode', 'config' => ['code', 'code.blocks']],
-            ['type' => 'Header', 'config' => ['headings']],
-            ['type' => 'SetextHeader', 'config' => ['headings']],
-            ['type' => 'Rule', 'config' => ['thematic_breaks']],
-            ['type' => 'List', 'config' => ['lists']],
-            ['type' => 'Table', 'config' => ['tables']],
-            ['type' => 'Comment', 'config' => ['comments']],
-            ['type' => 'Markup', 'config' => ['allow_raw_html']],
-            ['type' => 'Quote', 'config' => ['quotes']],
-            ['type' => 'Reference', 'config' => ['references']],
-            ['type' => 'DefinitionList', 'config' => ['definition_lists']],
-            ['type' => 'Abbreviation', 'config' => ['abbreviations']],
-            ['type' => 'Footnote', 'config' => ['footnotes']],
-        ];
+        return ExtensionDefinitions::coreBlock();
     }
 
     /**

@@ -217,4 +217,5 @@ class ConfigTest extends TestCase
 
         $this->assertEquals('<p>Use `code` here</p>', $parsedownExtended->text('Use `code` here'));
     }
+
 }

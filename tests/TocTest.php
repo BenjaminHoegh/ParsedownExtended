@@ -292,6 +292,18 @@ class TocTest extends TestCase
         $this->assertSame($expected, $actual);
     }
 
+    public function testContentsListJsonAvailableAfterTextWithTocTag()
+    {
+        $this->parsedownExtended->config()->set('headings.auto_anchors', true);
+
+        $this->parsedownExtended->text("[TOC]\n\n# Heading");
+
+        $expected = '[{"text":"Heading","id":"heading","level":"h1"}]';
+        $actual = $this->parsedownExtended->contentsList('json');
+
+        $this->assertSame($expected, $actual);
+    }
+
     public function testTocStateResetsBetweenParses()
     {
         $this->parsedownExtended->config()->set('headings.auto_anchors', true);

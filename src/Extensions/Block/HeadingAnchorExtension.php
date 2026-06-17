@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace BenjaminHoegh\ParsedownExtended\Extensions\Toc;
+namespace BenjaminHoegh\ParsedownExtended\Extensions\Block;
 
-trait AnchorExtension
+trait HeadingAnchorExtension
 {
     /** @var array $anchorRegister Registry for anchors generated during parsing */
     private array $anchorRegister = [];
@@ -26,6 +26,11 @@ trait AnchorExtension
     public function setCreateAnchorIDCallback(callable $callback): void
     {
         $this->createAnchorIDCallback = $callback;
+    }
+
+    protected function resetAnchorRegister(): void
+    {
+        $this->anchorRegister = [];
     }
 
     /**

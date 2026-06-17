@@ -53,7 +53,7 @@ trait HeadingExtension
             $level = $Block['element']['name'];
 
             // Check if the header level is allowed (e.g., h1, h2, etc.)
-            if (!in_array($level, $this->configValue('headings.allowed_levels'))) {
+            if (!$this->configValueSetContains('headings.allowed_levels', $level)) {
                 return null; // Return null if the heading level is not allowed
             }
 
@@ -69,7 +69,7 @@ trait HeadingExtension
 
             // Check if the heading level should be included in the Table of Contents (TOC)
             // Also ensure we skip adding it to TOC if it is disabled in the config
-            if (!$this->configEnabled('toc') || !in_array($level, $this->configValue('toc.levels'))) {
+            if (!$this->configEnabled('toc') || !$this->configValueSetContains('toc.levels', $level)) {
                 return $Block; // Return the block if it should not be part of the TOC
             }
 
@@ -110,7 +110,7 @@ trait HeadingExtension
             $level = $Block['element']['name'];
 
             // Check if the header level is allowed (e.g., h1, h2, etc.)
-            if (!in_array($level, $this->configValue('headings.allowed_levels'))) {
+            if (!$this->configValueSetContains('headings.allowed_levels', $level)) {
                 return null; // Return null if the heading level is not allowed
             }
 
@@ -126,7 +126,7 @@ trait HeadingExtension
 
             // Check if the heading level should be included in the Table of Contents (TOC)
             // Also ensure we skip adding it to TOC if it is disabled in the config
-            if (!$this->configEnabled('toc') || !in_array($level, $this->configValue('toc.levels'))) {
+            if (!$this->configEnabled('toc') || !$this->configValueSetContains('toc.levels', $level)) {
                 return $Block; // Return the block if it should not be part of the TOC
             }
 

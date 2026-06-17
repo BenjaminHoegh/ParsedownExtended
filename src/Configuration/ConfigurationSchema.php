@@ -44,6 +44,7 @@ final class ConfigurationSchema
         ],
         'images' => true,
         'links' => [
+            'current_host' => '',
             'email_links' => true,
             'external_links' => [
                 'nofollow'           => true,

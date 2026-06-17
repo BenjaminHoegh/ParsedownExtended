@@ -20,46 +20,10 @@ class_alias(class_exists('ParsedownExtra') ? 'ParsedownExtra' : 'Parsedown', 'Pa
 // @psalm-suppress UndefinedClass
 class ParsedownExtended extends \ParsedownExtendedParentAlias
 {
-    use Extensions\ExtensionRegistrar;
-    use Extensions\Concerns\RegistersInlineTypes;
-    use Extensions\Concerns\RegistersBlockTypes;
-    use Extensions\Concerns\MovesSpecialCharacterHandler;
-    use Extensions\Inline\InlineCodeExtension;
-    use Extensions\Inline\InlineImageExtension;
-    use Extensions\Inline\InlineMarkupExtension;
-    use Extensions\Inline\StrikethroughExtension;
-    use Extensions\Inline\EmphasisExtension;
-    use Extensions\Inline\EscapeSequenceExtension;
-    use Extensions\Inline\MarkingExtension;
-    use Extensions\Inline\InsertionsExtension;
-    use Extensions\Inline\KeystrokesExtension;
-    use Extensions\Inline\SuperscriptExtension;
-    use Extensions\Inline\SubscriptExtension;
-    use Extensions\Inline\InlineMathExtension;
-    use Extensions\Inline\EmojiExtension;
-    use Extensions\Inline\SmartypantsExtension;
-    use Extensions\Inline\TypographerExtension;
-    use Extensions\Inline\LinkExtension;
-    use Extensions\Block\FootnoteExtension;
-    use Extensions\Block\DefinitionListExtension;
-    use Extensions\Block\BlockCodeExtension;
-    use Extensions\Block\CommentExtension;
-    use Extensions\Block\ListExtension;
-    use Extensions\Block\QuoteExtension;
-    use Extensions\Block\RuleExtension;
-    use Extensions\Block\BlockMarkupExtension;
-    use Extensions\Block\ReferenceExtension;
-    use Extensions\Block\TableExtension;
-    use Extensions\Block\AbbreviationExtension;
-    use Extensions\Block\AlertExtension;
-    use Extensions\Block\BlockMathExtension;
-    use Extensions\Block\DiagramExtension;
-    use Extensions\Block\TaskListExtension;
-    use Extensions\Block\TableSpanExtension;
-    use Extensions\Block\HeadingExtension;
-    use Extensions\Toc\TableOfContentsExtension;
-    use Extensions\Toc\AnchorExtension;
-    use Extensions\Toc\TransliterationExtension;
+    use Extensions\ExtensionRegistration;
+    use Extensions\InlineExtensions;
+    use Extensions\BlockExtensions;
+    use Extensions\Toc\TocExtensions;
 
     public const VERSION = '2.2.1';
     public const VERSION_PARSEDOWN_REQUIRED = '1.8.0';
@@ -108,6 +72,9 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
     /** @var bool $activeBlockTypesValid Whether the active block handler cache reflects current config. */
     private bool $activeBlockTypesValid = false;
 
+    /** @var array<string, array<string, true>> Cached lookup sets for list-like config payloads. */
+    private array $configValueSetCache = [];
+
     /**
      * Constructor for ParsedownExtended.
      *
@@ -149,6 +116,7 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
         }
 
         $this->registerExtensions();
+        $this->warmRuntimeCaches();
     }
 
     /**
@@ -245,6 +213,34 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
         return $this->payload[$path] ?? null;
     }
 
+    protected function configValueSetContains(string $path, string $value): bool
+    {
+        $set = $this->configValueSet($path);
+
+        return isset($set[$value]);
+    }
+
+    private function configValueSet(string $path): array
+    {
+        if (isset($this->configValueSetCache[$path])) {
+            return $this->configValueSetCache[$path];
+        }
+
+        $values = $this->payload[$path] ?? [];
+        if (!is_array($values)) {
+            return $this->configValueSetCache[$path] = [];
+        }
+
+        $set = [];
+        foreach ($values as $value) {
+            if (is_scalar($value)) {
+                $set[(string) $value] = true;
+            }
+        }
+
+        return $this->configValueSetCache[$path] = $set;
+    }
+
     /**
      * Invalidates derived parser state after public runtime configuration changes.
      */
@@ -256,8 +252,17 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
         $this->activeBlockTypes = [];
         $this->activeUnmarkedBlockTypes = [];
         $this->activeBlockTypesValid = false;
+        $this->configValueSetCache = [];
         $this->clearExtensionEnabledCache();
         $this->clearSmartypantsSubstitutionCache();
+    }
+
+    private function warmRuntimeCaches(): void
+    {
+        $this->getActiveInlineTypes();
+        $this->getActiveBlockTypes();
+        $this->configValueSet('headings.allowed_levels');
+        $this->configValueSet('toc.levels');
     }
 
     /**
@@ -342,7 +347,10 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
      */
     private function applyOverrides(array $ovr, string $prefix = '', ?object $configHandler = null): void
     {
-        $configHandler ??= $this->config();
+        if ($configHandler === null) {
+            $configHandler = new Configuration(self::$BOOLEAN_PATHS, self::$FLAT_SCHEMA);
+            $configHandler->bind($this->features, $this->payload);
+        }
 
         foreach ($ovr as $k => $v) {
             $path = $prefix === '' ? $k : $prefix . '.' . $k;

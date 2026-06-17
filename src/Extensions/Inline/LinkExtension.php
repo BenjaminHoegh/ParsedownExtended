@@ -186,8 +186,8 @@ trait LinkExtension
 
         $host = $this->normalizeHost((string) $host);
 
-        // Normalize current host
-        $currentHost = $this->normalizeHost($_SERVER['HTTP_HOST'] ?? '');
+        // Normalize configured current host, falling back to the legacy server value.
+        $currentHost = $this->getCurrentHost();
         if ($host === $currentHost) {
             return false;
         }
@@ -216,6 +216,16 @@ trait LinkExtension
         }
 
         return $host;
+    }
+
+    private function getCurrentHost(): string
+    {
+        $configuredHost = $this->configValue('links.current_host');
+        if (is_string($configuredHost) && $configuredHost !== '') {
+            return $this->normalizeHost($configuredHost);
+        }
+
+        return $this->normalizeHost($_SERVER['HTTP_HOST'] ?? '');
     }
 
     /**

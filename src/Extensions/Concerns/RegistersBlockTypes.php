@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace BenjaminHoegh\ParsedownExtended\Extensions\Concerns;
 
+use BenjaminHoegh\ParsedownExtended\Extensions\ExtensionDefinitions;
+
 trait RegistersBlockTypes
 {
     /**
@@ -15,32 +17,20 @@ trait RegistersBlockTypes
     {
         foreach ($this->customBlockExtensionDefinitions() as $definition) {
             $this->registerBlockExtension(
-                $definition['markers'],
-                $definition['type'],
-                $definition['config'] ?? [],
-                $definition['priority'] ?? 100
+                $definition->markers(),
+                $definition->type(),
+                $definition->configPaths(),
+                $definition->priority()
             );
         }
     }
 
     /**
-     * @return list<array{type: string, markers: list<string>, config?: list<string>, priority?: int}>
+     * @return list<\BenjaminHoegh\ParsedownExtended\Extensions\BlockExtensionDefinition>
      */
     private function customBlockExtensionDefinitions(): array
     {
-        return [
-            [
-                'type' => 'MathNotation',
-                'markers' => ['\\', '$'],
-                'config' => ['math', 'math.block'],
-            ],
-            [
-                'type' => 'Alert',
-                'markers' => ['>'],
-                'config' => ['alerts'],
-                'priority' => 110,
-            ],
-        ];
+        return ExtensionDefinitions::customBlock();
     }
 
     /**

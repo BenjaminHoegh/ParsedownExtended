@@ -255,6 +255,20 @@ class LinksTest extends TestCase
         $this->assertStringNotContainsString('noreferrer"', $html);
     }
 
+    public function testConfiguredCurrentHostTakesPrecedenceOverServerHost()
+    {
+        $_SERVER['HTTP_HOST'] = 'www.example.com';
+        $this->parsedownExtended->config()->set('links.current_host', 'docs.example.test');
+
+        $markdown = '[Docs](https://docs.example.test/guide)';
+        $html = $this->parsedownExtended->text($markdown);
+
+        $this->assertStringNotContainsString('target="_blank"', $html);
+        $this->assertStringNotContainsString('nofollow"', $html);
+        $this->assertStringNotContainsString('noopener"', $html);
+        $this->assertStringNotContainsString('noreferrer"', $html);
+    }
+
     public function testNoServerVars()
     {
         $this->parsedownExtended->config()->set('links.enabled', true);

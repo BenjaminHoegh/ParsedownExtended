@@ -36,7 +36,7 @@ trait TableOfContentsExtension
          * Reset the internal state for Table of Contents to avoid data persisting
          * when the same instance parses multiple markdown strings.
          */
-        $this->anchorRegister = [];
+        $this->resetAnchorRegister();
         $this->contentsListArray = [];
         $this->contentsListString = '';
         $this->contentsListStringDirty = false;
@@ -89,7 +89,7 @@ trait TableOfContentsExtension
         switch (strtolower($type_return)) {
             case 'string':
                 $contentsListString = $this->getContentsListString();
-                return $contentsListString ? $this->body($contentsListString) : '';
+                return $contentsListString;
             case 'json':
                 $json = json_encode($this->contentsListArray);
                 return is_string($json) ? $json : '[]';
@@ -242,12 +242,8 @@ trait TableOfContentsExtension
             return $this->contentsListString;
         }
 
-        $this->contentsListString = '';
+        $this->contentsListString = $this->renderContentsListHtml();
         $this->firstHeadLevel = 0;
-
-        foreach ($this->contentsListArray as $Content) {
-            $this->appendContentsListString($Content);
-        }
 
         $this->contentsListStringDirty = false;
 
@@ -255,29 +251,76 @@ trait TableOfContentsExtension
     }
 
     /**
-     * Adds the given content entry to the Table of Contents string.
-     *
-     * @param array $Content The content entry containing 'text', 'id', and 'level' keys.
-     * @return void
+     * Renders the collected Table of Contents entries as nested HTML lists.
      */
-    protected function appendContentsListString(array $Content): void
+    protected function renderContentsListHtml(): string
     {
-        $text = $this->fetchText($Content['text']); // Fetch the plain text of the content
-        $id = $Content['id']; // Get the ID of the content
-        $level = (int) trim($Content['level'], 'h'); // Get the level of the heading and convert to an integer
-        $link = "[{$text}](#{$id})"; // Create a Markdown link to the heading
+        if ($this->contentsListArray === []) {
+            return '';
+        }
 
-        // Set the first heading level if it hasn't been set yet
+        $html = '';
+        $currentLevel = 0;
+
+        foreach ($this->contentsListArray as $Content) {
+            $level = $this->normalizedContentsLevel($Content);
+
+            if ($currentLevel === 0 || $level > $currentLevel) {
+                while ($currentLevel < $level) {
+                    $html .= "<ul>\n";
+                    ++$currentLevel;
+                }
+            } elseif ($level === $currentLevel) {
+                $html .= "</li>\n";
+            } else {
+                $html .= "</li>\n";
+                while ($currentLevel > $level) {
+                    $html .= "</ul>\n";
+                    --$currentLevel;
+                    $html .= "</li>\n";
+                }
+            }
+
+            $html .= '<li>' . $this->contentsListLink($Content);
+        }
+
+        if ($currentLevel > 0) {
+            $html .= "</li>\n";
+        }
+
+        while ($currentLevel > 0) {
+            $html .= '</ul>';
+            --$currentLevel;
+
+            if ($currentLevel > 0) {
+                $html .= "\n</li>\n";
+            }
+        }
+
+        return $html;
+    }
+
+    protected function normalizedContentsLevel(array $Content): int
+    {
+        $level = (int) trim((string) $Content['level'], 'h');
+
         if ($this->firstHeadLevel === 0) {
             $this->firstHeadLevel = $level;
         }
 
-        // Calculate the indent level for the list item
-        $indentLevel = max(1, $level - ($this->firstHeadLevel - 1));
-        $indent = str_repeat('  ', $indentLevel); // Create the appropriate indent based on the level
+        return max(1, $level - ($this->firstHeadLevel - 1));
+    }
 
-        // Append the formatted list item to the contents list string
-        $this->contentsListString .= "{$indent}- {$link}" . PHP_EOL;
+    protected function contentsListLink(array $Content): string
+    {
+        $text = html_entity_decode($this->fetchText($Content['text']), ENT_QUOTES | ENT_HTML5, 'UTF-8');
+        $id = (string) $Content['id'];
+
+        return '<a href="#'
+            . htmlspecialchars($id, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8')
+            . '">'
+            . htmlspecialchars($text, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8')
+            . '</a>';
     }
 
     /**

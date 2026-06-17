@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace BenjaminHoegh\ParsedownExtended\Extensions\Concerns;
 
+use BenjaminHoegh\ParsedownExtended\Extensions\ExtensionDefinitions;
+
 trait RegistersInlineTypes
 {
     /**
@@ -15,68 +17,20 @@ trait RegistersInlineTypes
     {
         foreach ($this->customInlineExtensionDefinitions() as $definition) {
             $this->registerInlineExtension(
-                $definition['markers'],
-                $definition['type'],
-                $definition['config'] ?? [],
-                $definition['priority'] ?? 100
+                $definition->markers(),
+                $definition->type(),
+                $definition->configPaths(),
+                $definition->priority()
             );
         }
     }
 
     /**
-     * @return list<array{type: string, markers: list<string>, config?: list<string>, priority?: int}>
+     * @return list<\BenjaminHoegh\ParsedownExtended\Extensions\InlineExtensionDefinition>
      */
     private function customInlineExtensionDefinitions(): array
     {
-        return [
-            [
-                'type' => 'Marking',
-                'markers' => ['='],
-                'config' => ['emphasis', 'emphasis.mark'],
-            ],
-            [
-                'type' => 'Insertions',
-                'markers' => ['+'],
-                'config' => ['emphasis', 'emphasis.insertions'],
-            ],
-            [
-                'type' => 'Keystrokes',
-                'markers' => ['['],
-                'config' => ['emphasis', 'emphasis.keystrokes'],
-            ],
-            [
-                'type' => 'MathNotation',
-                'markers' => ['\\', '$'],
-                'config' => ['math', 'math.inline'],
-            ],
-            [
-                'type' => 'Superscript',
-                'markers' => ['^'],
-                'config' => ['emphasis', 'emphasis.superscript'],
-            ],
-            [
-                'type' => 'Subscript',
-                'markers' => ['~'],
-                'config' => ['emphasis', 'emphasis.subscript'],
-            ],
-            [
-                'type' => 'Emojis',
-                'markers' => [':'],
-                'config' => ['emojis'],
-            ],
-            [
-                'type' => 'Smartypants',
-                'markers' => ['<', '>', '-', '.', "'", '"', '`'],
-                'config' => ['smartypants'],
-                'priority' => 100,
-            ],
-            [
-                'type' => 'Typographer',
-                'markers' => ['(', '.', '+', '!', '?'],
-                'config' => ['typographer'],
-                'priority' => 110,
-            ],
-        ];
+        return ExtensionDefinitions::customInline();
     }
 
     /**
