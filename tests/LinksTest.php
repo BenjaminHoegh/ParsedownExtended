@@ -6,16 +6,26 @@ use PHPUnit\Framework\TestCase;
 class LinksTest extends TestCase
 {
     private ParsedownExtended $parsedownExtended;
+    private bool $hadOriginalHost;
+    private ?string $originalHost;
 
     protected function setUp(): void
     {
         $this->parsedownExtended = new ParsedownExtended();
         $this->parsedownExtended->setSafeMode(true);
-        $_SERVER['HTTP_HOST'] = 'www.example.com';  // Default host for testing
+        $this->hadOriginalHost = array_key_exists('HTTP_HOST', $_SERVER);
+        $this->originalHost = $_SERVER['HTTP_HOST'] ?? null;
+        $_SERVER['HTTP_HOST'] = 'www.example.com';
     }
 
     protected function tearDown(): void
     {
+        if ($this->hadOriginalHost) {
+            $_SERVER['HTTP_HOST'] = $this->originalHost;
+        } else {
+            unset($_SERVER['HTTP_HOST']);
+        }
+
         unset($this->parsedownExtended);
     }
 
@@ -273,43 +283,12 @@ class LinksTest extends TestCase
     {
         $this->parsedownExtended->config()->set('links.enabled', true);
 
-        // this is not set e.g. when used from CLI
-        $temp = $_SERVER['HTTP_HOST'];
         unset($_SERVER['HTTP_HOST']);
 
         $markdown = '[Link](https://www.example.com/blah)';
         $html = $this->parsedownExtended->line($markdown);
 
-        // just checking if above throws some error/warning
-        $this->assertTrue(true);
-
-        // restore for other tests
-        $_SERVER['HTTP_HOST'] = $temp;
+        $this->assertStringContainsString('href="https://www.example.com/blah"', $html);
     }
 
-    // Markdown Edge Cases
-    // ----------------------------
-
-    // public function testMultipleLinksInText()
-    // {
-    //     $markdown = '[Google](https://www.google.com) and [Bing](https://www.bing.com)';
-    //     $html = $this->parsedownExtended->text($markdown);
-    //     $this->assertStringContainsString('href="https://www.google.com"', $html);
-    //     $this->assertStringContainsString('href="https://www.bing.com"', $html);
-    // }
-
-    // public function testLinkWithSpecialCharacters()
-    // {
-    //     $markdown = '[Google](https://www.google.com/search?q=hello+world)';
-    //     $html = $this->parsedownExtended->text($markdown);
-    //     $this->assertStringContainsString('href="https://www.google.com/search?q=hello+world"', $html);
-    // }
-
-    // public function testNestedMarkdownElements()
-    // {
-    //     $markdown = '![Image](https://www.example.com/image.jpg) and [Link](https://www.example.com)';
-    //     $html = $this->parsedownExtended->text($markdown);
-    //     $this->assertStringContainsString('<img src="https://www.example.com/image.jpg"', $html);
-    //     $this->assertStringContainsString('<a href="https://www.example.com">Link</a>', $html);
-    // }
 }

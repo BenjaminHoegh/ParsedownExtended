@@ -57,7 +57,7 @@ trait TaskListExtension
         }
 
         // Remove unnecessary paragraph tags for the list item if not interrupted
-        if (!in_array('', $lines) && isset($Elements[$paragraphIndex]['name']) && $Elements[$paragraphIndex]['name'] === 'p') {
+        if (!in_array('', $lines, true) && isset($Elements[$paragraphIndex]['name']) && $Elements[$paragraphIndex]['name'] === 'p') {
             unset($Elements[$paragraphIndex]['name']); // Remove paragraph wrapper
         }
 

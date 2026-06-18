@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace BenjaminHoegh\ParsedownExtended\Extensions\Concerns;
 
-use BenjaminHoegh\ParsedownExtended\Extensions\ExtensionDefinitions;
+use BenjaminHoegh\ParsedownExtended\Extensions\Definition\ExtensionDefinitions;
 
 trait RegistersInlineTypes
 {
@@ -26,7 +26,7 @@ trait RegistersInlineTypes
     }
 
     /**
-     * @return list<\BenjaminHoegh\ParsedownExtended\Extensions\InlineExtensionDefinition>
+     * @return list<\BenjaminHoegh\ParsedownExtended\Extensions\Definition\InlineExtensionDefinition>
      */
     private function customInlineExtensionDefinitions(): array
     {
@@ -85,11 +85,4 @@ trait RegistersInlineTypes
         return $this;
     }
 
-    /**
-     * @param mixed $markers
-     */
-    protected function addInlineType($markers, string $funcName): void
-    {
-        $this->registerInlineExtension($markers, $funcName);
-    }
 }

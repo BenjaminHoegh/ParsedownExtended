@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace BenjaminHoegh\ParsedownExtended\Extensions\Concerns;
 
-use BenjaminHoegh\ParsedownExtended\Extensions\ExtensionDefinitions;
+use BenjaminHoegh\ParsedownExtended\Extensions\Definition\ExtensionDefinitions;
 
 trait RegistersBlockTypes
 {
@@ -26,7 +26,7 @@ trait RegistersBlockTypes
     }
 
     /**
-     * @return list<\BenjaminHoegh\ParsedownExtended\Extensions\BlockExtensionDefinition>
+     * @return list<\BenjaminHoegh\ParsedownExtended\Extensions\Definition\BlockExtensionDefinition>
      */
     private function customBlockExtensionDefinitions(): array
     {
@@ -81,11 +81,4 @@ trait RegistersBlockTypes
         return $this;
     }
 
-    /**
-     * @param mixed $markers
-     */
-    protected function addBlockType($markers, string $funcName): void
-    {
-        $this->registerBlockExtension($markers, $funcName);
-    }
 }

@@ -44,6 +44,33 @@ class ExtensionRegistryTestParser extends ParsedownExtended
 
 class ExtensionRegistryTest extends TestCase
 {
+    public function testDefinitionClassesLiveInDefinitionNamespace(): void
+    {
+        $blockDefinition = \BenjaminHoegh\ParsedownExtended\Extensions\Definition\BlockExtensionDefinition::core('Code');
+        $inlineDefinition = \BenjaminHoegh\ParsedownExtended\Extensions\Definition\InlineExtensionDefinition::core('Code');
+
+        $this->assertInstanceOf(
+            \BenjaminHoegh\ParsedownExtended\Extensions\Definition\BlockExtensionDefinition::class,
+            $blockDefinition
+        );
+        $this->assertInstanceOf(
+            \BenjaminHoegh\ParsedownExtended\Extensions\Definition\InlineExtensionDefinition::class,
+            $inlineDefinition
+        );
+        $this->assertContainsOnlyInstancesOf(
+            \BenjaminHoegh\ParsedownExtended\Extensions\Definition\InlineExtensionDefinition::class,
+            \BenjaminHoegh\ParsedownExtended\Extensions\Definition\ExtensionDefinitions::coreInline()
+        );
+    }
+
+    public function testRegistryTraitsLiveInRegistryNamespace(): void
+    {
+        $this->assertTrue(trait_exists(\BenjaminHoegh\ParsedownExtended\Extensions\Registry\BlockExtensions::class));
+        $this->assertTrue(trait_exists(\BenjaminHoegh\ParsedownExtended\Extensions\Registry\InlineExtensions::class));
+        $this->assertTrue(trait_exists(\BenjaminHoegh\ParsedownExtended\Extensions\Registry\ExtensionRegistration::class));
+        $this->assertTrue(trait_exists(\BenjaminHoegh\ParsedownExtended\Extensions\Registry\ExtensionRegistrar::class));
+    }
+
     public function testRuntimeInlineExtensionRegistrationHonorsConfigMetadata(): void
     {
         $parsedownExtended = new ExtensionRegistryTestParser();

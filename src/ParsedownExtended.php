@@ -20,9 +20,9 @@ class_alias(class_exists('ParsedownExtra') ? 'ParsedownExtra' : 'Parsedown', 'Pa
 // @psalm-suppress UndefinedClass
 class ParsedownExtended extends \ParsedownExtendedParentAlias
 {
-    use Extensions\ExtensionRegistration;
-    use Extensions\InlineExtensions;
-    use Extensions\BlockExtensions;
+    use Extensions\Registry\ExtensionRegistration;
+    use Extensions\Registry\InlineExtensions;
+    use Extensions\Registry\BlockExtensions;
     use Extensions\Toc\TocExtensions;
 
     public const VERSION = '2.2.1';

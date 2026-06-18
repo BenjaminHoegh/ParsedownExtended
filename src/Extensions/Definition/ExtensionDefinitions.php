@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace BenjaminHoegh\ParsedownExtended\Extensions;
+namespace BenjaminHoegh\ParsedownExtended\Extensions\Definition;
 
 final class ExtensionDefinitions
 {

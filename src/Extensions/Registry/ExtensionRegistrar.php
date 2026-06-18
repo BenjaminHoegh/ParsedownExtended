@@ -2,7 +2,11 @@
 
 declare(strict_types=1);
 
-namespace BenjaminHoegh\ParsedownExtended\Extensions;
+namespace BenjaminHoegh\ParsedownExtended\Extensions\Registry;
+
+use BenjaminHoegh\ParsedownExtended\Extensions\Definition\BlockExtensionDefinition;
+use BenjaminHoegh\ParsedownExtended\Extensions\Definition\ExtensionDefinitions;
+use BenjaminHoegh\ParsedownExtended\Extensions\Definition\InlineExtensionDefinition;
 
 trait ExtensionRegistrar
 {

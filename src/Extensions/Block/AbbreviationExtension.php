@@ -57,14 +57,4 @@ trait AbbreviationExtension
         $this->predefinedAbbreviationsAdded = true;
     }
 
-    /**
-     * Processes unmarked text, ensuring predefined abbreviations are initialized before parsing.
-     *
-     * @param string $text The input text to be processed.
-     * @return string The processed text.
-     */
-    protected function unmarkedText($text)
-    {
-        return parent::unmarkedText($text);
-    }
 }
