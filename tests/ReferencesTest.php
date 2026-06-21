@@ -38,6 +38,23 @@ class ReferencesTest extends TestCase
         $this->assertStringContainsString('[link text][ref]', $html);
     }
 
+    public function testReferenceConfigChangesAffectLaterParses()
+    {
+        $markdown = "[link text][ref]\n\n[ref]: https://example.com";
+
+        $this->parsedownExtended->config()->set('references', false);
+        $this->assertStringContainsString('<p>[link text][ref]</p>', $this->parsedownExtended->text($markdown));
+
+        $this->parsedownExtended->config()->set('references', true);
+        $this->assertStringContainsString(
+            '<a href="https://example.com">link text</a>',
+            $this->parsedownExtended->text($markdown)
+        );
+
+        $this->parsedownExtended->config()->set('references', false);
+        $this->assertStringContainsString('<p>[link text][ref]</p>', $this->parsedownExtended->text($markdown));
+    }
+
     public function testReferenceWithTitle()
     {
         $this->parsedownExtended->config()->set('references', true);
