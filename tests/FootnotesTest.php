@@ -42,6 +42,34 @@ class FootnotesTest extends TestCase
         $this->assertStringNotContainsString('href="#fn:', $html);
     }
 
+    public function testFootnotesDisabledDoesNotTreatFootnoteDefinitionsAsReferences()
+    {
+        $this->parsedownExtended->config()->set('footnotes', false);
+        $this->parsedownExtended->config()->set('references', true);
+
+        $markdown = "Text[^1]\n\n[^1]: Note.";
+        $expected = "<p>Text[^1]</p>\n<p>[^1]: Note.</p>";
+
+        $html = $this->parsedownExtended->text($markdown);
+
+        $this->assertEquals($expected, $html);
+    }
+
+    public function testFootnoteConfigChangesAffectLaterParses()
+    {
+        $markdown = "Text[^1]\n\n[^1]: Note.";
+        $disabledExpected = "<p>Text[^1]</p>\n<p>[^1]: Note.</p>";
+
+        $this->parsedownExtended->config()->set('footnotes', false);
+        $this->assertEquals($disabledExpected, $this->parsedownExtended->text($markdown));
+
+        $this->parsedownExtended->config()->set('footnotes', true);
+        $this->assertStringContainsString('<sup', $this->parsedownExtended->text($markdown));
+
+        $this->parsedownExtended->config()->set('footnotes', false);
+        $this->assertEquals($disabledExpected, $this->parsedownExtended->text($markdown));
+    }
+
     public function testMultipleFootnotes()
     {
         $this->parsedownExtended->config()->set('footnotes', true);

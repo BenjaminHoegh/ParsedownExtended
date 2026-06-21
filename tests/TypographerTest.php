@@ -52,4 +52,17 @@ class TypographerTest extends TestCase
         $this->assertEquals($expected, $result);
     }
 
+    public function testTypographerDoesNotConsumeRemainingInlineMarkdown(): void
+    {
+        $this->parsedownExtended->config()->set('typographer', true);
+
+        $markdown = '(c) **bold** and [link](https://example.com)';
+
+        $result = $this->parsedownExtended->text($markdown);
+
+        $this->assertStringContainsString('© <strong>bold</strong> and <a href="https://example.com"', $result);
+        $this->assertStringContainsString('>link</a>', $result);
+        $this->assertStringNotContainsString('**bold**', $result);
+    }
+
 }

@@ -89,6 +89,27 @@ class HeadingsTest extends TestCase
     }
 
     /**
+     * Duplicate heading counters should reset between parses on the same instance.
+     */
+    public function testHeadingAnchorRegisterResetsBetweenParses()
+    {
+        $this->parsedownExtended->config()->set('headings.auto_anchors', true);
+
+        $firstMarkdown = <<<MARKDOWN
+            # Heading
+            # Heading
+            MARKDOWN;
+
+        $firstExpected = <<<HTML
+            <h1 id="heading">Heading</h1>
+            <h1 id="heading-1">Heading</h1>
+            HTML;
+
+        $this->assertEquals($firstExpected, $this->parsedownExtended->text($firstMarkdown));
+        $this->assertEquals('<h1 id="heading">Heading</h1>', $this->parsedownExtended->text('# Heading'));
+    }
+
+    /**
      * Test case for heading with custom anchor.
      */
     public function testHeadingWithCustomAnchor()
@@ -276,6 +297,20 @@ class HeadingsTest extends TestCase
         $markdown = '# Heading 1';
         $expected = '<h1 id="custom-anchor">Heading 1</h1>';
         $actual = $this->parsedownExtended->text($markdown);
+        $this->assertEquals($expected, $actual);
+    }
+
+    public function testHeadingUsingCallbackReturningEmptyStringDoesNotRenderEmptyId()
+    {
+        $this->parsedownExtended->config()->set('headings.auto_anchors', true);
+        $this->parsedownExtended->setCreateAnchorIDCallback(function () {
+            return '';
+        });
+
+        $markdown = '# Heading 1';
+        $expected = '<h1>Heading 1</h1>';
+        $actual = $this->parsedownExtended->text($markdown);
+
         $this->assertEquals($expected, $actual);
     }
 }

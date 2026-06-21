@@ -67,4 +67,17 @@ class DiagramsTest extends TestCase
 
         $this->assertEquals($expectedHtml, $result);
     }
+
+    public function testDisableChartjsDiagramTypeForChartjsFenceAlias()
+    {
+        $this->parsedownExtended->config()->set('diagrams', true);
+        $this->parsedownExtended->config()->set('diagrams.chartjs', false);
+
+        $markdown = "```chartjs\n{\"type\":\"line\",\"data\":{}}\n```";
+        $expectedHtml = "<pre><code class=\"language-chartjs\">{\"type\":\"line\",\"data\":{}}</code></pre>";
+
+        $result = $this->parsedownExtended->text($markdown);
+
+        $this->assertEquals($expectedHtml, $result);
+    }
 }

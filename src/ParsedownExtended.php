@@ -16,7 +16,7 @@ class_alias(class_exists('ParsedownExtra') ? 'ParsedownExtra' : 'Parsedown', 'Pa
 // @psalm-suppress UndefinedClass
 class ParsedownExtended extends \ParsedownExtendedParentAlias
 {
-    public const VERSION = '2.2.0';
+    public const VERSION = '2.2.1';
     public const VERSION_PARSEDOWN_REQUIRED = '1.8.0';
     public const VERSION_PARSEDOWN_EXTRA_REQUIRED = '0.9.0';
     public const MIN_PHP_VERSION = '7.4';
@@ -1846,8 +1846,14 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
      */
     protected function blockReference($Line)
     {
+        $config = $this->config();
+
+        if (!$config->get('footnotes') && preg_match('/^\[\^.+?\]:/', $Line['text'])) {
+            return null;
+        }
+
         // Check if references are enabled
-        if ($this->config()->get('references')) {
+        if ($config->get('references')) {
             return parent::blockReference($Line); // Delegate to parent class
         }
 
@@ -2354,13 +2360,17 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
 
             // Generate an anchor ID for the header element
             // If an ID attribute is not set, use the text to create the ID
-            $id = $Block['element']['attributes']['id'] ?? $text;
-            $id = $this->createAnchorID($id);
+            $anchorId = $Block['element']['attributes']['id'] ?? $text;
+            $anchorId = $this->createAnchorID($anchorId);
 
             // Set the 'id' attribute only when an anchor ID is generated
-            if ($id !== null) {
-                $Block['element']['attributes']['id'] = $id;
+            if (is_string($anchorId) && $anchorId !== '') {
+                $Block['element']['attributes']['id'] = $anchorId;
+            } elseif (isset($Block['element']['attributes']['id']) && $Block['element']['attributes']['id'] === '') {
+                unset($Block['element']['attributes']['id']);
             }
+
+            $id = $Block['element']['attributes']['id'] ?? null;
 
             // Check if the heading level should be included in the Table of Contents (TOC)
             // Also ensure we skip adding it to TOC if it is disabled in the config
@@ -2413,13 +2423,17 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
 
             // Generate an anchor ID for the header element
             // If an ID attribute is not set, use the text to create the ID
-            $id = $Block['element']['attributes']['id'] ?? $text;
-            $id = $this->createAnchorID($id);
+            $anchorId = $Block['element']['attributes']['id'] ?? $text;
+            $anchorId = $this->createAnchorID($anchorId);
 
             // Set the 'id' attribute only when an anchor ID is generated
-            if ($id !== null) {
-                $Block['element']['attributes']['id'] = $id;
+            if (is_string($anchorId) && $anchorId !== '') {
+                $Block['element']['attributes']['id'] = $anchorId;
+            } elseif (isset($Block['element']['attributes']['id']) && $Block['element']['attributes']['id'] === '') {
+                unset($Block['element']['attributes']['id']);
             }
+
+            $id = $Block['element']['attributes']['id'] ?? null;
 
             // Check if the heading level should be included in the Table of Contents (TOC)
             // Also ensure we skip adding it to TOC if it is disabled in the config
@@ -2675,7 +2689,7 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
 
         switch (strtolower($type_return)) {
             case 'string':
-                return $this->contentsListString ? $this->body($this->contentsListString) : '';
+                return $this->contentsListString ? parent::text($this->contentsListString) : '';
             case 'json':
                 $json = json_encode($this->contentsListArray);
                 return is_string($json) ? $json : '[]';

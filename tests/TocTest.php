@@ -227,4 +227,67 @@ class TocTest extends TestCase
 
         $this->assertSame('[]', $actual);
     }
+
+    public function testContentsListStringDoesNotClearContentsListState()
+    {
+        $this->parsedownExtended->config()->set('headings.auto_anchors', true);
+
+        $this->parsedownExtended->body("# One\n## Two");
+
+        $expectedJson = '[{"text":"One","id":"one","level":"h1"},{"text":"Two","id":"two","level":"h2"}]';
+        $expectedString = <<<HTML
+            <ul>
+            <li><a href="#one">One</a><ul>
+            <li><a href="#two">Two</a></li>
+            </ul>
+            </li>
+            </ul>
+            HTML;
+
+        $this->assertSame($expectedJson, $this->parsedownExtended->contentsList('json'));
+        $this->assertSame($expectedString, $this->parsedownExtended->contentsList());
+        $this->assertSame($expectedJson, $this->parsedownExtended->contentsList('json'));
+    }
+
+    public function testContentsListIsAvailableAfterParsingWithTocTag()
+    {
+        $this->parsedownExtended->config()->set('headings.auto_anchors', true);
+
+        $html = $this->parsedownExtended->text("[TOC]\n# One\n## Two");
+
+        $expectedJson = '[{"text":"One","id":"one","level":"h1"},{"text":"Two","id":"two","level":"h2"}]';
+        $expectedString = <<<HTML
+            <ul>
+            <li><a href="#one">One</a><ul>
+            <li><a href="#two">Two</a></li>
+            </ul>
+            </li>
+            </ul>
+            HTML;
+
+        $this->assertStringContainsString('<div id="toc"><ul>', $html);
+        $this->assertSame($expectedJson, $this->parsedownExtended->contentsList('json'));
+        $this->assertSame($expectedString, $this->parsedownExtended->contentsList());
+    }
+
+    public function testContentsListResetsBetweenRepeatedParses()
+    {
+        $this->parsedownExtended->config()->set('headings.auto_anchors', true);
+
+        $this->parsedownExtended->text("# First\n# First");
+        $this->assertSame(
+            '[{"text":"First","id":"first","level":"h1"},{"text":"First","id":"first-1","level":"h1"}]',
+            $this->parsedownExtended->contentsList('json')
+        );
+
+        $this->parsedownExtended->text('# Second');
+        $this->assertSame(
+            '[{"text":"Second","id":"second","level":"h1"}]',
+            $this->parsedownExtended->contentsList('json')
+        );
+
+        $this->parsedownExtended->text('No headings here.');
+        $this->assertSame('[]', $this->parsedownExtended->contentsList('json'));
+        $this->assertSame('', $this->parsedownExtended->contentsList());
+    }
 }
