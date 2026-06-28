@@ -1,124 +1,145 @@
 <p align="center">
   <a href="https://github.com/BenjaminHoegh/ParsedownExtended">
-    <!--<img src="https://github.com/BenjaminHoegh/Chameleon/blob/main/docs/assets/images/logo/logo.svg" alt="" width=129 height=129>-->
     <img alt="ParsedownExtended" src="https://github.com/BenjaminHoegh/ParsedownExtended/blob/docs/parsedownExtended.png" height="330" />
   </a>
+</p>
 
-  <h3 align="center">Parsedown Extended</h3>
+<h3 align="center">ParsedownExtended</h3>
 
-  <p align="center">
-    <a href="https://benjaminhoegh.github.io/ParsedownExtended/"><strong>Explore Documentation »</strong></a>
-    <br>
-    <br>
-    <a href="https://github.com/BenjaminHoegh/ParsedownExtended/issues/new?template=bug_report.md">Report bug</a>
-    ·
-    <a href="https://github.com/BenjaminHoegh/ParsedownExtended/issues/new?template=feature_request.md&labels=feature">Request feature</a>
-    ·
-    <a href="https://github.com/BenjaminHoegh/ParsedownExtended/discussions">Discussions</a>
-  </p>
+<p align="center">
+  A lightweight Parsedown extension with practical Markdown features and configurable output.
+</p>
 
+<p align="center">
+  <a href="https://benjaminhoegh.github.io/ParsedownExtended/">Documentation</a>
+  ·
+  <a href="https://github.com/BenjaminHoegh/ParsedownExtended/issues/new/choose">Report an issue</a>
+  ·
+  <a href="https://github.com/BenjaminHoegh/ParsedownExtended/discussions">Discussions</a>
 </p>
 
 <br>
 
-![GitHub Release](https://img.shields.io/github/v/release/BenjaminHoegh/ParsedownExtended?style=flat-square) 
+![GitHub Release](https://img.shields.io/github/v/release/BenjaminHoegh/ParsedownExtended?style=flat-square)
 ![Packagist Downloads](https://img.shields.io/packagist/dt/benjaminhoegh/parsedown-extended?style=flat-square)
 ![GitHub License](https://img.shields.io/github/license/BenjaminHoegh/ParsedownExtended?style=flat-square)
 
+## About
 
-Table of contents
+ParsedownExtended builds on [Parsedown](https://github.com/erusev/parsedown) and adds commonly requested Markdown features such as task lists, alerts, heading anchors, table of contents generation, math notation detection, emoji shortcodes, typographic replacements, and more.
 
-- [Introduction](#introduction)
-- [Features](#features)
-- [Getting started](#getting-started)
-- [Bugs and feature requests](#bugs-and-feature-requests)
-- [Contributing](#contributing)
-- [Community](#community)
-- [Copyright and license](#copyright-and-license)
+Standalone versions of some extended features are also available as separate libraries:
 
-## Introduction
+* [Parsedown Toc](https://github.com/BenjaminHoegh/ParsedownToc)
+* [Parsedown Math](https://github.com/BenjaminHoegh/ParsedownMath)
 
-ParsedownExtended is an extention for Parsedown, offering additional features and functionalities. It is designed to provide an easy-to-use Markdown parsing solution while extending the capabilities of the base Parsedown library.
+## Requirements
 
-Stand alone versions of the extended features are also available as separate libraries:
-- [Parsedown Toc](https://github.com/BenjaminHoegh/ParsedownToc)
-- [Parsedown Math](https://github.com/BenjaminHoegh/ParsedownMath)
-
-## Features
-
-ParsedownExtended includes a variety of features to enhance your Markdown parsing experience:
-
-- **Task Lists:** Create simple task lists in Markdown.
-- **Smartypants:** Automatically convert straight quotes to curly, dashes to en-dash and em-dash, etc.
-- **Emoji shortcodes:** Support for rendering emojis.
-- **Heading Permalinks:** Generate permalinks for your headings.
-- **Table of Contents:** Automatically generate a table of contents based on headings.
-- **Keystrokes:** Render keystroke combinations.
-- **Marking:** Mark text within your documents for emphasis or distinction.
-- **Superscript and Subscript:** Render text as superscript or subscript.
-- **Diagrams Syntax Support:** Recognizes diagram syntax for integration with libraries like mermaid.js and chart.js.
-- **LaTeX Syntax Support:** Detects LaTeX syntax, suitable for mathematical expressions, to be rendered with libraries like KaTeX.js.
-- **Predefined Abbreviations:** Define and use abbreviations easily.
-- **GFM Alerts:** Create alerts using GitHub Flavored Markdown Alert syntax there can be customized into your own language, or even create your own.
-- **Customizable Options:** Extensive options for customizing each Markdown element.
-- **Additional Features:** ParsedownExtended continuously evolves, adding more features over time.
+* PHP 7.4 or newer
+* Parsedown 1.8 or newer
+* Parsedown Extra 0.9 or newer when using Composer-installed dependencies
 
 ## Getting started
 
-### Manual
-Download the source code from the latest release
-You must include `parsedown.php` 1.8+
-Include `ParsedownExtended.php`
+Install with Composer:
 
-```php
-require 'Parsedown.php';
-require 'ParsedownExtra.php'; // optional
-require 'ParsedownExtended.php';
-
-use BenjaminHoegh\ParsedownExtended\ParsedownExtended;
-
-$ParsedownExtended = new ParsedownExtended();
-
-echo $ParsedownExtended->text('Hello _Parsedown_!'); # prints: <p>Hello <em>Parsedown</em>!</p>
-// you can also parse inline markdown only
-echo $ParsedownExtended->line('Hello _Parsedown_!'); # prints: Hello <em>Parsedown</em>!
-```
-
-### Using composer
-
-From the command line interface, navigate to your project folder then run this command:
-```shell
+```bash
 composer require benjaminhoegh/parsedown-extended
 ```
-Then require the auto-loader file:
+
+Then include Composer's autoloader and create a parser instance:
+
 ```php
 require 'vendor/autoload.php';
 
 use BenjaminHoegh\ParsedownExtended\ParsedownExtended;
 
-$ParsedownExtended = new ParsedownExtended();
+$parsedown = new ParsedownExtended();
 
-echo $ParsedownExtended->text('Hello _Parsedown_!'); # prints: <p>Hello <em>Parsedown</em>!</p>
-// you can also parse inline markdown only
-echo $ParsedownExtended->line('Hello _Parsedown_!'); # prints: Hello <em>Parsedown</em>!
+echo $parsedown->text('Hello _Parsedown_!');
 ```
+
+For inline Markdown only, use the inherited `line()` method:
+
+```php
+echo $parsedown->line('Hello _Parsedown_!');
+```
+
+## Configuration
+
+ParsedownExtended exposes a configuration handler through `config()`.
+
+```php
+$parsedown = new ParsedownExtended();
+
+$parsedown->config()->set('toc', true);
+$parsedown->config()->set('toc.levels', ['h1', 'h2', 'h3']);
+$parsedown->config()->set('math.enabled', true);
+$parsedown->config()->set('allow_raw_html', false);
+```
+
+Grouped configuration is also supported:
+
+```php
+$parsedown->config()->set('toc', [
+    'levels' => ['h1', 'h2', 'h3'],
+    'tag' => '[TOC]',
+    'id' => 'table-of-contents',
+]);
+```
+
+For the full supported API and configuration paths, see the [Documentation](https://benjaminhoegh.github.io/ParsedownExtended/).
+
+## Table of contents
+
+Use `text()` when you want `[TOC]` replaced automatically:
+
+```php
+echo $parsedown->text($markdown);
+```
+
+Use `body()` and `contentsList()` when you want to render the document and table of contents separately:
+
+```php
+$body = $parsedown->body($markdown);
+$toc = $parsedown->contentsList();
+
+echo $toc;
+echo $body;
+```
+
+## Security
+
+ParsedownExtended is a Markdown parser extension, not an HTML sanitizer.
+
+If you render Markdown from untrusted users, review your `allow_raw_html` setting and sanitize the generated HTML according to your application's threat model.
+
+Please do not open public issues for suspected security vulnerabilities. See [SECURITY.md](SECURITY.md) for reporting instructions.
 
 ## Bugs and feature requests
 
-Have a bug or a feature request? Please first read the [issue guidelines](https://github.com/BenjaminHoegh/ParsedownExtended/blob/main/.github/CONTRIBUTING.md#using-the-issue-tracker) and search for existing and closed issues. If your problem or idea is not addressed yet, [please open a new issue](https://github.com/BenjaminHoegh/ParsedownExtended/issues/new/choose).
+Before opening an issue, please search existing and closed issues.
+
+* Use issues for reproducible bugs.
+* Use discussions for questions, ideas, and support.
+* Include a minimal reproduction when reporting bugs.
+
+Open a new issue here: [Issues](https://github.com/BenjaminHoegh/ParsedownExtended/issues/new/choose)
 
 ## Contributing
 
-Please read through our [contributing guidelines](https://github.com/BenjaminHoegh/ParsedownExtended/blob/main/.github/CONTRIBUTING.md). Included are directions for opening issues, coding standards, and notes on development.
+Contributions are welcome, especially focused bug fixes, documentation improvements, and small compatibility fixes.
 
-All PHP should conform to the [Code Guide](https://www.php-fig.org/psr/psr-12/).
+Before starting large features or refactors, please open a discussion first so the scope can be agreed before work begins.
+
+Please read the [contributing guidelines](https://github.com/BenjaminHoegh/ParsedownExtended/blob/main/.github/CONTRIBUTING.md) before opening a pull request.
 
 ## Community
 
-Get updates on ParsedownExtended's development and chat with the project maintainers and community members.
+Join [GitHub Discussions](https://github.com/BenjaminHoegh/ParsedownExtended/discussions) for questions, ideas, and project discussion.
 
-- Join [GitHub discussions](https://github.com/BenjaminHoegh/ParsedownExtended/discussions).
+## License
 
-## Copyright and license
+Code is released under the [MIT License](https://github.com/BenjaminHoegh/ParsedownExtended/blob/main/LICENSE.md).
 
-Code and documentation copyright 2024 the [ParsedownExtended Authors](https://github.com/BenjaminHoegh/ParsedownExtended/graphs/contributors). Code released under the [MIT License](https://github.com/BenjaminHoegh/ParsedownExtended/blob/main/LICENSE.md). Docs released under [Creative Commons](https://github.com/BenjaminHoegh/ParsedownExtended/blob/main/docs/LICENSE.md).
+Documentation is released under [Creative Commons](https://github.com/BenjaminHoegh/ParsedownExtended/blob/main/docs/LICENSE.md).
