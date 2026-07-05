@@ -89,6 +89,7 @@ trait LinkExtension
 
         if (isset($Excerpt['element']['attributes']['href'])) {
             $Excerpt['element']['attributes']['target'] = '_blank';
+            $Excerpt['element']['attributes']['rel'] = 'noopener noreferrer';
         }
 
         return $Excerpt;

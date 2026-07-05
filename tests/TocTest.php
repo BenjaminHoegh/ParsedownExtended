@@ -292,6 +292,27 @@ class TocTest extends TestCase
         $this->assertSame($expected, $actual);
     }
 
+    public function testContentsListStringDoesNotMutateState()
+    {
+        $this->parsedownExtended->config()->set('headings.auto_anchors', true);
+
+        $this->parsedownExtended->body('# A');
+
+        $this->parsedownExtended->contentsList();
+
+        $json = $this->parsedownExtended->contentsList('json');
+        $this->assertStringContainsString('"text":"A"', $json);
+    }
+
+    public function testTocUsesExplicitIdWhenAutoAnchorsDisabled()
+    {
+        $this->parsedownExtended->config()->set('headings.auto_anchors', false);
+
+        $html = $this->parsedownExtended->text("[TOC]\n# A {#manual}");
+
+        $this->assertStringContainsString('href="#manual"', $html);
+    }
+
     public function testTocStateResetsBetweenParses()
     {
         $this->parsedownExtended->config()->set('headings.auto_anchors', true);

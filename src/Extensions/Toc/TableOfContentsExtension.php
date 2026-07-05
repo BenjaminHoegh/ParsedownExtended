@@ -89,7 +89,27 @@ trait TableOfContentsExtension
         switch (strtolower($type_return)) {
             case 'string':
                 $contentsListString = $this->getContentsListString();
-                return $contentsListString ? $this->body($contentsListString) : '';
+                if (!$contentsListString) {
+                    return '';
+                }
+
+                $savedAnchorRegister = $this->anchorRegister;
+                $savedContentsListArray = $this->contentsListArray;
+                $savedContentsListString = $this->contentsListString;
+                $savedContentsListStringDirty = $this->contentsListStringDirty;
+                $savedFirstHeadLevel = $this->firstHeadLevel;
+                $savedPredefinedAbbreviationsAdded = $this->predefinedAbbreviationsAdded;
+
+                $html = $this->body($contentsListString);
+
+                $this->anchorRegister = $savedAnchorRegister;
+                $this->contentsListArray = $savedContentsListArray;
+                $this->contentsListString = $savedContentsListString;
+                $this->contentsListStringDirty = $savedContentsListStringDirty;
+                $this->firstHeadLevel = $savedFirstHeadLevel;
+                $this->predefinedAbbreviationsAdded = $savedPredefinedAbbreviationsAdded;
+
+                return $html;
             case 'json':
                 $json = json_encode($this->contentsListArray);
                 return is_string($json) ? $json : '[]';

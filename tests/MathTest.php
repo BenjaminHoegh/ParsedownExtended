@@ -97,4 +97,14 @@ class MathTest extends TestCase
         $this->assertStringContainsString('<blockquote>', $result);
         $this->assertStringContainsString('La matrice', $result);
     }
+
+    public function testBlockMathMalformedDelimiterDoesNotCrash()
+    {
+        $this->parsedownExtended->config()->set('math', true);
+        $this->parsedownExtended->config()->set('math.block.delimiters', [['left' => '$$']]);
+
+        $result = $this->parsedownExtended->text('$$x$$');
+
+        $this->assertIsString($result);
+    }
 }

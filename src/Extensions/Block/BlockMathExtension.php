@@ -29,6 +29,9 @@ trait BlockMathExtension
         // Iterate over each configured math block delimiter (e.g., `$$`, `\\[`)
         $delimiters = $this->configValue('math.block.delimiters');
         foreach ($delimiters as $dConfig) {
+            if (!is_array($dConfig) || empty($dConfig['left']) || empty($dConfig['right'])) {
+                continue;
+            }
 
             // Escape the math delimiters for regex usage
             $leftMarker = preg_quote($dConfig['left'], '/');

@@ -52,7 +52,19 @@ class LinksTest extends TestCase
         $markdown = '<test@example.com>';
         $html = $this->parsedownExtended->text($markdown);
 
-        $this->assertStringContainsString('<a href="mailto:test@example.com" target="_blank">test@example.com</a>', $html);
+        $this->assertStringContainsString('href="mailto:test@example.com"', $html);
+        $this->assertStringContainsString('target="_blank"', $html);
+        $this->assertStringContainsString('test@example.com</a>', $html);
+    }
+
+    public function testEmailLinksHaveRelAttribute()
+    {
+        $this->parsedownExtended->config()->set('links.email_links', true);
+
+        $markdown = '<test@example.com>';
+        $html = $this->parsedownExtended->text($markdown);
+
+        $this->assertStringContainsString('rel="noopener noreferrer"', $html);
     }
 
     public function testEmailLinksDisabled()

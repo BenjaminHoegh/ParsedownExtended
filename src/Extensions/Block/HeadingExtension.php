@@ -59,12 +59,14 @@ trait HeadingExtension
 
             // Generate an anchor ID for the header element
             // If an ID attribute is not set, use the text to create the ID
-            $id = $Block['element']['attributes']['id'] ?? $text;
-            $id = $this->createAnchorID($id);
+            $explicitId = $Block['element']['attributes']['id'] ?? null;
+            $id = $this->createAnchorID($explicitId ?? $text);
 
             // Set the 'id' attribute only when an anchor ID is generated
             if ($id !== null) {
                 $Block['element']['attributes']['id'] = $id;
+            } elseif ($explicitId !== null) {
+                $id = $explicitId;
             }
 
             // Check if the heading level should be included in the Table of Contents (TOC)
@@ -116,12 +118,14 @@ trait HeadingExtension
 
             // Generate an anchor ID for the header element
             // If an ID attribute is not set, use the text to create the ID
-            $id = $Block['element']['attributes']['id'] ?? $text;
-            $id = $this->createAnchorID($id);
+            $explicitId = $Block['element']['attributes']['id'] ?? null;
+            $id = $this->createAnchorID($explicitId ?? $text);
 
             // Set the 'id' attribute only when an anchor ID is generated
             if ($id !== null) {
                 $Block['element']['attributes']['id'] = $id;
+            } elseif ($explicitId !== null) {
+                $id = $explicitId;
             }
 
             // Check if the heading level should be included in the Table of Contents (TOC)
