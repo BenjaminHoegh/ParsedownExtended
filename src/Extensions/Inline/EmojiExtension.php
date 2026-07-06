@@ -22,9 +22,8 @@ trait EmojiExtension
      */
     protected function inlineEmojis(array $Excerpt): ?array
     {
-        // Check if emoji processing is enabled in the configuration settings
         if (!$this->configEnabled('emojis')) {
-            return null; // Return null if emoji replacement is disabled
+            return null;
         }
 
         // Early return if there is no closing ':' to form an emoji code

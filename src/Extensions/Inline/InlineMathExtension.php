@@ -22,9 +22,8 @@ trait InlineMathExtension
      */
     protected function inlineMathNotation($Excerpt)
     {
-        // Check if parsing of math notation is enabled in the configuration settings
         if (!$this->configEnabled('math') || !$this->configEnabled('math.inline')) {
-            return null; // Return null if math or inline math is disabled
+            return null;
         }
 
         // Check if the excerpt has enough characters to proceed

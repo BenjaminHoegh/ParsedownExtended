@@ -19,9 +19,8 @@ trait SubscriptExtension
      */
     protected function inlineSubscript(array $Excerpt): ?array
     {
-        // Check if subscript is enabled in the configuration settings
-        if (!$this->configEnabled('emphasis.subscript') || !$this->configEnabled('emphasis')) {
-            return null; // Return null if subscript or general emphasis is disabled
+        if (!$this->configEnabled('emphasis') || !$this->configEnabled('emphasis.subscript')) {
+            return null;
         }
 
         // Early return if no text follows the tilde or the next character is a tilde

@@ -13,8 +13,9 @@ trait RegistersBlockTypes
      */
     private function registerCustomBlockTypes(): void
     {
-        $this->addBlockType(['\\', '$'], 'MathNotation');
-        $this->addBlockType('>', 'Alert');
+        foreach ($this->getBlockExtensionDefinitions() as $definition) {
+            $this->addBlockType($definition['markers'], $definition['type']);
+        }
     }
 
     /**

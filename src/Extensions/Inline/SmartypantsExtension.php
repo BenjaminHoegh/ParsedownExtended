@@ -20,9 +20,8 @@ trait SmartypantsExtension
      */
     protected function inlineSmartypants($Excerpt)
     {
-        // Check if Smartypants is enabled in the configuration settings
         if (!$this->configEnabled('smartypants')) {
-            return null; // Return null if Smartypants is disabled
+            return null;
         }
 
         // Substitutions: Load the characters to use for the specific Smartypants transformations

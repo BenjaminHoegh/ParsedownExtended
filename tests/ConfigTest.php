@@ -189,6 +189,57 @@ class ConfigTest extends TestCase
     }
 
     /**
+     * Test runtime feature toggles invalidate cached inline handlers.
+     */
+    public function testRuntimeInlineToggleInvalidatesInlineCache()
+    {
+        $parsedownExtended = new ParsedownExtended();
+
+        $markdown = '[Link](https://www.example.com)';
+
+        $parsedownExtended->config()->set('links', true);
+        $enabledHtml = $parsedownExtended->text($markdown);
+        $this->assertStringContainsString('<a href="https://www.example.com"', $enabledHtml);
+
+        $parsedownExtended->config()->set('links', false);
+        $disabledHtml = $parsedownExtended->text($markdown);
+        $this->assertStringNotContainsString('<a href="https://www.example.com">Link</a>', $disabledHtml);
+
+        $parsedownExtended->config()->set('links', true);
+        $reEnabledHtml = $parsedownExtended->text($markdown);
+        $this->assertStringContainsString('<a href="https://www.example.com"', $reEnabledHtml);
+    }
+
+    /**
+     * Test parsing remains stable when all configurable inline handlers are disabled.
+     */
+    public function testAllInlineHandlersDisabledStillParsesText()
+    {
+        $parsedownExtended = new ParsedownExtended();
+        $parsedownExtended->setSafeMode(true);
+
+        $parsedownExtended->config()->set([
+            'code' => false,
+            'images' => false,
+            'allow_raw_html' => false,
+            'links' => false,
+            'footnotes' => false,
+            'emphasis' => false,
+            'math' => false,
+            'emojis' => false,
+            'smartypants' => false,
+            'typographer' => false,
+        ]);
+
+        $markdown = '*a* [b](https://www.example.com) `c` :smile: $x$ <span>d</span>';
+        $html = $parsedownExtended->text($markdown);
+
+        $this->assertStringNotContainsString('<em>', $html);
+        $this->assertStringNotContainsString('<a href=', $html);
+        $this->assertStringNotContainsString('<code>', $html);
+    }
+
+    /**
      * Test that config handlers remain isolated between ParsedownExtended instances.
      */
     public function testConfigHandlerIsolationBetweenInstances()

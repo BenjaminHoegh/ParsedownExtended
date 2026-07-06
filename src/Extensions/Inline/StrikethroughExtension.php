@@ -18,10 +18,10 @@ trait StrikethroughExtension
      */
     protected function inlineStrikethrough($Excerpt)
     {
-        if ($this->configEnabled('emphasis.strikethroughs') && $this->configEnabled('emphasis')) {
-            return parent::inlineStrikethrough($Excerpt);
+        if (!$this->configEnabled('emphasis') || !$this->configEnabled('emphasis.strikethroughs')) {
+            return null;
         }
 
-        return null;
+        return parent::inlineStrikethrough($Excerpt);
     }
 }

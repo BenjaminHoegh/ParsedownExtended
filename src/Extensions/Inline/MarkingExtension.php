@@ -19,9 +19,8 @@ trait MarkingExtension
      */
     protected function inlineMarking(array $Excerpt): ?array
     {
-        // Check if marking is enabled in the configuration settings
-        if (!$this->configEnabled('emphasis.mark') || !$this->configEnabled('emphasis')) {
-            return null; // Return null if marking or emphasis is disabled
+        if (!$this->configEnabled('emphasis') || !$this->configEnabled('emphasis.mark')) {
+            return null;
         }
 
         // Early return if the excerpt does not start with two '=' characters

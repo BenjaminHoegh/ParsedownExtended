@@ -20,10 +20,11 @@ trait TypographerExtension
      */
     protected function inlineTypographer(array $Excerpt): ?array
     {
-        if (
-            !$this->configEnabled('typographer') ||
-            empty($Excerpt['text'])
-        ) {
+        if (!$this->configEnabled('typographer')) {
+            return null;
+        }
+
+        if (empty($Excerpt['text'])) {
             return null;
         }
 

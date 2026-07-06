@@ -16,7 +16,6 @@ trait FootnoteExtension
      */
     protected function blockFootnote($Line)
     {
-        // Check if footnotes are enabled
         if ($this->configEnabled('footnotes')) {
             return parent::blockFootnote($Line); // Delegate to parent class
         }

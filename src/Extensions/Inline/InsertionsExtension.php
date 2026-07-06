@@ -19,9 +19,8 @@ trait InsertionsExtension
      */
     protected function inlineInsertions(array $Excerpt): ?array
     {
-        // Check if insertions are enabled in the configuration settings
-        if (!$this->configEnabled('emphasis.insertions') || !$this->configEnabled('emphasis')) {
-            return null; // Return null if insertions or general emphasis is disabled
+        if (!$this->configEnabled('emphasis') || !$this->configEnabled('emphasis.insertions')) {
+            return null;
         }
 
         // Early return if the excerpt does not start with two '+' characters

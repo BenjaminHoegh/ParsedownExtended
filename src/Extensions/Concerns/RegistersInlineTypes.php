@@ -13,15 +13,9 @@ trait RegistersInlineTypes
      */
     private function registerCustomInlineTypes(): void
     {
-        $this->addInlineType('=', 'Marking');
-        $this->addInlineType('+', 'Insertions');
-        $this->addInlineType('[', 'Keystrokes');
-        $this->addInlineType(['\\', '$'], 'MathNotation');
-        $this->addInlineType('^', 'Superscript');
-        $this->addInlineType('~', 'Subscript');
-        $this->addInlineType(':', 'Emojis');
-        $this->addInlineType(['<', '>', '-', '.', "'", '"', '`'], 'Smartypants');
-        $this->addInlineType(['(', '.', '+', '!', '?'], 'Typographer');
+        foreach ($this->getInlineExtensionDefinitions() as $definition) {
+            $this->addInlineType($definition['markers'], $definition['type']);
+        }
     }
 
     /**

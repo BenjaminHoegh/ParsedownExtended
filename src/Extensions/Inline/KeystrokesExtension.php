@@ -19,9 +19,8 @@ trait KeystrokesExtension
      */
     protected function inlineKeystrokes(array $Excerpt): ?array
     {
-        // Check if keystrokes are enabled in the configuration settings
-        if (!$this->configEnabled('emphasis.keystrokes') || !$this->configEnabled('emphasis')) {
-            return null; // Return null if keystrokes or general emphasis is disabled
+        if (!$this->configEnabled('emphasis') || !$this->configEnabled('emphasis.keystrokes')) {
+            return null;
         }
 
         // Early return if the excerpt does not start with two '[' characters
