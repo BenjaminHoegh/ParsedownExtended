@@ -109,6 +109,29 @@ class HeadingsTest extends TestCase
         $this->assertEquals('<h1 id="heading">Heading</h1>', $this->parsedownExtended->text('# Heading'));
     }
 
+    public function testHeadingAnchorWithTrailingBackslash()
+    {
+        $this->parsedownExtended->config()->set('headings.auto_anchors', true);
+
+        $markdown = '### foo\\';
+        $expected = '<h3 id="foo">foo\</h3>';
+
+        $this->assertEquals($expected, $this->parsedownExtended->text($markdown));
+    }
+
+    public function testSetextHeadingAnchorWithTrailingBackslash()
+    {
+        $this->parsedownExtended->config()->set('headings.auto_anchors', true);
+
+        $markdown = <<<MARKDOWN
+            Foo\\
+            ---
+            MARKDOWN;
+        $expected = '<h2 id="foo">Foo\</h2>';
+
+        $this->assertEquals($expected, $this->parsedownExtended->text($markdown));
+    }
+
     /**
      * Test case for heading with custom anchor.
      */
