@@ -65,6 +65,9 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
     /** @var bool $activeInlineMarkerListValid Whether the active inline marker list reflects current config. */
     private bool $activeInlineMarkerListValid = false;
 
+    /** @var array<string,bool> $configEnabledCache Memoized boolean config lookups for current instance state. */
+    private array $configEnabledCache = [];
+
     /**
      * Constructor for ParsedownExtended.
      *
@@ -197,12 +200,18 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
      */
     protected function configEnabled(string $path): bool
     {
+        if (array_key_exists($path, $this->configEnabledCache)) {
+            return $this->configEnabledCache[$path];
+        }
+
         if (isset($this->features[$path])) {
-            return $this->features[$path];
+            $this->configEnabledCache[$path] = $this->features[$path];
+            return $this->configEnabledCache[$path];
         }
 
         $enabledPath = $path . '.enabled';
-        return $this->features[$enabledPath] ?? false;
+        $this->configEnabledCache[$path] = $this->features[$enabledPath] ?? false;
+        return $this->configEnabledCache[$path];
     }
 
     /**
@@ -221,6 +230,7 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
         $this->activeInlineMarkerList = '';
         $this->activeInlineTypesByMarker = [];
         $this->activeInlineMarkerListValid = false;
+        $this->configEnabledCache = [];
     }
 
     /**

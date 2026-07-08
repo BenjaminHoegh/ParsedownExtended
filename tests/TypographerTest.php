@@ -46,7 +46,19 @@ class TypographerTest extends TestCase
         $this->parsedownExtended->config()->set('smartypants', true);
 
         $markdown = '(c) (r) (tm) ...';
-        $expected = '<p>© ® ™ …</p>';
+        $expected = '<p>© ® ™ ...</p>';
+
+        $result = $this->parsedownExtended->text($markdown);
+        $this->assertEquals($expected, $result);
+    }
+
+    public function testTypographerCustomEllipsesSubstitution(): void
+    {
+        $this->parsedownExtended->config()->set('typographer', true);
+        $this->parsedownExtended->config()->set('typographer.substitutions.ellipses', '&hellip;');
+
+        $markdown = '(c) ...';
+        $expected = '<p>© …</p>';
 
         $result = $this->parsedownExtended->text($markdown);
         $this->assertEquals($expected, $result);

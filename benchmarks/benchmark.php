@@ -39,8 +39,8 @@ if (isset($options['help'])) {
     exit(0);
 }
 
-if (!class_exists('Parsedown') || !class_exists('ParsedownExtra') || !class_exists(ParsedownExtended::class)) {
-    fwrite(STDERR, "Error: Parsedown, ParsedownExtra, and ParsedownExtended must be installed.\n");
+if (!class_exists('ParsedownExtra') || !class_exists(ParsedownExtended::class)) {
+    fwrite(STDERR, "Error: ParsedownExtra and ParsedownExtended must be installed.\n");
     exit(1);
 }
 
@@ -68,9 +68,6 @@ echo "Warmup: {$warmup}" . PHP_EOL;
 echo 'Files: ' . count($markdownFiles) . PHP_EOL . PHP_EOL;
 
 $parserFactories = [
-    'Parsedown' => function (): Parsedown {
-        return new Parsedown();
-    },
     'ParsedownExtra' => function (): ParsedownExtra {
         return new ParsedownExtra();
     },

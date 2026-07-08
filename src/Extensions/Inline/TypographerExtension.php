@@ -31,10 +31,8 @@ trait TypographerExtension
         static $substitutions = null;
         static $lastEllipsesKey = null;
 
-        // Only update ellipses if config changes
-        $ellipsesKey = $this->configEnabled('smartypants') && $this->configEnabled('smartypants.smart_ellipses')
-            ? $this->configValue('smartypants.substitutions.ellipses')
-            : '...';
+        // Typographer owns its substitution settings.
+        $ellipsesKey = $this->configValue('typographer.substitutions.ellipses') ?? '...';
 
         if ($substitutions === null || $ellipsesKey !== $lastEllipsesKey) {
             $lastEllipsesKey = $ellipsesKey;

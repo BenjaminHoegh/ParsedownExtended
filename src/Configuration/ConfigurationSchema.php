@@ -95,7 +95,12 @@ final class ConfigurationSchema
             'tag'    => '[TOC]',
             'id'     => 'toc',
         ],
-        'typographer' => true,
+          'typographer' => [
+              'enabled' => true,
+              'substitutions' => [
+                  'ellipses' => '...', # REMOVE: This will be a breaking change in the future, we need to use the one from smartypants instead.
+              ],
+          ],
         'references'  => true,
     ];
 }
