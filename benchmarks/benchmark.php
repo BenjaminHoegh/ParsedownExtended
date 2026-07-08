@@ -1,219 +1,535 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Performance Benchmarks</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Roboto:ital,wght@0,100;0,300;0,400;0,500;0,700;0,900;1,100;1,300;1,400;1,500;1,700;1,900&display=swap" rel="stylesheet">
-    <style>
-        body {
-            background-color: #222222;
-            color: #777;
-            font-family: "Roboto", "lucida grande", tahoma, verdana, arial, sans-serif;
-            font-size: 16px;
-            line-height: 1.5rem;
-            margin: 0;
-            padding: 0;
-            font-weight: 400;
-        }
-
-        table {
-            width: 100%;
-            border-collapse: collapse;
-        }
-
-        th, td {
-            padding: 20px;
-            text-align: left;
-            font-weight: normal;
-        }
-
-        td {
-            width: 20%;
-        }
-
-        table th:first-child, table td:first-child {
-            width: 20%;
-        }
-
-        tbody tr:nth-child(odd) {
-            background-color: #1D1D1D;
-        }
-
-        .average {
-            border-top: 1px solid #333;
-        }
-
-        strong {
-            color: #ddd;
-            font-weight: 400;
-            font-size: 16px;
-        }
-
-        .faster {
-            color: #77dd77;
-        }
-        .slower {
-            color: #dd7777;
-        }
-
-        .xdebug-warning {
-            background-color: #ffcc00;
-            color: #333;
-            padding: 10px;
-            margin: 20px 0;
-            font-size: 16px;
-            font-weight: 400;
-        }
-
-        .error {
-            color: #dd7777;
-            padding: 20px;
-            font-size: 18px;
-        }
-    </style>
-</head>
-<body>
-
-<h1>Performance Benchmarks</h1>
-
+#!/usr/bin/env php
 <?php
-# Load the autoloader first
-require_once '../vendor/autoload.php';
 
-# Check if xdebug is enabled
+declare(strict_types=1);
+
+use BenjaminHoegh\ParsedownExtended\ParsedownExtended;
+
+$root = dirname(__DIR__);
+$autoload = $root . '/vendor/autoload.php';
+
+if (!file_exists($autoload)) {
+    fwrite(STDERR, "Error: vendor/autoload.php not found. Run composer install first.\n");
+    exit(1);
+}
+
+require_once $autoload;
+
+$options = getopt('', [
+    'iterations::',
+    'warmup::',
+    'path::',
+    'memory',
+    'no-color',
+    'no-feature-groups',
+    'help',
+]);
+
+if (isset($options['help'])) {
+    echo <<<TXT
+        Usage:
+          composer benchmark -- [--iterations=50] [--warmup=3] [--path=benchmarks/tests] [--memory] [--no-feature-groups] [--no-color]
+
+        Examples:
+          composer benchmark
+          composer benchmark -- --iterations=100 --no-color
+          composer benchmark -- --path=benchmarks/tests --memory
+
+        TXT;
+    exit(0);
+}
+
+if (!class_exists('ParsedownExtra') || !class_exists(ParsedownExtended::class)) {
+    fwrite(STDERR, "Error: ParsedownExtra and ParsedownExtended must be installed.\n");
+    exit(1);
+}
+
+$iterations = max(1, (int) ($options['iterations'] ?? 50));
+$warmup = max(0, (int) ($options['warmup'] ?? 3));
+$path = (string) ($options['path'] ?? 'benchmarks/tests');
+$testPath = isAbsolutePath($path) ? $path : $root . '/' . $path;
+$useColor = !isset($options['no-color']);
+$includeMemory = isset($options['memory']);
+$includeFeatureGroups = !isset($options['no-feature-groups']);
+
 if (extension_loaded('xdebug')) {
-    echo "<div class='xdebug-warning'>Warning: Xdebug is enabled. This may result in incorrect benchmark results.</div>";
+    fwrite(STDERR, "Warning: Xdebug is enabled. Benchmark results may be inaccurate.\n\n");
 }
 
-// Ensure ParsedownExtra and ParsedownExtended are available
-if (!class_exists('ParsedownExtra') || !class_exists('BenjaminHoegh\ParsedownExtended\ParsedownExtended')) {
-    echo "<div class='error'>Error: ParsedownExtra and ParsedownExtended are required but not found. Please make sure these packages are installed.</div>";
-    exit; // Stop further execution
+$markdownFiles = loadMarkdownFiles($testPath);
+if ($markdownFiles === []) {
+    fwrite(STDERR, "Error: No benchmark markdown files found in {$testPath}\n");
+    exit(1);
 }
 
-?>
+echo colorize('Performance Benchmarks', 'bold', $useColor) . PHP_EOL;
+echo "Iterations: {$iterations}" . PHP_EOL;
+echo "Warmup: {$warmup}" . PHP_EOL;
+echo 'Files: ' . count($markdownFiles) . PHP_EOL . PHP_EOL;
 
-<table>
-    <thead>
-        <tr>
-            <th><strong>Source</strong></th>
-            <th><strong>ParsedownExtra</strong> | base speed </th>
-            <th><strong>ParsedownExtended</strong> | our extension </th>
-            <th><strong>Markdown PHP</strong> | the original parser </th>
-            <th><strong>League</strong> | commonmark parser</th>
-        </tr>
-    </thead>
-
-    <tbody id="benchmark-results">
-<?php
-
-// Define a function to measure execution time and average it over multiple runs
-function benchmark($parser, $markdown, $iterations = 10)
-{
-    $total_time = 0;
-
-    for ($i = 0; $i < $iterations; $i++) {
-        $start = microtime(true);
-
-        if ($parser instanceof Michelf\Markdown) {
-            $parser->defaultTransform($markdown);
-        } elseif ($parser instanceof League\CommonMark\CommonMarkConverter) {
-            $parser->convert($markdown);
-        } else {
-            $parser->text($markdown);
-        }
-
-        $total_time += microtime(true) - $start;
-    }
-
-    return $total_time / $iterations; // Return average time
-}
-
-// Load your markdown files (adjust paths as necessary)
-$markdown_files = [
-    'angular readme' => file_get_contents('tests/angular-readme.md'),
-    'bootstrap readme' => file_get_contents('tests/bootstrap-readme.md'),
-    'homebrew readme' => file_get_contents('tests/homebrew-readme.md'),
-    'jquery readme' => file_get_contents('tests/jquery-readme.md'),
-    'markdown readme' => file_get_contents('tests/markdown-readme.md'),
-    'rails readme' => file_get_contents('tests/rails-readme.md'),
-    'textmate readme' => file_get_contents('tests/textmate-readme.md'),
-    // Add other markdown files similarly
+$parserFactories = [
+    'ParsedownExtra' => function (): ParsedownExtra {
+        return new ParsedownExtra();
+    },
+    'ParsedownExtended' => function (): ParsedownExtended {
+        return new ParsedownExtended();
+    },
 ];
 
-// Initialize parsers
-$parsers = [];
-$parsers['ParsedownExtra'] = new ParsedownExtra();
-$parsers['ParsedownExtended'] = new \BenjaminHoegh\ParsedownExtended\ParsedownExtended();
+$comparison = benchmarkParsers($markdownFiles, $parserFactories, $iterations, $warmup, $includeMemory);
+printParserComparison($comparison, $parserFactories, $useColor, $includeMemory);
 
-if (class_exists('Michelf\MarkdownExtra')) {
-    $parsers['Markdown PHP'] = new \Michelf\MarkdownExtra();
-}
-if (class_exists('League\CommonMark\CommonMarkConverter')) {
-    $parsers['League'] = new \League\CommonMark\CommonMarkConverter();
+if ($includeFeatureGroups) {
+    echo PHP_EOL;
+    $extraAverage = $comparison['averages']['ParsedownExtra']['time'];
+    $featureGroups = benchmarkFeatureGroups($markdownFiles, $iterations, $warmup, $includeMemory);
+    printFeatureGroups($featureGroups, $extraAverage, $useColor, $includeMemory);
 }
 
-// Initialize variables to calculate averages
-$totals = [];
-$averages = [];
-$file_count = count($markdown_files);
+function isAbsolutePath(string $path): bool
+{
+    return $path !== '' && ($path[0] === '/' || preg_match('/^[A-Za-z]:[\/\\\\]/', $path) === 1);
+}
 
-// Run the benchmarks
-foreach ($markdown_files as $name => $markdown) {
-    echo "<tr>";
-    echo "<td><strong>$name</strong></td>";
+function loadMarkdownFiles(string $testPath): array
+{
+    $preferredOrder = [
+        'angular-readme',
+        'bootstrap-readme',
+        'homebrew-readme',
+        'jquery-readme',
+        'markdown-readme',
+        'rails-readme',
+        'textmate-readme',
+    ];
 
-    // Benchmark ParsedownExtra first to establish the base speed
-    $parsedown_extra_time = benchmark($parsers['ParsedownExtra'], $markdown);
-    $parsedown_extra_time_ms = round($parsedown_extra_time * 1000, 2); // Convert to milliseconds
-    $totals['ParsedownExtra'] = ($totals['ParsedownExtra'] ?? 0) + $parsedown_extra_time;
-
-    echo "<td>~ <strong>{$parsedown_extra_time_ms} ms</strong></td>";
-
-    // Benchmark other parsers and compare to ParsedownExtra
-    foreach ($parsers as $parser_name => $parser) {
-        if ($parser_name !== 'ParsedownExtra') {
-            $time = benchmark($parser, $markdown);
-            $time_ms = round($time * 1000, 2); // Convert to milliseconds
-            $totals[$parser_name] = ($totals[$parser_name] ?? 0) + $time;
-
-            $speed_diff = $time / $parsedown_extra_time;
-            $speed_text = $speed_diff < 1 ? 'faster' : 'slower';
-            $times_diff = round($speed_diff < 1 ? 1 / $speed_diff : $speed_diff, 2);
-
-            echo "<td>~ <strong>{$time_ms} ms</strong> or <span class='{$speed_text}'>{$times_diff} times</span> {$speed_text}</td>";
+    $files = [];
+    foreach ($preferredOrder as $name) {
+        $file = rtrim($testPath, '/\\') . '/' . $name . '.md';
+        if (is_file($file)) {
+            $contents = file_get_contents($file);
+            if (is_string($contents)) {
+                $files[$name] = $contents;
+            }
         }
     }
 
-    echo "</tr>";
+    if ($files !== []) {
+        return $files;
+    }
+
+    foreach (glob(rtrim($testPath, '/\\') . '/*.md') ?: [] as $file) {
+        $contents = file_get_contents($file);
+        if (is_string($contents)) {
+            $files[basename($file, '.md')] = $contents;
+        }
+    }
+
+    ksort($files);
+
+    return $files;
 }
 
-// Calculate the averages
-echo "<tr class='average'>";
-echo "<td><strong>Averages</strong></td>";
+function benchmarkParsers(array $markdownFiles, array $parserFactories, int $iterations, int $warmup, bool $includeMemory): array
+{
+    $rows = [];
+    $totals = [];
 
-// Average for ParsedownExtra
-$average_parsedown_extra_time = round(($totals['ParsedownExtra'] / $file_count) * 1000, 2);
-echo "<td>~ <strong>{$average_parsedown_extra_time} ms</strong></td>";
+    foreach ($parserFactories as $parserName => $_factory) {
+        $totals[$parserName] = ['time' => 0.0, 'memory' => 0];
+    }
 
-// Averages for other parsers relative to ParsedownExtra
-foreach ($parsers as $parser_name => $parser) {
-    if ($parser_name !== 'ParsedownExtra') {
-        $average_time = round(($totals[$parser_name] / $file_count) * 1000, 2);
-        $average_speed_diff = $average_time / $average_parsedown_extra_time;
-        $average_speed_text = $average_speed_diff < 1 ? 'faster' : 'slower';
-        $average_times_diff = round($average_speed_diff < 1 ? 1 / $average_speed_diff : $average_speed_diff, 1);
+    foreach ($markdownFiles as $source => $markdown) {
+        $rows[$source] = [];
 
-        echo "<td>~ <strong>{$average_time} ms</strong> or <span class='{$average_speed_text}'>{$average_times_diff} times</span> {$average_speed_text}</td>";
+        foreach ($parserFactories as $parserName => $factory) {
+            $parser = $factory();
+            $result = benchmarkParser($parser, $markdown, $iterations, $warmup, $includeMemory);
+            $rows[$source][$parserName] = $result;
+            $totals[$parserName]['time'] += $result['time'];
+            $totals[$parserName]['memory'] += $result['memory'];
+        }
+    }
+
+    $fileCount = count($markdownFiles);
+    $averages = [];
+    foreach ($totals as $parserName => $total) {
+        $averages[$parserName] = [
+            'time' => $total['time'] / $fileCount,
+            'memory' => (int) round($total['memory'] / $fileCount),
+        ];
+    }
+
+    return ['rows' => $rows, 'averages' => $averages];
+}
+
+function benchmarkFeatureGroups(array $markdownFiles, int $iterations, int $warmup, bool $includeMemory): array
+{
+    $groups = featureGroupSettings();
+    $results = [];
+
+    foreach ($groups as $groupName => $settings) {
+        $parser = new ParsedownExtended();
+        applySettings($parser, $settings);
+
+        $totalTime = 0.0;
+        $totalMemory = 0;
+
+        foreach ($markdownFiles as $markdown) {
+            $result = benchmarkParser($parser, $markdown, $iterations, $warmup, $includeMemory);
+            $totalTime += $result['time'];
+            $totalMemory += $result['memory'];
+        }
+
+        $results[$groupName] = [
+            'time' => $totalTime / count($markdownFiles),
+            'memory' => (int) round($totalMemory / count($markdownFiles)),
+        ];
+    }
+
+    return $results;
+}
+
+function featureGroupSettings(): array
+{
+    $optionalDisabled = [
+        'toc' => false,
+        'smartypants' => false,
+        'typographer' => false,
+        'emojis' => false,
+        'math' => false,
+        'diagrams' => false,
+        'tables.tablespan' => false,
+        'lists.tasks' => false,
+        'links.external_links' => false,
+        'abbreviations' => false,
+        'headings.auto_anchors' => false,
+        'emphasis.mark' => false,
+        'emphasis.insertions' => false,
+        'emphasis.keystrokes' => false,
+        'emphasis.subscript' => false,
+        'emphasis.superscript' => false,
+    ];
+
+    $allEnabled = [
+        'abbreviations' => true,
+        'abbreviations.allow_custom' => true,
+        'alerts' => true,
+        'allow_raw_html' => true,
+        'code' => true,
+        'code.blocks' => true,
+        'code.inline' => true,
+        'comments' => true,
+        'definition_lists' => true,
+        'diagrams' => true,
+        'diagrams.chartjs' => true,
+        'diagrams.mermaid' => true,
+        'emojis' => true,
+        'emphasis' => true,
+        'emphasis.bold' => true,
+        'emphasis.italic' => true,
+        'emphasis.insertions' => true,
+        'emphasis.keystrokes' => true,
+        'emphasis.mark' => true,
+        'emphasis.strikethroughs' => true,
+        'emphasis.subscript' => true,
+        'emphasis.superscript' => true,
+        'footnotes' => true,
+        'headings' => true,
+        'headings.auto_anchors' => true,
+        'headings.auto_anchors.lowercase' => true,
+        'headings.auto_anchors.transliterate' => true,
+        'headings.special_attributes' => true,
+        'images' => true,
+        'links' => true,
+        'links.email_links' => true,
+        'links.external_links' => true,
+        'links.external_links.nofollow' => true,
+        'links.external_links.noopener' => true,
+        'links.external_links.noreferrer' => true,
+        'links.external_links.open_in_new_window' => true,
+        'lists' => true,
+        'lists.tasks' => true,
+        'math' => true,
+        'math.block' => true,
+        'math.inline' => true,
+        'quotes' => true,
+        'references' => true,
+        'smartypants' => true,
+        'smartypants.smart_angled_quotes' => true,
+        'smartypants.smart_backticks' => true,
+        'smartypants.smart_dashes' => true,
+        'smartypants.smart_ellipses' => true,
+        'smartypants.smart_quotes' => true,
+        'tables' => true,
+        'tables.tablespan' => true,
+        'thematic_breaks' => true,
+        'toc' => true,
+        'typographer' => true,
+    ];
+
+    return [
+        'default configuration' => [],
+        'all settings enabled' => $allEnabled,
+        'all optional disabled' => $optionalDisabled,
+        'TOC disabled' => ['toc' => false],
+        'smartypants disabled' => ['smartypants' => false],
+        'typographer disabled' => ['typographer' => false],
+        'emoji disabled' => ['emojis' => false],
+        'math disabled' => ['math' => false],
+        'diagrams disabled' => ['diagrams' => false],
+        'tablespan disabled' => ['tables.tablespan' => false],
+        'task lists disabled' => ['lists.tasks' => false],
+        'external links disabled' => ['links.external_links' => false],
+        'abbreviations disabled' => ['abbreviations' => false],
+        'heading anchors disabled' => ['headings.auto_anchors' => false],
+        'only headings/anchors' => array_merge($optionalDisabled, ['headings.auto_anchors' => true]),
+        'only TOC' => array_merge($optionalDisabled, ['toc' => true, 'headings.auto_anchors' => true]),
+        'only emoji' => array_merge($optionalDisabled, ['emojis' => true]),
+        'only smartypants' => array_merge($optionalDisabled, ['smartypants' => true]),
+        'only typographer' => array_merge($optionalDisabled, ['typographer' => true]),
+        'only math' => array_merge($optionalDisabled, ['math' => true]),
+        'only external links' => array_merge($optionalDisabled, ['links.external_links' => true]),
+        'only abbreviations' => array_merge($optionalDisabled, ['abbreviations' => true]),
+    ];
+}
+
+function applySettings(ParsedownExtended $parser, array $settings): void
+{
+    foreach ($settings as $path => $value) {
+        $parser->config()->set($path, $value);
     }
 }
 
-echo "</tr>";
-?>
-    </tbody>
-</table>
-</body>
-</html>
+function benchmarkParser($parser, string $markdown, int $iterations, int $warmup, bool $includeMemory): array
+{
+    for ($i = 0; $i < $warmup; $i++) {
+        parseMarkdown($parser, $markdown);
+    }
+
+    gc_collect_cycles();
+
+    if ($includeMemory && function_exists('memory_reset_peak_usage')) {
+        memory_reset_peak_usage();
+    }
+
+    $memoryStart = $includeMemory ? memory_get_usage(false) : 0;
+    $start = hrtime(true);
+
+    for ($i = 0; $i < $iterations; $i++) {
+        parseMarkdown($parser, $markdown);
+    }
+
+    $elapsed = hrtime(true) - $start;
+    $memory = 0;
+
+    if ($includeMemory) {
+        $memory = max(0, memory_get_peak_usage(false) - $memoryStart);
+    }
+
+    return [
+        'time' => ($elapsed / 1000000000) / $iterations,
+        'memory' => $memory,
+    ];
+}
+
+function parseMarkdown($parser, string $markdown): string
+{
+    return $parser->text($markdown);
+}
+
+function printParserComparison(array $comparison, array $parserFactories, bool $useColor, bool $includeMemory): void
+{
+    echo colorize('Parser Comparison', 'bold', $useColor) . PHP_EOL;
+
+    $headers = array_merge(['Source'], array_keys($parserFactories));
+    $rows = [];
+
+    foreach ($comparison['rows'] as $source => $times) {
+        $baseTime = $times['ParsedownExtra']['time'];
+        $row = [$source];
+
+        foreach (array_keys($parserFactories) as $parserName) {
+            $cell = formatMs($times[$parserName]['time']);
+            if ($parserName !== 'ParsedownExtra') {
+                $cell .= ' / ' . formatComparison($times[$parserName]['time'], $baseTime, $useColor);
+            }
+            if ($includeMemory) {
+                $cell .= ' / ' . formatBytes($times[$parserName]['memory']);
+            }
+            $row[] = $cell;
+        }
+
+        $rows[] = $row;
+    }
+
+    $averageBaseTime = $comparison['averages']['ParsedownExtra']['time'];
+    $averageRow = ['Averages'];
+    foreach (array_keys($parserFactories) as $parserName) {
+        $cell = formatMs($comparison['averages'][$parserName]['time']);
+        if ($parserName !== 'ParsedownExtra') {
+            $cell .= ' / ' . formatComparison($comparison['averages'][$parserName]['time'], $averageBaseTime, $useColor);
+        }
+        if ($includeMemory) {
+            $cell .= ' / ' . formatBytes($comparison['averages'][$parserName]['memory']);
+        }
+        $averageRow[] = $cell;
+    }
+    $rows[] = $averageRow;
+
+    printTable($headers, $rows);
+}
+
+function printFeatureGroups(array $featureGroups, float $extraAverage, bool $useColor, bool $includeMemory): void
+{
+    echo colorize('ParsedownExtended Feature Groups', 'bold', $useColor) . PHP_EOL;
+
+    $defaultTime = $featureGroups['default configuration']['time'];
+    $headers = ['Case', 'Average', 'vs default', 'vs ParsedownExtra'];
+    if ($includeMemory) {
+        $headers[] = 'Peak memory';
+    }
+
+    $rows = [];
+    foreach ($featureGroups as $case => $result) {
+        $row = [
+            $case,
+            formatMs($result['time']),
+            $case === 'default configuration'
+                ? 'baseline'
+                : formatImprovement($result['time'], $defaultTime, $useColor),
+            formatComparison($result['time'], $extraAverage, $useColor),
+        ];
+
+        if ($includeMemory) {
+            $row[] = formatBytes($result['memory']);
+        }
+
+        $rows[] = $row;
+    }
+
+    printTable($headers, $rows);
+}
+
+function colorize(string $text, string $color, bool $enabled): string
+{
+    if (!$enabled) {
+        return $text;
+    }
+
+    switch ($color) {
+        case 'green':
+            return "\033[32m{$text}\033[0m";
+        case 'red':
+            return "\033[31m{$text}\033[0m";
+        case 'bold':
+            return "\033[1m{$text}\033[0m";
+        default:
+            return $text;
+    }
+}
+
+function visibleLength(string $value): int
+{
+    return strlen(preg_replace('/\033\[[0-9;]*m/', '', $value));
+}
+
+function padVisible(string $value, int $length): string
+{
+    return $value . str_repeat(' ', max(0, $length - visibleLength($value)));
+}
+
+function formatMs(float $seconds): string
+{
+    return '~ ' . number_format($seconds * 1000, 2) . ' ms';
+}
+
+function formatBytes(int $bytes): string
+{
+    if ($bytes >= 1048576) {
+        return number_format($bytes / 1048576, 2) . ' MB';
+    }
+
+    if ($bytes >= 1024) {
+        return number_format($bytes / 1024, 1) . ' KB';
+    }
+
+    return $bytes . ' B';
+}
+
+function formatComparison(float $time, float $baseTime, bool $useColor): string
+{
+    if ($baseTime <= 0 || $time <= 0) {
+        return '';
+    }
+
+    $ratio = $time / $baseTime;
+
+    if (abs($ratio - 1.0) < 0.01) {
+        return 'same speed';
+    }
+
+    if ($ratio < 1) {
+        return colorize(number_format(1 / $ratio, 2) . 'x faster', 'green', $useColor);
+    }
+
+    return colorize(number_format($ratio, 2) . 'x slower', 'red', $useColor);
+}
+
+function formatImprovement(float $time, float $baseTime, bool $useColor): string
+{
+    if ($baseTime <= 0 || $time <= 0) {
+        return '';
+    }
+
+    $ratio = $time / $baseTime;
+
+    if (abs($ratio - 1.0) < 0.01) {
+        return 'same speed';
+    }
+
+    if ($ratio < 1) {
+        return colorize(number_format((1 - $ratio) * 100, 1) . '% faster', 'green', $useColor);
+    }
+
+    return colorize(number_format(($ratio - 1) * 100, 1) . '% slower', 'red', $useColor);
+}
+
+function printTable(array $headers, array $rows): void
+{
+    $widths = [];
+    foreach ($headers as $index => $header) {
+        $widths[$index] = visibleLength($header);
+    }
+
+    foreach ($rows as $row) {
+        foreach ($row as $index => $cell) {
+            $widths[$index] = max($widths[$index] ?? 0, visibleLength($cell));
+        }
+    }
+
+    printTableRow($headers, $widths);
+
+    $dividers = [];
+    foreach ($widths as $width) {
+        $dividers[] = str_repeat('-', $width);
+    }
+    echo implode('-+-', $dividers) . PHP_EOL;
+
+    foreach ($rows as $row) {
+        printTableRow($row, $widths);
+    }
+}
+
+function printTableRow(array $row, array $widths): void
+{
+    foreach ($row as $index => $cell) {
+        echo padVisible($cell, $widths[$index]);
+
+        if ($index < count($row) - 1) {
+            echo ' | ';
+        }
+    }
+
+    echo PHP_EOL;
+}
