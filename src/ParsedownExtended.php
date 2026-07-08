@@ -93,7 +93,10 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
         ],
         'images' => true,
         'links' => [
-            'email_links' => true,
+            'email_links' => [
+                'enabled' => true,
+                'open_in_new_window' => true,
+            ],
             'external_links' => [
                 'nofollow'           => true,
                 'noopener'           => true,
@@ -146,6 +149,27 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
         ],
         'typographer' => true,
         'references'  => true,
+    ];
+
+    private const PARSEDOWN_ESCAPABLE_SPECIAL_CHARACTERS = [
+        '\\' => true,
+        '`' => true,
+        '*' => true,
+        '_' => true,
+        '{' => true,
+        '}' => true,
+        '[' => true,
+        ']' => true,
+        '(' => true,
+        ')' => true,
+        '>' => true,
+        '#' => true,
+        '+' => true,
+        '-' => true,
+        '.' => true,
+        '!' => true,
+        '|' => true,
+        '~' => true,
     ];
 
 
@@ -395,7 +419,7 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
 
         $Excerpt = parent::inlineEmailTag($Excerpt);
 
-        if (isset($Excerpt['element']['attributes']['href'])) {
+        if (isset($Excerpt['element']['attributes']['href']) && $config->get('links.email_links.open_in_new_window')) {
             $Excerpt['element']['attributes']['target'] = '_blank';
         }
 
@@ -879,11 +903,13 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
             }
         }
 
+        $escapedCharacter = $Excerpt['text'][1] ?? null;
+
         // Check if the character following the backslash is a special character that should be escaped
-        if (isset($Excerpt['text'][1]) && in_array($Excerpt['text'][1], $this->specialCharacters, true)) {
+        if (is_string($escapedCharacter) && $this->isEscapableSpecialCharacter($escapedCharacter)) {
             // Return the escaped character
             return [
-                'markup' => $Excerpt['text'][1], // The character to be escaped
+                'element' => ['rawHtml' => $escapedCharacter === '<' ? '&lt;' : $escapedCharacter], // The character to be escaped
                 'extent' => 2, // The length of the escape sequence (backslash + character)
             ];
         }
@@ -2798,7 +2824,16 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
         }
 
         if ($mbstringLoaded) {
-            return mb_convert_encoding($text, 'UTF-8', mb_list_encodings());
+            if (mb_check_encoding($text, 'UTF-8')) {
+                return $text;
+            }
+
+            $encoding = mb_detect_encoding($text, ['UTF-8', 'Windows-1252', 'ISO-8859-1'], true);
+            if (!is_string($encoding)) {
+                return $text;
+            }
+
+            return mb_convert_encoding($text, 'UTF-8', $encoding);
         } else {
             return $text; // Return raw text as there is no good alternative for mb_convert_encoding
         }
@@ -3276,6 +3311,68 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
     }
 
     /**
+     * Determines if a backslash may escape the given inline marker.
+     *
+     * ParsedownExtended registers markers for optional features up front, but
+     * disabled features should not change ParsedownExtra-compatible escaping.
+     */
+    private function isEscapableSpecialCharacter(string $character): bool
+    {
+        if (isset(self::PARSEDOWN_ESCAPABLE_SPECIAL_CHARACTERS[$character])) {
+            return true;
+        }
+
+        $config = $this->config();
+
+        switch ($character) {
+            case '=':
+                return $config->get('emphasis') && $config->get('emphasis.mark');
+            case '$':
+                return $config->get('math');
+            case '^':
+                return $config->get('emphasis') && $config->get('emphasis.superscript');
+            case ':':
+                return $config->get('emojis');
+            case '"':
+            case "'":
+            case '<':
+                return $config->get('smartypants');
+            case '?':
+                return $config->get('typographer');
+            default:
+                return false;
+        }
+    }
+
+    /**
+     * Normalizes non-nestable inline type data into a lookup set.
+     *
+     * Parsedown passes this as a list initially, then recursive handlers pass it
+     * back as element metadata. Accept both shapes so nested parsing keeps the
+     * original restrictions.
+     *
+     * @param array<int|string, mixed> $nonNestables
+     * @return array<string, bool>
+     */
+    private function normalizeNonNestables(array $nonNestables): array
+    {
+        $normalized = [];
+
+        foreach ($nonNestables as $key => $value) {
+            if (is_string($key)) {
+                $normalized[$key] = true;
+                continue;
+            }
+
+            if (is_string($value)) {
+                $normalized[$value] = true;
+            }
+        }
+
+        return $normalized;
+    }
+
+    /**
      * Registers an inline type marker with a corresponding handler function.
      *
      * This function ensures that a given marker is registered for inline parsing, associating it with
@@ -3632,9 +3729,7 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
         $text = str_replace(["\r\n", "\r"], "\n", $text);
 
         $Elements = [];
-        $nonNestables = empty($nonNestables)
-            ? []
-            : array_fill_keys($nonNestables, true);
+        $nonNestables = $this->normalizeNonNestables($nonNestables);
 
         while ($ExcerptStr = strpbrk($text, $this->inlineMarkerList)) {
             $marker = $ExcerptStr[0];
@@ -3669,7 +3764,7 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
 
                 // Propagate non-nestable markers through nested elements.
                 $Inline['element']['nonNestables'] = isset($Inline['element']['nonNestables'])
-                    ? array_merge($Inline['element']['nonNestables'], $nonNestables)
+                    ? $this->normalizeNonNestables($Inline['element']['nonNestables']) + $nonNestables
                     : $nonNestables;
 
                 // Compile text before the inline.
