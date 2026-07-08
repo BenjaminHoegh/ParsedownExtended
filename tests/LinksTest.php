@@ -65,6 +65,17 @@ class LinksTest extends TestCase
         $this->assertStringNotContainsString('<a href="mailto:test@example.com">test@example.com</a>', $html);
     }
 
+    public function testEmailOpenInNewWindowDisabled()
+    {
+        $this->parsedownExtended->config()->set('links.email_links.open_in_new_window', false);
+
+        $markdown = '<test@example.com>';
+        $html = $this->parsedownExtended->text($markdown);
+
+        $this->assertStringContainsString('<a href="mailto:test@example.com">test@example.com</a>', $html);
+        $this->assertStringNotContainsString('target="_blank"', $html);
+    }
+
     // External Links Settings
     // ----------------------------
 
@@ -271,6 +282,30 @@ class LinksTest extends TestCase
 
         // restore for other tests
         $_SERVER['HTTP_HOST'] = $temp;
+    }
+
+    public function testLinksRemainNonNestableInsideEmphasis()
+    {
+        $markdown = '[foo *[bar [baz](/uri)](/uri)*](/uri)';
+        $expectedHtml = '<p><a href="/uri">foo <em>[bar [baz](/uri)](/uri)</em></a></p>';
+
+        $html = $this->parsedownExtended->text($markdown);
+
+        $this->assertEquals($expectedHtml, $html);
+    }
+
+    public function testReferenceLinksRemainNonNestableInsideEmphasis()
+    {
+        $markdown = <<<MARKDOWN
+            [foo *bar [baz][ref]*][ref]
+
+            [ref]: /uri
+            MARKDOWN;
+        $expectedHtml = '<p><a href="/uri">foo <em>bar [baz][ref]</em></a></p>';
+
+        $html = $this->parsedownExtended->text($markdown);
+
+        $this->assertEquals($expectedHtml, $html);
     }
 
     // Markdown Edge Cases
