@@ -2097,8 +2097,6 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
     }
 
 
-    // BUG: Breaks formatting if written in a single line
-
     /**
      * Processes block-level math notation.
      *
