@@ -95,13 +95,12 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
         'links' => [
             'email_links' => [
                 'enabled' => true,
-                'open_in_new_window' => true,
             ],
             'external_links' => [
-                'nofollow'           => true,
-                'noopener'           => true,
-                'noreferrer'         => true,
-                'open_in_new_window' => true,
+                'nofollow'           => false,
+                'noopener'           => false,
+                'noreferrer'         => false,
+                'open_in_new_window' => false,
                 'internal_hosts'     => [],
             ],
         ],
@@ -417,13 +416,7 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
             return null;
         }
 
-        $Excerpt = parent::inlineEmailTag($Excerpt);
-
-        if (isset($Excerpt['element']['attributes']['href']) && $config->get('links.email_links.open_in_new_window')) {
-            $Excerpt['element']['attributes']['target'] = '_blank';
-        }
-
-        return $Excerpt;
+        return parent::inlineEmailTag($Excerpt);
     }
 
 

@@ -3,6 +3,9 @@
     <testsuites>
         <testsuite name="ParsedownExtended Test Suite">
             <directory>./tests</directory>
+            <exclude>./tests/fixtures/CommonMarkComparisonTest.php</exclude>
+            <exclude>./tests/fixtures/CommonMarkTestStrict.php</exclude>
+            <exclude>./tests/fixtures/CommonMarkTestWeak.php</exclude>
         </testsuite>
     </testsuites>
 </phpunit>

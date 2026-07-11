@@ -52,7 +52,8 @@ class LinksTest extends TestCase
         $markdown = '<test@example.com>';
         $html = $this->parsedownExtended->text($markdown);
 
-        $this->assertStringContainsString('<a href="mailto:test@example.com" target="_blank">test@example.com</a>', $html);
+        $this->assertStringContainsString('<a href="mailto:test@example.com">test@example.com</a>', $html);
+        $this->assertStringNotContainsString('target="_blank"', $html);
     }
 
     public function testEmailLinksDisabled()
@@ -65,10 +66,8 @@ class LinksTest extends TestCase
         $this->assertStringNotContainsString('<a href="mailto:test@example.com">test@example.com</a>', $html);
     }
 
-    public function testEmailOpenInNewWindowDisabled()
+    public function testEmailLinksNeverOpenInNewWindow()
     {
-        $this->parsedownExtended->config()->set('links.email_links.open_in_new_window', false);
-
         $markdown = '<test@example.com>';
         $html = $this->parsedownExtended->text($markdown);
 
@@ -238,8 +237,8 @@ class LinksTest extends TestCase
         $markdown = '[External](https://www.google.com)';
 
         $beforeUpdate = $this->parsedownExtended->text($markdown);
-        $this->assertStringContainsString('rel="nofollow noopener noreferrer"', $beforeUpdate);
-        $this->assertStringContainsString('target="_blank"', $beforeUpdate);
+        $this->assertStringNotContainsString('rel="nofollow noopener noreferrer"', $beforeUpdate);
+        $this->assertStringNotContainsString('target="_blank"', $beforeUpdate);
 
         $this->parsedownExtended->config()->set('links.external_links.internal_hosts', ['google.com']);
 
