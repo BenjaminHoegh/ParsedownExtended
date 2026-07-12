@@ -20,6 +20,7 @@ $options = getopt('', [
     'warmup::',
     'path::',
     'memory',
+    'mode::',
     'no-color',
     'no-feature-groups',
     'help',
@@ -28,11 +29,12 @@ $options = getopt('', [
 if (isset($options['help'])) {
     echo <<<TXT
         Usage:
-          composer benchmark -- [--iterations=50] [--warmup=3] [--path=benchmarks/tests] [--memory] [--no-feature-groups] [--no-color]
+          composer benchmark -- [--iterations=50] [--warmup=3] [--mode=reuse|fresh] [--path=benchmarks/tests] [--memory] [--no-feature-groups] [--no-color]
 
         Examples:
           composer benchmark
           composer benchmark -- --iterations=100 --no-color
+          composer benchmark -- --mode=fresh --no-feature-groups
           composer benchmark -- --path=benchmarks/tests --memory
 
         TXT;
@@ -51,6 +53,12 @@ $testPath = isAbsolutePath($path) ? $path : $root . '/' . $path;
 $useColor = !isset($options['no-color']);
 $includeMemory = isset($options['memory']);
 $includeFeatureGroups = !isset($options['no-feature-groups']);
+$mode = (string) ($options['mode'] ?? 'reuse');
+
+if (!in_array($mode, ['reuse', 'fresh'], true)) {
+    fwrite(STDERR, "Error: --mode must be either 'reuse' or 'fresh'.\n");
+    exit(1);
+}
 
 if (extension_loaded('xdebug')) {
     fwrite(STDERR, "Warning: Xdebug is enabled. Benchmark results may be inaccurate.\n\n");
@@ -65,6 +73,7 @@ if ($markdownFiles === []) {
 echo colorize('Performance Benchmarks', 'bold', $useColor) . PHP_EOL;
 echo "Iterations: {$iterations}" . PHP_EOL;
 echo "Warmup: {$warmup}" . PHP_EOL;
+echo 'Mode: ' . ($mode === 'reuse' ? 'reuse parser' : 'construct parser for every parse') . PHP_EOL;
 echo 'Files: ' . count($markdownFiles) . PHP_EOL . PHP_EOL;
 
 $parserFactories = [
@@ -76,7 +85,7 @@ $parserFactories = [
     },
 ];
 
-$comparison = benchmarkParsers($markdownFiles, $parserFactories, $iterations, $warmup, $includeMemory);
+$comparison = benchmarkParsers($markdownFiles, $parserFactories, $iterations, $warmup, $includeMemory, $mode);
 printParserComparison($comparison, $parserFactories, $useColor, $includeMemory);
 
 if ($includeFeatureGroups) {
@@ -130,23 +139,23 @@ function loadMarkdownFiles(string $testPath): array
     return $files;
 }
 
-function benchmarkParsers(array $markdownFiles, array $parserFactories, int $iterations, int $warmup, bool $includeMemory): array
+function benchmarkParsers(array $markdownFiles, array $parserFactories, int $iterations, int $warmup, bool $includeMemory, string $mode): array
 {
     $rows = [];
     $totals = [];
 
     foreach ($parserFactories as $parserName => $_factory) {
-        $totals[$parserName] = ['time' => 0.0, 'memory' => 0];
+        $totals[$parserName] = ['time' => 0.0, 'p95' => 0.0, 'memory' => 0];
     }
 
     foreach ($markdownFiles as $source => $markdown) {
         $rows[$source] = [];
 
         foreach ($parserFactories as $parserName => $factory) {
-            $parser = $factory();
-            $result = benchmarkParser($parser, $markdown, $iterations, $warmup, $includeMemory);
+            $result = benchmarkParser($factory, $markdown, $iterations, $warmup, $includeMemory, $mode);
             $rows[$source][$parserName] = $result;
             $totals[$parserName]['time'] += $result['time'];
+            $totals[$parserName]['p95'] += $result['p95'];
             $totals[$parserName]['memory'] += $result['memory'];
         }
     }
@@ -156,6 +165,7 @@ function benchmarkParsers(array $markdownFiles, array $parserFactories, int $ite
     foreach ($totals as $parserName => $total) {
         $averages[$parserName] = [
             'time' => $total['time'] / $fileCount,
+            'p95' => $total['p95'] / $fileCount,
             'memory' => (int) round($total['memory'] / $fileCount),
         ];
     }
@@ -176,7 +186,7 @@ function benchmarkFeatureGroups(array $markdownFiles, int $iterations, int $warm
         $totalMemory = 0;
 
         foreach ($markdownFiles as $markdown) {
-            $result = benchmarkParser($parser, $markdown, $iterations, $warmup, $includeMemory);
+            $result = benchmarkParser(static function () use ($parser) { return $parser; }, $markdown, $iterations, $warmup, $includeMemory, 'reuse');
             $totalTime += $result['time'];
             $totalMemory += $result['memory'];
         }
@@ -301,10 +311,16 @@ function applySettings(ParsedownExtended $parser, array $settings): void
     }
 }
 
-function benchmarkParser($parser, string $markdown, int $iterations, int $warmup, bool $includeMemory): array
+function benchmarkParser(callable $factory, string $markdown, int $iterations, int $warmup, bool $includeMemory, string $mode): array
 {
+    $parser = $mode === 'reuse' ? $factory() : null;
+    $expected = null;
+
     for ($i = 0; $i < $warmup; $i++) {
-        parseMarkdown($parser, $markdown);
+        $warmupParser = $mode === 'reuse' ? $parser : $factory();
+        $output = parseMarkdown($warmupParser, $markdown);
+        $expected = $expected ?? $output;
+        assertStableOutput($expected, $output);
     }
 
     gc_collect_cycles();
@@ -314,13 +330,17 @@ function benchmarkParser($parser, string $markdown, int $iterations, int $warmup
     }
 
     $memoryStart = $includeMemory ? memory_get_usage(false) : 0;
-    $start = hrtime(true);
+    $samples = [];
 
     for ($i = 0; $i < $iterations; $i++) {
-        parseMarkdown($parser, $markdown);
-    }
+        $start = hrtime(true);
+        $iterationParser = $mode === 'reuse' ? $parser : $factory();
+        $output = parseMarkdown($iterationParser, $markdown);
+        $samples[] = (hrtime(true) - $start) / 1000000000;
 
-    $elapsed = hrtime(true) - $start;
+        $expected = $expected ?? $output;
+        assertStableOutput($expected, $output);
+    }
     $memory = 0;
 
     if ($includeMemory) {
@@ -328,9 +348,24 @@ function benchmarkParser($parser, string $markdown, int $iterations, int $warmup
     }
 
     return [
-        'time' => ($elapsed / 1000000000) / $iterations,
+        'time' => percentile($samples, 0.50),
+        'p95' => percentile($samples, 0.95),
         'memory' => $memory,
     ];
+}
+
+function assertStableOutput(string $expected, string $actual): void
+{
+    if ($expected !== $actual) {
+        throw new RuntimeException('Parser output changed between benchmark iterations.');
+    }
+}
+
+function percentile(array $samples, float $percentile): float
+{
+    sort($samples, SORT_NUMERIC);
+    $index = (int) ceil($percentile * count($samples)) - 1;
+    return $samples[max(0, min($index, count($samples) - 1))];
 }
 
 function parseMarkdown($parser, string $markdown): string
@@ -350,7 +385,7 @@ function printParserComparison(array $comparison, array $parserFactories, bool $
         $row = [$source];
 
         foreach (array_keys($parserFactories) as $parserName) {
-            $cell = formatMs($times[$parserName]['time']);
+            $cell = formatMs($times[$parserName]['time']) . ' / p95 ' . formatMs($times[$parserName]['p95']);
             if ($parserName !== 'ParsedownExtra') {
                 $cell .= ' / ' . formatComparison($times[$parserName]['time'], $baseTime, $useColor);
             }
@@ -366,7 +401,7 @@ function printParserComparison(array $comparison, array $parserFactories, bool $
     $averageBaseTime = $comparison['averages']['ParsedownExtra']['time'];
     $averageRow = ['Averages'];
     foreach (array_keys($parserFactories) as $parserName) {
-        $cell = formatMs($comparison['averages'][$parserName]['time']);
+        $cell = formatMs($comparison['averages'][$parserName]['time']) . ' / p95 ' . formatMs($comparison['averages'][$parserName]['p95']);
         if ($parserName !== 'ParsedownExtra') {
             $cell .= ' / ' . formatComparison($comparison['averages'][$parserName]['time'], $averageBaseTime, $useColor);
         }
@@ -441,7 +476,7 @@ function padVisible(string $value, int $length): string
 
 function formatMs(float $seconds): string
 {
-    return '~ ' . number_format($seconds * 1000, 2) . ' ms';
+    return number_format($seconds * 1000, 2) . ' ms';
 }
 
 function formatBytes(int $bytes): string
