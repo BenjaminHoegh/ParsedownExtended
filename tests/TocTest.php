@@ -218,6 +218,33 @@ class TocTest extends TestCase
         $this->assertEquals($expected, $actual);
     }
 
+    public function testCustomTocTagCannotBypassSafeMode()
+    {
+        $tag = '<img src=x onerror=alert(1)>';
+        $this->parsedownExtended->config()->set('toc.tag', $tag);
+
+        $actual = $this->parsedownExtended->text("Before {$tag} after");
+
+        $this->assertSame(
+            '<p>Before &lt;img src=x onerror=alert(1)&gt; after</p>',
+            $actual
+        );
+        $this->assertStringNotContainsString('<img', $actual);
+    }
+
+    public function testCustomTocIdIsEscaped()
+    {
+        $this->parsedownExtended->config()->set('toc.id', 'contents" onmouseover="alert(1)');
+
+        $actual = $this->parsedownExtended->text("[TOC]\n\n# Heading");
+
+        $this->assertStringContainsString(
+            '<div id="contents&quot; onmouseover=&quot;alert(1)">',
+            $actual
+        );
+        $this->assertStringNotContainsString('onmouseover="alert(1)"', $actual);
+    }
+
     /**
      * Test case for table of contents with multiple settings at once.
      */

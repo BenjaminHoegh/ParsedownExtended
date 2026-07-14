@@ -123,8 +123,9 @@ trait TableOfContentsExtension
             return $text;
         }
 
-        // Replace the hashed tag with the original tag
-        return str_replace($tag_hashed, $tag_origin, $text);
+        // The placeholder is decoded after Parsedown's Safe Mode has run, so the
+        // configured tag must be escaped before it is reintroduced into HTML.
+        return str_replace($tag_hashed, $this->escapeTocHtmlValue($tag_origin), $text);
     }
 
     /**
@@ -351,7 +352,17 @@ trait TableOfContentsExtension
 
         // Replace the ToC placeholder with the actual ToC content
         $toc_data = $this->contentsList();
-        $toc_id = $this->configValue('toc.id');
-        return str_replace("<p>{$tag_origin}</p>", "<div id=\"{$toc_id}\">{$toc_data}</div>", $html);
+        $toc_id = $this->escapeTocHtmlValue((string) $this->configValue('toc.id'));
+        $tag_html = $this->escapeTocHtmlValue($tag_origin);
+
+        return str_replace("<p>{$tag_html}</p>", "<div id=\"{$toc_id}\">{$toc_data}</div>", $html);
+    }
+
+    /**
+     * Escapes configurable TOC values before inserting them into parsed HTML.
+     */
+    private function escapeTocHtmlValue(string $value): string
+    {
+        return htmlspecialchars($value, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
     }
 }
