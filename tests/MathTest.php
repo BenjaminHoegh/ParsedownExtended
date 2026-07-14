@@ -40,6 +40,16 @@ class MathTest extends TestCase
         $this->assertEquals($expectedHtml, $result);
     }
 
+    public function testSingleLineBlockMathDoesNotConsumeFollowingMarkdown()
+    {
+        $markdown = '$$E=mc^2$$' . "\nnext";
+
+        $this->parsedownExtended->config()->set('math', true);
+        $result = $this->parsedownExtended->text($markdown);
+
+        $this->assertSame('E=mc^2<p>next</p>', $result);
+    }
+
     public function testInlineMathWithPunctuation()
     {
         // Test that inline math works correctly when followed by various punctuation

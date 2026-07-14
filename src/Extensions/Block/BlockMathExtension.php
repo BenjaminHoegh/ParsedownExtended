@@ -6,8 +6,6 @@ namespace BenjaminHoegh\ParsedownExtended\Extensions\Block;
 
 trait BlockMathExtension
 {
-    // BUG: Breaks formatting if written in a single line
-
     /**
      * Processes block-level math notation.
      *
@@ -39,13 +37,20 @@ trait BlockMathExtension
 
             // Check if the line matches the math block pattern
             if (preg_match($regex, $Line['text'], $matches)) {
-                return [
+                $Block = [
                     'element' => [
                         'text' => $matches[2], // Extract and store the math content between the delimiters
                     ],
                     'start' => $dConfig['left'], // Store the start marker (e.g., `$$`)
                     'end' => $dConfig['right'], // Store the end marker (e.g., `$$`)
                 ];
+
+                if (isset($matches[3]) && $matches[3] !== '') {
+                    $Block['complete'] = true;
+                    $Block['math'] = true;
+                }
+
+                return $Block;
             }
         }
 
