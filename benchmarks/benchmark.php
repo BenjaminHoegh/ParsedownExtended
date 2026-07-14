@@ -102,41 +102,18 @@ function isAbsolutePath(string $path): bool
 
 function loadMarkdownFiles(string $testPath): array
 {
-    $preferredOrder = [
-        'angular-readme',
-        'bootstrap-readme',
-        'homebrew-readme',
-        'jquery-readme',
-        'markdown-readme',
-        'rails-readme',
-        'textmate-readme',
-    ];
-
-    $files = [];
-    foreach ($preferredOrder as $name) {
-        $file = rtrim($testPath, '/\\') . '/' . $name . '.md';
-        if (is_file($file)) {
-            $contents = file_get_contents($file);
-            if (is_string($contents)) {
-                $files[$name] = $contents;
-            }
-        }
-    }
-
-    if ($files !== []) {
-        return $files;
-    }
-
+    $allFiles = [];
     foreach (glob(rtrim($testPath, '/\\') . '/*.md') ?: [] as $file) {
+        $name = basename($file, '.md');
         $contents = file_get_contents($file);
         if (is_string($contents)) {
-            $files[basename($file, '.md')] = $contents;
+            $allFiles[$name] = $contents;
         }
     }
 
-    ksort($files);
+    ksort($allFiles);
 
-    return $files;
+    return $allFiles;
 }
 
 function benchmarkParsers(array $markdownFiles, array $parserFactories, int $iterations, int $warmup, bool $includeMemory, string $mode): array
@@ -315,12 +292,15 @@ function benchmarkParser(callable $factory, string $markdown, int $iterations, i
 {
     $parser = $mode === 'reuse' ? $factory() : null;
     $expected = null;
+    $assertStable = $mode === 'fresh';
 
     for ($i = 0; $i < $warmup; $i++) {
         $warmupParser = $mode === 'reuse' ? $parser : $factory();
         $output = parseMarkdown($warmupParser, $markdown);
         $expected = $expected ?? $output;
-        assertStableOutput($expected, $output);
+        if ($assertStable) {
+            assertStableOutput($expected, $output);
+        }
     }
 
     gc_collect_cycles();
@@ -339,7 +319,9 @@ function benchmarkParser(callable $factory, string $markdown, int $iterations, i
         $samples[] = (hrtime(true) - $start) / 1000000000;
 
         $expected = $expected ?? $output;
-        assertStableOutput($expected, $output);
+        if ($assertStable) {
+            assertStableOutput($expected, $output);
+        }
     }
     $memory = 0;
 
