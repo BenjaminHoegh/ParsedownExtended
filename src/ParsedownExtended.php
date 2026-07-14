@@ -4,8 +4,6 @@ declare(strict_types=1);
 
 namespace BenjaminHoegh\ParsedownExtended;
 
-class_alias(class_exists('ParsedownExtra') ? 'ParsedownExtra' : 'Parsedown', 'ParsedownExtendedParentAlias');
-
 /**
  * Class ParsedownExtended
  *
@@ -13,8 +11,7 @@ class_alias(class_exists('ParsedownExtra') ? 'ParsedownExtra' : 'Parsedown', 'Pa
  * Provides extended parsing capabilities, version checking, and custom configuration options.
  *
  */
-// @psalm-suppress UndefinedClass
-class ParsedownExtended extends \ParsedownExtendedParentAlias
+class ParsedownExtended extends \ParsedownExtra
 {
     public const VERSION = '2.3.0';
     public const VERSION_PARSEDOWN_REQUIRED = '1.8.0';
@@ -36,8 +33,8 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
     /** @var callable|null $createAnchorIDCallback Callback function for anchor creation */
     private $createAnchorIDCallback = null;
 
-    /** @var object|null $configHandler Cached configuration handler */
-    private ?object $configHandler = null;
+    /** @var Configuration $configHandler Configuration storage shared by all callers */
+    private Configuration $configHandler;
 
     /** @var array|null $emojiMap Cached emoji map for emoji replacements */
     private ?array $emojiMap = null;
@@ -172,26 +169,17 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
     ];
 
 
-    /** @var array $BOOLEAN_PATHS Stores a set of boolean config paths. */
-    private static array $BOOLEAN_PATHS = [];
-
     /** @var array $FLAT_SCHEMA Stores a flat schema of configuration options for easy access. */
     private static array $FLAT_SCHEMA   = [];
 
-    /** @var array $DEFAULT_FEATURES Stores default boolean settings keyed by path. */
-    private static array $DEFAULT_FEATURES = [];
+    /** @var array $CONFIG_ALIASES Maps canonical and branch paths to canonical paths. */
+    private static array $CONFIG_ALIASES = [];
 
-    /** @var array $DEFAULT_PAYLOAD Stores default non-boolean settings for the configuration. */
-    private static array $DEFAULT_PAYLOAD = [];
+    /** @var array $DEFAULT_CONFIG Stores all default settings in one flat map. */
+    private static array $DEFAULT_CONFIG = [];
 
     /** @var bool $COMPILED Indicates whether the schema has been compiled. */
     private static bool  $COMPILED = false;
-
-    /** @var array $features Stores boolean feature flags for the instance. */
-    private array $features;
-
-    /** @var array $payload Stores non-boolean settings for the instance. */
-    private array $payload;   // non‑boolean settings
 
     /**
      * Constructor for ParsedownExtended.
@@ -206,11 +194,10 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
         // Check if the installed Parsedown version meets the minimum requirement
         $this->checkVersion('Parsedown', \Parsedown::version, self::VERSION_PARSEDOWN_REQUIRED);
 
-        if (class_exists('ParsedownExtra')) {
-            // Ensure ParsedownExtra meets the version requirement
-            $this->checkVersion('ParsedownExtra', \ParsedownExtra::version, self::VERSION_PARSEDOWN_EXTRA_REQUIRED);
-            parent::__construct();
-        }
+        // Ensure ParsedownExtra meets the version requirement
+        $this->checkVersion('ParsedownExtra', \ParsedownExtra::version, self::VERSION_PARSEDOWN_EXTRA_REQUIRED);
+
+        parent::__construct();
 
         // Initialize the configuration schema
         if (!self::$COMPILED) {
@@ -218,9 +205,12 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
             self::$COMPILED = true;
         }
 
-        // Initialize features and payload
-        $this->features = self::$DEFAULT_FEATURES;
-        $this->payload  = self::$DEFAULT_PAYLOAD;
+        // Use one flat configuration store for internal and external reads.
+        $this->configHandler = new Configuration(
+            self::$FLAT_SCHEMA,
+            self::$CONFIG_ALIASES,
+            self::$DEFAULT_CONFIG
+        );
 
         // Apply overrides if provided
         if ($overrides) {
@@ -3457,127 +3447,32 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
     }
 
     /**
-     * Returns a singleton configuration handler object for managing boolean settings and payload values.
+     * Returns this parser's configuration object.
      *
-     * The handler provides methods to get, set, and export configuration values, supporting both
-     * boolean path-based settings and arbitrary payload data. The configuration schema and boolean-path
-     * mapping are provided statically. The handler validates types and throws exceptions for invalid
-     * paths or types.
+     * Internal and external callers share this object and its flat value store.
+     * Configuration paths and value types are validated by the public API, while
+     * precompiled aliases keep reads inexpensive.
      *
      * @return object Configuration handler with the following public methods:
      *                - get(string $path): mixed
      *                - set(string|array $path, mixed $value = null): self
      *                - export(): array
-     *                - bind(array &$features, array &$payload): void
      *
      * @throws \InvalidArgumentException If an invalid config path or type is provided to set().
      */
     public function config(): object
     {
-        if ($this->configHandler === null) {
-            $this->configHandler = new class(self::$BOOLEAN_PATHS, self::$FLAT_SCHEMA) {
-                private array $booleanPaths;
-                private array $schema;
-                private array $features;
-                private array $payload;
-
-                public function __construct(array $booleanPaths, array $schema)
-                {
-                    $this->booleanPaths = $booleanPaths;
-                    $this->schema = $schema;
-                }
-                public function bind(array &$f, array &$p): void
-                {
-                    $this->features = &$f;
-                    $this->payload  = &$p;
-                }
-
-                /* ---------------------------- GET ----------------------- */
-                public function get(string $path)
-                {
-                    $path = $this->normalisePath($path);
-                    if (!isset($this->schema[$path])) {
-                        throw new \InvalidArgumentException("Invalid config path: {$path}");
-                    }
-                    if (isset($this->booleanPaths[$path])) {
-                        return $this->features[$path] ?? false;
-                    }
-                    return $this->payload[$path] ?? null;
-                }
-
-                /* ---------------------------- SET ----------------------- */
-                public function set($path, $value = null): self
-                {
-                    if (is_array($path)) {
-                        foreach ($path as $k => $v) { $this->set($k, $v); }
-                        return $this;
-                    }
-
-                    if (is_string($path) && is_array($value) && !isset($this->schema[$path])) {
-                        $prefix = $path . '.';
-                        $hasChild = false;
-                        foreach ($this->schema as $key => $_) {
-                            if (strpos($key, $prefix) === 0) { $hasChild = true; break; }
-                        }
-                        if ($hasChild) {
-                            foreach ($value as $k => $v) { $this->set($prefix . $k, $v); }
-                            return $this;
-                        }
-                    }
-
-                    $path = $this->normalisePath($path);
-
-                    if (!isset($this->schema[$path])) {
-                        throw new \InvalidArgumentException("Invalid config path: {$path}");
-                    }
-                    $this->validate($value, $this->schema[$path]['type']);
-
-                    if (isset($this->booleanPaths[$path])) {
-                        $this->features[$path] = $value;
-                    } else {
-                        $this->payload[$path] = $value;
-                    }
-                    return $this;
-                }
-
-                public function export(): array
-                {
-                    $flat = $this->payload;
-                    foreach ($this->booleanPaths as $p => $_) {
-                        $flat[$p] = $this->features[$p] ?? false;
-                    }
-                    return $flat;
-                }
-
-                /* -------------------- helpers --------------------------- */
-                private function normalisePath(string $p): string
-                {
-                    if (!isset($this->schema[$p]) && isset($this->schema[$p . '.enabled'])) {
-                        return $p . '.enabled';
-                    }
-                    return $p;
-                }
-                private function validate($val, string $expected): void
-                {
-                    $actual = gettype($val);
-                    if ($expected !== $actual) {
-                        throw new \InvalidArgumentException("Expected {$expected}, got {$actual}");
-                    }
-                }
-            };
-        }
-        $this->configHandler->bind($this->features, $this->payload);
         return $this->configHandler;
     }
 
     /**
      * Compiles the configuration schema by recursively traversing the schema definition.
      *
-     * This method walks through the CONFIG_SCHEMA_DEFAULT array, registering boolean options
-     * and payloads for each configuration path. For associative array branches, it registers
+     * This method walks through the CONFIG_SCHEMA_DEFAULT array, registering values
+     * for each configuration path. For associative array branches, it registers
      * an "enabled" boolean (defaulting to true unless specified), and recurses into child nodes.
      * For leaf nodes, it distinguishes between booleans (registered as boolean options) and
-     * other types (registered as payloads).
+     * other value types.
      *
      * @return void
      */
@@ -3627,15 +3522,19 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
      */
     private function registerBoolean(string $path, bool $default): void
     {
-        self::$BOOLEAN_PATHS[$path] = true;
         self::$FLAT_SCHEMA[$path] = ['type' => 'boolean', 'default' => $default];
-        self::$DEFAULT_FEATURES[$path] = $default;
+        self::$CONFIG_ALIASES[$path] = $path;
+        self::$DEFAULT_CONFIG[$path] = $default;
+
+        if (substr($path, -8) === '.enabled') {
+            self::$CONFIG_ALIASES[substr($path, 0, -8)] = $path;
+        }
     }
 
     /**
-     * Registers a payload path with its default value and type in the schema.
+     * Registers a non-boolean path with its default value and type in the schema.
      *
-     * @param string $path    The unique path identifier for the payload.
+     * @param string $path    The unique configuration path.
      * @param mixed  $default The default value to associate with the payload path.
      *
      * @return void
@@ -3643,7 +3542,8 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
     private function registerPayload(string $path, $default): void
     {
         self::$FLAT_SCHEMA[$path]   = ['type' => gettype($default), 'default' => $default];
-        self::$DEFAULT_PAYLOAD[$path] = $default;
+        self::$CONFIG_ALIASES[$path] = $path;
+        self::$DEFAULT_CONFIG[$path] = $default;
     }
 
     /**
@@ -3659,9 +3559,9 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
      *
      * @return void
      */
-    private function applyOverrides(array $ovr, string $prefix = '', ?object $configHandler = null): void
+    private function applyOverrides(array $ovr, string $prefix = '', ?Configuration $configHandler = null): void
     {
-        $configHandler = $configHandler ?? $this->config();
+        $configHandler = $configHandler ?? $this->configHandler;
 
         foreach ($ovr as $k => $v) {
             $path = $prefix === '' ? $k : $prefix . '.' . $k;
