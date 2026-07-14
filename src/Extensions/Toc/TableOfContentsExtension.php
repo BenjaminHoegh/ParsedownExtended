@@ -60,6 +60,7 @@ trait TableOfContentsExtension
     {
         // Ensure definitions are reset per parse, then re-apply predefined abbreviations.
         $this->DefinitionData = [];
+        $this->resetDocumentFootnoteCount();
         $this->predefinedAbbreviationsAdded = false;
         $this->initializePredefinedAbbreviations();
 

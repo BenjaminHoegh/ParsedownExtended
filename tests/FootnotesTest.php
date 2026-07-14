@@ -78,4 +78,18 @@ class FootnotesTest extends TestCase
         $this->assertStringContainsString('First footnote.', $html);
         $this->assertStringContainsString('Second footnote.', $html);
     }
+
+    public function testFootnoteNumbersResetBetweenParses(): void
+    {
+        $markdown = "Text[^first] and more[^second].\n\n"
+            . "[^first]: First footnote.\n\n"
+            . "[^second]: Second footnote.";
+
+        $first = $this->parsedownExtended->text($markdown);
+        $second = $this->parsedownExtended->text($markdown);
+
+        $this->assertSame($first, $second);
+        $this->assertStringContainsString('>1</a>', $second);
+        $this->assertStringContainsString('>2</a>', $second);
+    }
 }

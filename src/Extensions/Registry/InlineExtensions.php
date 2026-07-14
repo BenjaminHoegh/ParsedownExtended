@@ -7,6 +7,7 @@ namespace BenjaminHoegh\ParsedownExtended\Extensions\Registry;
 use BenjaminHoegh\ParsedownExtended\Extensions\Inline\EmojiExtension;
 use BenjaminHoegh\ParsedownExtended\Extensions\Inline\EmphasisExtension;
 use BenjaminHoegh\ParsedownExtended\Extensions\Inline\EscapeSequenceExtension;
+use BenjaminHoegh\ParsedownExtended\Extensions\Inline\FootnoteMarkerExtension;
 use BenjaminHoegh\ParsedownExtended\Extensions\Inline\InlineCodeExtension;
 use BenjaminHoegh\ParsedownExtended\Extensions\Inline\InlineImageExtension;
 use BenjaminHoegh\ParsedownExtended\Extensions\Inline\InlineMarkupExtension;
@@ -29,6 +30,7 @@ trait InlineExtensions
     use StrikethroughExtension;
     use EmphasisExtension;
     use EscapeSequenceExtension;
+    use FootnoteMarkerExtension;
     use MarkingExtension;
     use InsertionsExtension;
     use KeystrokesExtension;
