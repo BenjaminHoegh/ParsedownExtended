@@ -16,6 +16,10 @@ trait ReferenceExtension
      */
     protected function blockReference($Line)
     {
+        if (!$this->configEnabled('footnotes') && preg_match('/^\[\^.+?\]:/', $Line['text'])) {
+            return null;
+        }
+
         // Check if references are enabled
         if ($this->configEnabled('references')) {
             return parent::blockReference($Line); // Delegate to parent class

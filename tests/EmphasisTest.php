@@ -44,6 +44,19 @@ class EmphasisTest extends TestCase
         $this->assertEquals($expectedHtml, $result);
     }
 
+    public function testDisabledFeatureMarkersDoNotBecomeBackslashEscapes()
+    {
+        $this->parsedownExtended->config()
+            ->set('math', false)
+            ->set('emphasis.superscript', false)
+            ->set('smartypants', false);
+
+        $markdown = '\\$ \\^ \\" \\<br/>';
+        $expectedHtml = '<p>\\$ \\^ \\" \\&lt;br/&gt;</p>';
+
+        $this->assertEquals($expectedHtml, $this->parsedownExtended->text($markdown));
+    }
+
     public function testInlineItalicUsingAsterisks()
     {
         $markdown = "*italic*";

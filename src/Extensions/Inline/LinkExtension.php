@@ -89,13 +89,7 @@ trait LinkExtension
             return null;
         }
 
-        $Excerpt = parent::inlineEmailTag($Excerpt);
-
-        if (isset($Excerpt['element']['attributes']['href'])) {
-            $Excerpt['element']['attributes']['target'] = '_blank';
-        }
-
-        return $Excerpt;
+        return parent::inlineEmailTag($Excerpt);
     }
 
     /**

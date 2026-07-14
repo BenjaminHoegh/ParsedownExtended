@@ -60,12 +60,19 @@ trait HeadingExtension
             $id = null;
             if ($this->configEnabled('headings.auto_anchors')) {
                 // If an ID attribute is not set, use the text to create the ID.
-                $id = $Block['element']['attributes']['id'] ?? $text;
-                $id = $this->createAnchorID($id);
+                $anchorId = $Block['element']['attributes']['id'] ?? $text;
+                $anchorId = $this->createAnchorID($anchorId);
 
-                if ($id !== null) {
-                    $Block['element']['attributes']['id'] = $id;
+                if (is_string($anchorId) && $anchorId !== '') {
+                    $Block['element']['attributes']['id'] = $anchorId;
+                } elseif (
+                    isset($Block['element']['attributes']['id'])
+                    && $Block['element']['attributes']['id'] === ''
+                ) {
+                    unset($Block['element']['attributes']['id']);
                 }
+
+                $id = $Block['element']['attributes']['id'] ?? null;
             }
 
             // Check if the heading level should be included in the Table of Contents (TOC)
@@ -118,12 +125,19 @@ trait HeadingExtension
             $id = null;
             if ($this->configEnabled('headings.auto_anchors')) {
                 // If an ID attribute is not set, use the text to create the ID.
-                $id = $Block['element']['attributes']['id'] ?? $text;
-                $id = $this->createAnchorID($id);
+                $anchorId = $Block['element']['attributes']['id'] ?? $text;
+                $anchorId = $this->createAnchorID($anchorId);
 
-                if ($id !== null) {
-                    $Block['element']['attributes']['id'] = $id;
+                if (is_string($anchorId) && $anchorId !== '') {
+                    $Block['element']['attributes']['id'] = $anchorId;
+                } elseif (
+                    isset($Block['element']['attributes']['id'])
+                    && $Block['element']['attributes']['id'] === ''
+                ) {
+                    unset($Block['element']['attributes']['id']);
                 }
+
+                $id = $Block['element']['attributes']['id'] ?? null;
             }
 
             // Check if the heading level should be included in the Table of Contents (TOC)

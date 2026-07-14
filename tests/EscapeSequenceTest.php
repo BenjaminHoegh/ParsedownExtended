@@ -21,7 +21,7 @@ class EscapeSequenceTest extends TestCase
     public function testEscapeSequence()
     {
         $markdown = '\\*literal\\*';
-        $expectedHtml = '<p>literal</p>';
+        $expectedHtml = '<p>*literal*</p>';
         $result = $this->parsedownExtended->text($markdown);
 
         $this->assertEquals($expectedHtml, trim($result));
@@ -32,7 +32,7 @@ class EscapeSequenceTest extends TestCase
         $this->parsedownExtended->config()->set('math', true);
 
         $markdown = '\\$not math\\$ and $math$';
-        $expectedHtml = '<p>not math and $math$</p>';
+        $expectedHtml = '<p>$not math$ and $math$</p>';
         $result = $this->parsedownExtended->text($markdown);
 
         $this->assertEquals($expectedHtml, trim($result));

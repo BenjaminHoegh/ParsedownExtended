@@ -21,7 +21,6 @@ trait TransliterationExtension
     protected function normalizeString(string $text)
     {
         static $mbstringLoaded = null;
-        static $encodings = null;
 
         if ($mbstringLoaded === null) {
             $mbstringLoaded = extension_loaded('mbstring');
@@ -32,11 +31,12 @@ trait TransliterationExtension
                 return $text;
             }
 
-            if ($encodings === null) {
-                $encodings = mb_list_encodings();
+            $encoding = mb_detect_encoding($text, ['UTF-8', 'Windows-1252', 'ISO-8859-1'], true);
+            if (!is_string($encoding)) {
+                return $text;
             }
 
-            return mb_convert_encoding($text, 'UTF-8', $encodings);
+            return mb_convert_encoding($text, 'UTF-8', $encoding);
         } else {
             return $text; // Return raw text as there is no good alternative for mb_convert_encoding
         }

@@ -303,4 +303,29 @@ class HeadingsTest extends TestCase
         $actual = $this->parsedownExtended->text($markdown);
         $this->assertEquals($expected, $actual);
     }
+
+    public function testHeadingUsingCallbackReturningEmptyStringDoesNotRenderEmptyId()
+    {
+        $this->parsedownExtended->config()->set('headings.auto_anchors', true);
+        $this->parsedownExtended->setCreateAnchorIDCallback(function () {
+            return '';
+        });
+
+        $this->assertEquals('<h1>Heading 1</h1>', $this->parsedownExtended->text('# Heading 1'));
+    }
+
+    public function testHeadingAnchorWithTrailingBackslash()
+    {
+        $this->parsedownExtended->config()->set('headings.auto_anchors', true);
+
+        $this->assertEquals('<h3 id="foo">foo\\</h3>', $this->parsedownExtended->text('### foo\\'));
+    }
+
+    public function testSetextHeadingAnchorWithTrailingBackslash()
+    {
+        $this->parsedownExtended->config()->set('headings.auto_anchors', true);
+
+        $markdown = "Foo\\\n---";
+        $this->assertEquals('<h2 id="foo">Foo\\</h2>', $this->parsedownExtended->text($markdown));
+    }
 }

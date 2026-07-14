@@ -30,16 +30,50 @@ trait EscapeSequenceExtension
             }
         }
 
-        // Check if the character following the backslash is a special character that should be escaped
-        if (isset($Excerpt['text'][1]) && in_array($Excerpt['text'][1], $this->specialCharacters, true)) {
+        $escapedCharacter = $Excerpt['text'][1] ?? null;
+
+        // Check if the character following the backslash is enabled and escapable.
+        if (is_string($escapedCharacter) && $this->isEscapableSpecialCharacter($escapedCharacter)) {
             // Return the escaped character
             return [
-                'markup' => $Excerpt['text'][1], // The character to be escaped
+                'element' => ['rawHtml' => $escapedCharacter === '<' ? '&lt;' : $escapedCharacter],
                 'extent' => 2, // The length of the escape sequence (backslash + character)
             ];
         }
 
         // If no valid escape sequence is found, return null
         return null;
+    }
+
+    /**
+     * Determine whether a backslash may escape an active inline marker.
+     *
+     * Optional extensions register their markers up front, but disabling an
+     * extension must not change Parsedown-compatible escaping behavior.
+     */
+    private function isEscapableSpecialCharacter(string $character): bool
+    {
+        if (isset(self::PARSEDOWN_ESCAPABLE_SPECIAL_CHARACTERS[$character])) {
+            return true;
+        }
+
+        switch ($character) {
+            case '=':
+                return $this->configEnabled('emphasis') && $this->configEnabled('emphasis.mark');
+            case '$':
+                return $this->configEnabled('math');
+            case '^':
+                return $this->configEnabled('emphasis') && $this->configEnabled('emphasis.superscript');
+            case ':':
+                return $this->configEnabled('emojis');
+            case '"':
+            case "'":
+            case '<':
+                return $this->configEnabled('smartypants');
+            case '?':
+                return $this->configEnabled('typographer');
+            default:
+                return false;
+        }
     }
 }

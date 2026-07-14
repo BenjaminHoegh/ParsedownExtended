@@ -30,6 +30,28 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
     public const VERSION_PARSEDOWN_EXTRA_REQUIRED = '0.9.0';
     public const MIN_PHP_VERSION = '7.4';
 
+    /** Parsedown-compatible punctuation that is always backslash-escapable. */
+    private const PARSEDOWN_ESCAPABLE_SPECIAL_CHARACTERS = [
+        '\\' => true,
+        '`' => true,
+        '*' => true,
+        '_' => true,
+        '{' => true,
+        '}' => true,
+        '[' => true,
+        ']' => true,
+        '(' => true,
+        ')' => true,
+        '>' => true,
+        '#' => true,
+        '+' => true,
+        '-' => true,
+        '.' => true,
+        '!' => true,
+        '|' => true,
+        '~' => true,
+    ];
+
     /** @var object|null $configHandler Cached configuration handler */
     private ?object $configHandler = null;
 
@@ -526,9 +548,7 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
         $text = str_replace(["\r\n", "\r"], "\n", $text);
 
         $Elements = [];
-        $nonNestables = empty($nonNestables)
-            ? []
-            : array_fill_keys($nonNestables, true);
+        $nonNestables = $this->normalizeNonNestables($nonNestables);
 
         $activeInlineTypes = $this->getActiveInlineTypes();
         $inlineMarkerList = $this->activeInlineMarkerList;
@@ -566,7 +586,7 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
 
                 // Propagate non-nestable markers through nested elements.
                 $Inline['element']['nonNestables'] = isset($Inline['element']['nonNestables'])
-                    ? array_merge($Inline['element']['nonNestables'], $nonNestables)
+                    ? $this->normalizeNonNestables($Inline['element']['nonNestables']) + $nonNestables
                     : $nonNestables;
 
                 // Compile text before the inline.
@@ -598,5 +618,29 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
         unset($Element);
 
         return $Elements;
+    }
+
+    /**
+     * Normalize Parsedown's list and element-metadata forms into a lookup set.
+     *
+     * @param array<int|string, mixed> $nonNestables
+     * @return array<string, bool>
+     */
+    private function normalizeNonNestables(array $nonNestables): array
+    {
+        $normalized = [];
+
+        foreach ($nonNestables as $key => $value) {
+            if (is_string($key)) {
+                $normalized[$key] = true;
+                continue;
+            }
+
+            if (is_string($value)) {
+                $normalized[$value] = true;
+            }
+        }
+
+        return $normalized;
     }
 }

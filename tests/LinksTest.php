@@ -62,7 +62,8 @@ class LinksTest extends TestCase
         $markdown = '<test@example.com>';
         $html = $this->parsedownExtended->text($markdown);
 
-        $this->assertStringContainsString('<a href="mailto:test@example.com" target="_blank">test@example.com</a>', $html);
+        $this->assertStringContainsString('<a href="mailto:test@example.com">test@example.com</a>', $html);
+        $this->assertStringNotContainsString('target="_blank"', $html);
     }
 
     public function testEmailLinksDisabled()
@@ -234,6 +235,12 @@ class LinksTest extends TestCase
 
     public function testInternalHostsCacheRefreshesAfterConfigUpdate()
     {
+        $this->parsedownExtended->config()
+            ->set('links.external_links.nofollow', true)
+            ->set('links.external_links.noopener', true)
+            ->set('links.external_links.noreferrer', true)
+            ->set('links.external_links.open_in_new_window', true);
+
         $markdown = '[External](https://www.google.com)';
 
         $beforeUpdate = $this->parsedownExtended->text($markdown);
@@ -245,6 +252,14 @@ class LinksTest extends TestCase
         $afterUpdate = $this->parsedownExtended->text($markdown);
         $this->assertStringNotContainsString('rel="nofollow noopener noreferrer"', $afterUpdate);
         $this->assertStringNotContainsString('target="_blank"', $afterUpdate);
+    }
+
+    public function testExternalLinkDefaultsDoNotAddAttributes()
+    {
+        $html = $this->parsedownExtended->text('[External](https://www.google.com)');
+
+        $this->assertStringNotContainsString('rel=', $html);
+        $this->assertStringNotContainsString('target="_blank"', $html);
     }
 
     public function testSameDomainLinkWithoutNewWindow()
@@ -289,6 +304,22 @@ class LinksTest extends TestCase
         $html = $this->parsedownExtended->line($markdown);
 
         $this->assertStringContainsString('href="https://www.example.com/blah"', $html);
+    }
+
+    public function testLinksRemainNonNestableInsideEmphasis()
+    {
+        $markdown = '[foo *[bar [baz](/uri)](/uri)*](/uri)';
+        $expectedHtml = '<p><a href="/uri">foo <em>[bar [baz](/uri)](/uri)</em></a></p>';
+
+        $this->assertEquals($expectedHtml, $this->parsedownExtended->text($markdown));
+    }
+
+    public function testReferenceLinksRemainNonNestableInsideEmphasis()
+    {
+        $markdown = "[foo *bar [baz][ref]*][ref]\n\n[ref]: /uri";
+        $expectedHtml = '<p><a href="/uri">foo <em>bar [baz][ref]</em></a></p>';
+
+        $this->assertEquals($expectedHtml, $this->parsedownExtended->text($markdown));
     }
 
 }
