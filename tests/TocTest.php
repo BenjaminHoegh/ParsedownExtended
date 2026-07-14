@@ -218,6 +218,45 @@ class TocTest extends TestCase
         $this->assertEquals($expected, $actual);
     }
 
+    public function testTocUsesExplicitIdWhenAutomaticAnchorsAreDisabled(): void
+    {
+        $this->parsedownExtended->config()->set('headings.auto_anchors', false);
+
+        $actual = $this->parsedownExtended->text("[TOC]\n\n# Heading {#custom}");
+
+        $this->assertStringContainsString('<a href="#custom">Heading</a>', $actual);
+        $this->assertStringNotContainsString('<a href="#">', $actual);
+    }
+
+    public function testTocSkipsHeadingsWithoutAnId(): void
+    {
+        $this->parsedownExtended->config()->set('headings.auto_anchors', false);
+
+        $actual = $this->parsedownExtended->text("[TOC]\n\n# Heading");
+
+        $this->assertStringNotContainsString('<a href="#">', $actual);
+        $this->assertStringContainsString('<h1>Heading</h1>', $actual);
+    }
+
+    public function testTocClampsSkippedHeadingLevels(): void
+    {
+        $this->parsedownExtended->body("# One\n\n### Three");
+
+        $expected = <<<HTML
+            <ul>
+            <li><a href="#one">One</a><ul>
+            <li><a href="#three">Three</a></li>
+            </ul>
+            </li>
+            </ul>
+            HTML;
+
+        $actual = $this->parsedownExtended->contentsList();
+
+        $this->assertSame($expected, $actual);
+        $this->assertStringNotContainsString("<ul>\n<ul>", $actual);
+    }
+
     public function testCustomTocTagCannotBypassSafeMode()
     {
         $tag = '<img src=x onerror=alert(1)>';

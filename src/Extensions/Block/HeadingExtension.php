@@ -48,43 +48,7 @@ trait HeadingExtension
         $Block = parent::blockHeader($Line);
 
         if (!empty($Block)) {
-            // Extract the text and level of the header
-            $text = $Block['element']['text'] ?? $Block['element']['handler']['argument'] ?? '';
-            $level = $Block['element']['name'];
-
-            // Check if the header level is allowed (e.g., h1, h2, etc.)
-            if (!$this->configValueSetContains('headings.allowed_levels', $level)) {
-                return null; // Return null if the heading level is not allowed
-            }
-
-            $id = null;
-            if ($this->configEnabled('headings.auto_anchors')) {
-                // If an ID attribute is not set, use the text to create the ID.
-                $anchorId = $Block['element']['attributes']['id'] ?? $text;
-                $anchorId = $this->createAnchorID($anchorId);
-
-                if (is_string($anchorId) && $anchorId !== '') {
-                    $Block['element']['attributes']['id'] = $anchorId;
-                } elseif (
-                    isset($Block['element']['attributes']['id'])
-                    && $Block['element']['attributes']['id'] === ''
-                ) {
-                    unset($Block['element']['attributes']['id']);
-                }
-
-                $id = $Block['element']['attributes']['id'] ?? null;
-            }
-
-            // Check if the heading level should be included in the Table of Contents (TOC)
-            // Also ensure we skip adding it to TOC if it is disabled in the config
-            if (!$this->configEnabled('toc') || !$this->configValueSetContains('toc.levels', $level)) {
-                return $Block; // Return the block if it should not be part of the TOC
-            }
-
-            // Add the heading to the Table of Contents
-            $this->setContentsList(['text' => $text, 'id' => $id, 'level' => $level]);
-
-            return $Block; // Return the modified header block
+            return $this->finalizeHeadingBlock($Block);
         }
 
         return null; // Return null if the header block is empty
@@ -113,45 +77,49 @@ trait HeadingExtension
         $Block = parent::blockSetextHeader($Line, $Block);
 
         if (!empty($Block)) {
-            // Extract the text and level of the header
-            $text = $Block['element']['text'] ?? $Block['element']['handler']['argument'] ?? '';
-            $level = $Block['element']['name'];
-
-            // Check if the header level is allowed (e.g., h1, h2, etc.)
-            if (!$this->configValueSetContains('headings.allowed_levels', $level)) {
-                return null; // Return null if the heading level is not allowed
-            }
-
-            $id = null;
-            if ($this->configEnabled('headings.auto_anchors')) {
-                // If an ID attribute is not set, use the text to create the ID.
-                $anchorId = $Block['element']['attributes']['id'] ?? $text;
-                $anchorId = $this->createAnchorID($anchorId);
-
-                if (is_string($anchorId) && $anchorId !== '') {
-                    $Block['element']['attributes']['id'] = $anchorId;
-                } elseif (
-                    isset($Block['element']['attributes']['id'])
-                    && $Block['element']['attributes']['id'] === ''
-                ) {
-                    unset($Block['element']['attributes']['id']);
-                }
-
-                $id = $Block['element']['attributes']['id'] ?? null;
-            }
-
-            // Check if the heading level should be included in the Table of Contents (TOC)
-            // Also ensure we skip adding it to TOC if it is disabled in the config
-            if (!$this->configEnabled('toc') || !$this->configValueSetContains('toc.levels', $level)) {
-                return $Block; // Return the block if it should not be part of the TOC
-            }
-
-            // Add the heading to the Table of Contents
-            $this->setContentsList(['text' => $text, 'id' => $id, 'level' => $level]);
-
-            return $Block; // Return the modified Setext header block
+            return $this->finalizeHeadingBlock($Block);
         }
 
         return null; // Return null if the Setext header block is empty
+    }
+
+    /**
+     * Applies shared level, anchor, and TOC handling to a parsed heading block.
+     */
+    private function finalizeHeadingBlock(array $Block): ?array
+    {
+        $text = $Block['element']['text'] ?? $Block['element']['handler']['argument'] ?? '';
+        $level = $Block['element']['name'];
+
+        if (!$this->configValueSetContains('headings.allowed_levels', $level)) {
+            return null;
+        }
+
+        if ($this->configEnabled('headings.auto_anchors')) {
+            $anchorId = $Block['element']['attributes']['id'] ?? $text;
+            $anchorId = $this->createAnchorID($anchorId);
+
+            if (is_string($anchorId) && $anchorId !== '') {
+                $Block['element']['attributes']['id'] = $anchorId;
+            } elseif (
+                isset($Block['element']['attributes']['id'])
+                && $Block['element']['attributes']['id'] === ''
+            ) {
+                unset($Block['element']['attributes']['id']);
+            }
+        }
+
+        if (!$this->configEnabled('toc') || !$this->configValueSetContains('toc.levels', $level)) {
+            return $Block;
+        }
+
+        $id = $Block['element']['attributes']['id'] ?? null;
+        if (!is_string($id) || $id === '') {
+            return $Block;
+        }
+
+        $this->setContentsList(['text' => $text, 'id' => $id, 'level' => $level]);
+
+        return $Block;
     }
 }

@@ -265,6 +265,7 @@ trait TableOfContentsExtension
 
         foreach ($this->contentsListArray as $Content) {
             $level = $this->normalizedContentsLevel($Content);
+            $level = min($level, $currentLevel + 1);
 
             if ($currentLevel === 0 || $level > $currentLevel) {
                 while ($currentLevel < $level) {
