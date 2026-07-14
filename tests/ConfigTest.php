@@ -110,4 +110,20 @@ class ConfigTest extends TestCase
         $this->assertFalse($first->config()->get('emojis'), 'First instance should reflect its own config change');
         $this->assertTrue($second->config()->get('emojis'), 'Second instance should not be affected by first instance changes');
     }
+
+    /**
+     * Test that canonical and shorthand paths access the same stored value.
+     */
+    public function testConfigAliasesShareOneValue()
+    {
+        $parsedownExtended = new ParsedownExtended();
+        $config = $parsedownExtended->config();
+
+        $config->set('math', true);
+
+        $this->assertSame($config, $parsedownExtended->config());
+        $this->assertTrue($config->get('math'));
+        $this->assertTrue($config->get('math.enabled'));
+        $this->assertTrue($config->export()['math.enabled']);
+    }
 }
