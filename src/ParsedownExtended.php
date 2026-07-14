@@ -553,9 +553,36 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
         $activeInlineTypes = $this->getActiveInlineTypes();
         $inlineMarkerList = $this->activeInlineMarkerList;
 
-        while ($inlineMarkerList !== '' && ($ExcerptStr = strpbrk($text, $inlineMarkerList))) {
-            $marker = $ExcerptStr[0];
-            $markerPosition = strlen($text) - strlen($ExcerptStr);
+        $markerSearchOffset = 0;
+        $textLength = strlen($text);
+
+        while ($inlineMarkerList !== '' && $markerSearchOffset < $textLength) {
+            $markerPosition = $markerSearchOffset + strcspn($text, $inlineMarkerList, $markerSearchOffset);
+            if ($markerPosition >= $textLength) {
+                break;
+            }
+
+            $marker = $text[$markerPosition];
+            $candidateInlineTypes = [];
+
+            foreach ($activeInlineTypes[$marker] as $inlineType) {
+                if (isset($nonNestables[$inlineType])) {
+                    continue;
+                }
+
+                if (!$this->inlineTypeCanMatchAtPosition($inlineType, $text, $markerPosition)) {
+                    continue;
+                }
+
+                $candidateInlineTypes[] = $inlineType;
+            }
+
+            if ($candidateInlineTypes === []) {
+                $markerSearchOffset = $markerPosition + 1;
+                continue;
+            }
+
+            $ExcerptStr = substr($text, $markerPosition);
 
             $Excerpt = [
                 'text' => $ExcerptStr,
@@ -563,11 +590,7 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
                 'before' => $markerPosition > 0 ? $text[$markerPosition - 1] : '',
             ];
 
-            foreach ($activeInlineTypes[$marker] as $inlineType) {
-                if (isset($nonNestables[$inlineType])) {
-                    continue;
-                }
-
+            foreach ($candidateInlineTypes as $inlineType) {
                 $Inline = $this->{"inline$inlineType"}($Excerpt);
 
                 if (!isset($Inline)) {
@@ -598,13 +621,14 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
 
                 // Remove processed text and continue.
                 $text = substr($text, $Inline['position'] + $Inline['extent']);
+                $markerSearchOffset = 0;
+                $textLength = strlen($text);
                 continue 2;
             }
 
-            // Marker does not belong to an inline.
-            $InlineText = $this->inlineText(substr($text, 0, $markerPosition + 1));
-            $Elements[] = $InlineText['element'];
-            $text = substr($text, $markerPosition + 1);
+            // Keep unmatched markers in the pending text so they can be emitted
+            // as one element instead of allocating an element per character.
+            $markerSearchOffset = $markerPosition + 1;
         }
 
         $InlineText = $this->inlineText($text);
@@ -618,6 +642,16 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
         unset($Element);
 
         return $Elements;
+    }
+
+    /**
+     * Runs an optional cheap marker check before allocating the excerpt suffix.
+     */
+    private function inlineTypeCanMatchAtPosition(string $inlineType, string $text, int $position): bool
+    {
+        $methodName = 'inline' . $inlineType . 'MarkerMatches';
+
+        return !method_exists($this, $methodName) || $this->$methodName($text, $position);
     }
 
     /**

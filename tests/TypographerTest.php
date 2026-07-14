@@ -3,6 +3,14 @@
 use BenjaminHoegh\ParsedownExtended\ParsedownExtended;
 use PHPUnit\Framework\TestCase;
 
+class TypographerElementCountParser extends ParsedownExtended
+{
+    public function lineElementCount(string $text): int
+    {
+        return count($this->lineElements($text));
+    }
+}
+
 class TypographerTest extends TestCase
 {
     protected ParsedownExtended $parsedownExtended;
@@ -75,5 +83,14 @@ class TypographerTest extends TestCase
         );
         $this->assertStringContainsString('>link</a>', $result);
         $this->assertStringNotContainsString('**bold**', $result);
+    }
+
+    public function testUnmatchedPunctuationIsEmittedAsOneTextElement(): void
+    {
+        $parsedownExtended = new TypographerElementCountParser();
+        $text = str_repeat('Sentence. ', 1000);
+
+        $this->assertSame(1, $parsedownExtended->lineElementCount($text));
+        $this->assertSame($text, $parsedownExtended->line($text));
     }
 }

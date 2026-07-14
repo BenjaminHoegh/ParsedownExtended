@@ -7,6 +7,34 @@ namespace BenjaminHoegh\ParsedownExtended\Extensions\Inline;
 trait TypographerExtension
 {
     /**
+     * Quickly rejects ordinary punctuation before the inline parser allocates an excerpt.
+     */
+    protected function inlineTypographerMarkerMatches(string $text, int $position): bool
+    {
+        $first = $text[$position] ?? '';
+        $next = $text[$position + 1] ?? '';
+
+        if ($first === '(') {
+            $candidate = strtolower(substr($text, $position, 4));
+
+            return strncmp($candidate, '(c)', 3) === 0
+                || strncmp($candidate, '(r)', 3) === 0
+                || strncmp($candidate, '(p)', 3) === 0
+                || $candidate === '(tm)';
+        }
+
+        if ($first === '+') {
+            return $next === '-';
+        }
+
+        if ($first === '!' || $first === '?') {
+            return $next === '.' && strspn($text, '.', $position + 1) >= 3;
+        }
+
+        return $first === '.' && $next === '.';
+    }
+
+    /**
      * Processes inline typographic substitutions.
      *
      * This function handles typographic improvements, such as replacing plain text with their typographic equivalents.
