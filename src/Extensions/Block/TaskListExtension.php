@@ -29,12 +29,12 @@ trait TaskListExtension
 
         // Extract the text of the first element to check for a task list checkbox
         $text = $Elements[0]['handler']['argument'] ?? null;
-        $firstFourChars = is_string($text) ? substr($text, 0, 4) : '';
 
-        // Check if the list item starts with a checkbox (e.g., `[x]` or `[ ]`)
-        if (is_string($text) && preg_match('/^\[[x ]\]/i', $firstFourChars, $matches)) {
+        // A task marker must be followed by a space or tab. Requiring the
+        // separator prevents ordinary text such as `[x]foo` from losing data.
+        if (is_string($text) && preg_match('/^\[([x ])\][ \t]/i', $text, $matches)) {
             // Remove the checkbox marker from the beginning of the text
-            $Elements[0]['handler']['argument'] = substr_replace($text, '', 0, 4);
+            $Elements[0]['handler']['argument'] = substr($text, strlen($matches[0]));
 
             // Prepare attributes for the checkbox element
             $inputAttributes = [
@@ -42,7 +42,7 @@ trait TaskListExtension
                 'disabled' => 'disabled',
             ];
 
-            if (strtolower($matches[0]) === '[x]') {
+            if (strtolower($matches[1]) === 'x') {
                 $inputAttributes['checked'] = 'checked';
             }
 

@@ -46,4 +46,20 @@ class ListsTest extends TestCase
 
         $this->assertEquals($expectedHtml, trim($result));
     }
+
+    public function testTaskListMarkerRequiresWhitespace(): void
+    {
+        $this->assertSame(
+            "<ul>\n<li>[x]foo</li>\n</ul>",
+            $this->parsedownExtended->text('- [x]foo')
+        );
+    }
+
+    public function testTaskListMarkerConsumesOnlyItsSeparator(): void
+    {
+        $this->assertSame(
+            "<ul>\n<li><input type=\"checkbox\" disabled=\"disabled\" checked=\"checked\" />foo</li>\n</ul>",
+            $this->parsedownExtended->text('- [x] foo')
+        );
+    }
 }
