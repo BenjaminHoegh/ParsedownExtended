@@ -129,7 +129,19 @@ function benchmarkParsers(array $markdownFiles, array $parserFactories, int $ite
         $rows[$source] = [];
 
         foreach ($parserFactories as $parserName => $factory) {
-            $result = benchmarkParser($factory, $markdown, $iterations, $warmup, $includeMemory, $mode);
+            // ParsedownExtra retains a private footnote counter when reused. It
+            // remains useful as a timing baseline, but only ParsedownExtended is
+            // expected to guarantee stable output in reuse mode.
+            $verifyOutputStability = $mode === 'fresh' || $parserName !== 'ParsedownExtra';
+            $result = benchmarkParser(
+                $factory,
+                $markdown,
+                $iterations,
+                $warmup,
+                $includeMemory,
+                $mode,
+                $verifyOutputStability
+            );
             $rows[$source][$parserName] = $result;
             $totals[$parserName]['time'] += $result['time'];
             $totals[$parserName]['p95'] += $result['p95'];
@@ -163,7 +175,15 @@ function benchmarkFeatureGroups(array $markdownFiles, int $iterations, int $warm
         $totalMemory = 0;
 
         foreach ($markdownFiles as $markdown) {
-            $result = benchmarkParser(static function () use ($parser) { return $parser; }, $markdown, $iterations, $warmup, $includeMemory, 'reuse');
+            $result = benchmarkParser(
+                static function () use ($parser) { return $parser; },
+                $markdown,
+                $iterations,
+                $warmup,
+                $includeMemory,
+                'reuse',
+                true
+            );
             $totalTime += $result['time'];
             $totalMemory += $result['memory'];
         }
@@ -288,17 +308,24 @@ function applySettings(ParsedownExtended $parser, array $settings): void
     }
 }
 
-function benchmarkParser(callable $factory, string $markdown, int $iterations, int $warmup, bool $includeMemory, string $mode): array
+function benchmarkParser(
+    callable $factory,
+    string $markdown,
+    int $iterations,
+    int $warmup,
+    bool $includeMemory,
+    string $mode,
+    bool $verifyOutputStability
+): array
 {
     $parser = $mode === 'reuse' ? $factory() : null;
     $expected = null;
-    $assertStable = $mode === 'fresh';
 
     for ($i = 0; $i < $warmup; $i++) {
         $warmupParser = $mode === 'reuse' ? $parser : $factory();
         $output = parseMarkdown($warmupParser, $markdown);
         $expected = $expected ?? $output;
-        if ($assertStable) {
+        if ($verifyOutputStability) {
             assertStableOutput($expected, $output);
         }
     }
@@ -319,7 +346,7 @@ function benchmarkParser(callable $factory, string $markdown, int $iterations, i
         $samples[] = (hrtime(true) - $start) / 1000000000;
 
         $expected = $expected ?? $output;
-        if ($assertStable) {
+        if ($verifyOutputStability) {
             assertStableOutput($expected, $output);
         }
     }
