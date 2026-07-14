@@ -135,6 +135,54 @@ class ConfigTest extends TestCase
         $parsedownExtended->config()->set('code.inline', 'false');
     }
 
+    public function testInvalidHeadingReplacementRegexIsRejected(): void
+    {
+        $this->expectException(InvalidArgumentException::class);
+        $this->expectExceptionMessage(
+            'Invalid config value for headings.auto_anchors.replacements'
+        );
+
+        $parsedownExtended = new ParsedownExtended();
+        $parsedownExtended->config()->set('headings.auto_anchors.replacements', [
+            '[' => 'replacement',
+        ]);
+    }
+
+    public function testMalformedMathDelimiterIsRejected(): void
+    {
+        $this->expectException(InvalidArgumentException::class);
+        $this->expectExceptionMessage(
+            'Invalid config value for math.block.delimiters'
+        );
+
+        $parsedownExtended = new ParsedownExtended();
+        $parsedownExtended->config()->set('math.block.delimiters', [
+            ['left' => '$$'],
+        ]);
+    }
+
+    public function testInvalidHeadingLevelIsRejected(): void
+    {
+        $this->expectException(InvalidArgumentException::class);
+        $this->expectExceptionMessage(
+            'Invalid config value for toc.levels'
+        );
+
+        $parsedownExtended = new ParsedownExtended();
+        $parsedownExtended->config()->set('toc.levels', ['h1', 'h7']);
+    }
+
+    public function testEmptyAnchorDelimiterIsRejected(): void
+    {
+        $this->expectException(InvalidArgumentException::class);
+        $this->expectExceptionMessage(
+            'Invalid config value for headings.auto_anchors.delimiter'
+        );
+
+        $parsedownExtended = new ParsedownExtended();
+        $parsedownExtended->config()->set('headings.auto_anchors.delimiter', '');
+    }
+
     /**
      * Test multiple settings at once
      */

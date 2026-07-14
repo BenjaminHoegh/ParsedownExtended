@@ -70,7 +70,7 @@ final class Configuration
         if (!isset($this->schema[$path])) {
             throw new \InvalidArgumentException("Invalid config path: {$path}");
         }
-        $this->validate($value, $this->schema[$path]['type']);
+        ConfigurationValidator::validate($path, $value, $this->schema[$path]['type']);
 
         if (isset($this->booleanPaths[$path])) {
             $this->features[$path] = $value;
@@ -101,13 +101,5 @@ final class Configuration
             return $path . '.enabled';
         }
         return $path;
-    }
-
-    private function validate($value, string $expected): void
-    {
-        $actual = gettype($value);
-        if ($expected !== $actual) {
-            throw new \InvalidArgumentException("Expected {$expected}, got {$actual}");
-        }
     }
 }
