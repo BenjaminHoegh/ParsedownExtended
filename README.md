@@ -35,9 +35,9 @@ Standalone versions of some extended features are also available as separate lib
 
 ## Requirements
 
-* PHP 7.4 or newer
-* Parsedown 1.8 or newer
-* Parsedown Extra 0.9 or newer when using Composer-installed dependencies
+* PHP 8.2 or later
+* Parsedown 1.8 or later
+* Parsedown Extra 0.9 or later when using Composer-installed dependencies
 
 ## Getting started
 
