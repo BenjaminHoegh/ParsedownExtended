@@ -6,8 +6,6 @@ namespace BenjaminHoegh\ParsedownExtended;
 
 use BenjaminHoegh\ParsedownExtended\Configuration\Configuration;
 
-class_alias(class_exists('ParsedownExtra') ? 'ParsedownExtra' : 'Parsedown', 'ParsedownExtendedParentAlias');
-
 /**
  * Class ParsedownExtended
  *
@@ -16,7 +14,7 @@ class_alias(class_exists('ParsedownExtra') ? 'ParsedownExtra' : 'Parsedown', 'Pa
  *
  */
 // @psalm-suppress UndefinedClass
-class ParsedownExtended extends \ParsedownExtendedParentAlias
+class ParsedownExtended extends \ParsedownExtra
 {
     use Extensions\Registry\ExtensionRegistrar;
     use Extensions\Toc\TocExtensions;
