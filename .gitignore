@@ -12,6 +12,7 @@ docs/*
 
 # PHPUnit
 .phpunit.result.cache
+.phpunit.cache
 
 # Composer
 composer.phar
