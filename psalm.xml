@@ -2,9 +2,14 @@
 <psalm
     errorLevel="8"
     useDocblockTypes="false"
+    findUnusedCode="false"
     phpVersion="8.2"
 >
     <projectFiles>
         <directory name="src" />
     </projectFiles>
+    <issueHandlers>
+        <!-- PHP's native #[Override] attribute requires PHP 8.3. -->
+        <MissingOverrideAttribute errorLevel="suppress" />
+    </issueHandlers>
 </psalm>
