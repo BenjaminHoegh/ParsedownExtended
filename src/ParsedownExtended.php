@@ -22,7 +22,7 @@ class ParsedownExtended extends \ParsedownExtra
     public const VERSION = '3.0.0';
     public const VERSION_PARSEDOWN_REQUIRED = '1.8.0';
     public const VERSION_PARSEDOWN_EXTRA_REQUIRED = '0.9.0';
-    public const MIN_PHP_VERSION = '7.4';
+    public const MIN_PHP_VERSION = '8.2';
 
     /** Parsedown-compatible punctuation that is always backslash-escapable. */
     private const PARSEDOWN_ESCAPABLE_SPECIAL_CHARACTERS = [
