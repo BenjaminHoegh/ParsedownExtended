@@ -29,12 +29,12 @@ final class Configuration
 
     private array $values;
 
-    private $onChange;
+    private ?\Closure $onChange;
 
     public function __construct(array &$values, ?callable $onChange = null)
     {
         $this->values = &$values;
-        $this->onChange = $onChange;
+        $this->onChange = $onChange === null ? null : \Closure::fromCallable($onChange);
     }
 
     /**
@@ -230,10 +230,7 @@ final class Configuration
         return self::aliases()[$path] ?? $path;
     }
 
-    /**
-     * @return mixed
-     */
-    public function get(string $path)
+    public function get(string $path): mixed
     {
         $path = self::resolve($path);
         if (!isset(self::definitions()[$path])) {
@@ -244,10 +241,9 @@ final class Configuration
     }
 
     /**
-     * @param string|array<string, mixed> $path
-     * @param mixed $value
+     * @param array<string, mixed>|string $path
      */
-    public function set($path, $value = null): self
+    public function set(array|string $path, mixed $value = null): self
     {
         if (is_array($path)) {
             foreach ($path as $key => $item) {
@@ -255,10 +251,6 @@ final class Configuration
             }
 
             return $this;
-        }
-
-        if (!is_string($path)) {
-            throw new \InvalidArgumentException('Configuration path must be a string or an associative array.');
         }
 
         $definitions = self::definitions();
@@ -291,10 +283,9 @@ final class Configuration
     }
 
     /**
-     * @param mixed $default
      * @return array{type: string, default: mixed, description: string, validationRule: string|null, alias: null}
      */
-    private static function option($default, string $description, ?string $validationRule = null): array
+    private static function option(mixed $default, string $description, ?string $validationRule = null): array
     {
         return [
             'type' => gettype($default),
@@ -345,10 +336,9 @@ final class Configuration
     }
 
     /**
-     * @param mixed $value
      * @param array<string, mixed> $definition
      */
-    private function setValue(string $path, $value, array $definition): self
+    private function setValue(string $path, mixed $value, array $definition): self
     {
         self::validate($path, $value, $definition);
         $this->values[$path] = $value;
@@ -368,7 +358,7 @@ final class Configuration
         $prefix = $path . '.';
 
         foreach ($definitions as $candidate => $_) {
-            if (strpos($candidate, $prefix) === 0) {
+            if (str_starts_with($candidate, $prefix)) {
                 return true;
             }
         }
@@ -377,14 +367,15 @@ final class Configuration
     }
 
     /**
-     * @param mixed $value
      * @param array<string, mixed> $definition
      */
-    private static function validate(string $path, $value, array $definition): void
+    private static function validate(string $path, mixed $value, array $definition): void
     {
         $actualType = gettype($value);
         if ($definition['type'] !== $actualType) {
-            throw new \InvalidArgumentException("Expected {$definition['type']}, got {$actualType}");
+            throw new \InvalidArgumentException(
+                "Expected {$definition['type']}, got " . get_debug_type($value)
+            );
         }
 
         switch ($definition['validationRule']) {
@@ -433,7 +424,7 @@ final class Configuration
 
     private static function validateStringList(string $path, array $values): void
     {
-        if (!self::isList($values)) {
+        if (!array_is_list($values)) {
             self::invalid($path, 'expected a list of non-empty strings');
         }
 
@@ -446,7 +437,7 @@ final class Configuration
 
     private static function validateHeadingLevels(string $path, array $levels): void
     {
-        if (!self::isList($levels)) {
+        if (!array_is_list($levels)) {
             self::invalid($path, 'expected a list containing only h1 through h6');
         }
 
@@ -473,7 +464,7 @@ final class Configuration
 
     private static function validateMathDelimiters(string $path, array $delimiters): void
     {
-        if (!self::isList($delimiters)) {
+        if (!array_is_list($delimiters)) {
             self::invalid($path, 'expected a list of delimiter pairs');
         }
 
@@ -491,12 +482,7 @@ final class Configuration
         }
     }
 
-    private static function isList(array $values): bool
-    {
-        return $values === [] || array_keys($values) === range(0, count($values) - 1);
-    }
-
-    private static function invalid(string $path, string $reason): void
+    private static function invalid(string $path, string $reason): never
     {
         throw new \InvalidArgumentException("Invalid config value for {$path}: {$reason}");
     }

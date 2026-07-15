@@ -1,11 +1,12 @@
 <?php
+
 require_once __DIR__ . '/TestParsedownExtended.php';
 
 use PHPUnit\Framework\TestCase;
 
 class ParsedownExtendedTest extends TestCase
 {
-    final function __construct($name = null, array $data = array(), $dataName = '')
+    final public function __construct($name = null, array $data = [], $dataName = '')
     {
         $this->dirs = $this->initDirs();
         $this->Parsedown = $this->initParsedown();
@@ -21,7 +22,7 @@ class ParsedownExtendedTest extends TestCase
      */
     protected function initDirs()
     {
-        $dirs []= dirname(__FILE__).'/data/';
+        $dirs [] = dirname(__FILE__).'/data/';
 
         return $dirs;
     }
@@ -41,15 +42,14 @@ class ParsedownExtendedTest extends TestCase
      * @param $test
      * @param $dir
      */
-    function test_($test, $dir)
+    public function test_($test, $dir)
     {
         // Use a fresh instance so parser state (anchors, footnotes, TOC entries,
         // and references) cannot leak between fixture files.
         $this->Parsedown = $this->initParsedown();
 
         $configFile = $dir . $test . '.json';
-        if (file_exists($configFile))
-        {
+        if (file_exists($configFile)) {
             $config = json_decode(file_get_contents($configFile), true, 512, JSON_THROW_ON_ERROR);
             $this->Parsedown->config()->set($config);
         }
@@ -70,20 +70,17 @@ class ParsedownExtendedTest extends TestCase
         $this->assertEquals($expectedMarkup, $actualMarkup, "Failed for fixture: {$dir}{$test}.md");
     }
 
-    function data()
+    public function data()
     {
-        $data = array();
+        $data = [];
 
-        foreach ($this->dirs as $dir)
-        {
+        foreach ($this->dirs as $dir) {
             $Folder = new DirectoryIterator($dir);
 
-            foreach ($Folder as $File)
-            {
+            foreach ($Folder as $File) {
                 /** @var $File DirectoryIterator */
 
-                if ( ! $File->isFile())
-                {
+                if (! $File->isFile()) {
                     continue;
                 }
 
@@ -91,16 +88,14 @@ class ParsedownExtendedTest extends TestCase
 
                 $extension = pathinfo($filename, PATHINFO_EXTENSION);
 
-                if ($extension !== 'md')
-                {
+                if ($extension !== 'md') {
                     continue;
                 }
 
                 $basename = $File->getBasename('.md');
 
-                if (file_exists($dir . $basename . '.html'))
-                {
-                    $data[$basename] = array($basename, $dir);
+                if (file_exists($dir . $basename . '.html')) {
+                    $data[$basename] = [$basename, $dir];
                 }
             }
         }

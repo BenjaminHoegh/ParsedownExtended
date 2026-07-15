@@ -6,8 +6,8 @@ namespace BenjaminHoegh\ParsedownExtended\Extensions\Block;
 
 trait HeadingAnchorExtension
 {
-    /** @var callable|null $createAnchorIDCallback Callback function for anchor creation */
-    private $createAnchorIDCallback = null;
+    /** @var (\Closure(string, \BenjaminHoegh\ParsedownExtended\Configuration\Configuration): ?string)|null */
+    private ?\Closure $createAnchorIDCallback = null;
 
     /**
      * Sets a callback function for creating anchor IDs for headers.
@@ -22,7 +22,7 @@ trait HeadingAnchorExtension
      */
     public function setCreateAnchorIDCallback(callable $callback): void
     {
-        $this->createAnchorIDCallback = $callback;
+        $this->createAnchorIDCallback = \Closure::fromCallable($callback);
     }
 
     /**
@@ -45,7 +45,7 @@ trait HeadingAnchorExtension
         }
 
         // If a user-defined callback is provided, use it to generate the anchor ID
-        if (is_callable($this->createAnchorIDCallback)) {
+        if ($this->createAnchorIDCallback !== null) {
             $config = $this->config();
             return ($this->createAnchorIDCallback)($text, $config);
         }

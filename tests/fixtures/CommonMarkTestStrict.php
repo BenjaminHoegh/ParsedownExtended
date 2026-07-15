@@ -1,8 +1,8 @@
 <?php
+
 require_once __DIR__ . '/TestParsedownExtended.php';
 
 use PHPUnit\Framework\TestCase;
-
 
 /**
  * Optional: excluded from the default suite because it downloads the upstream
@@ -12,11 +12,11 @@ use PHPUnit\Framework\TestCase;
  */
 class CommonMarkTestStrict extends TestCase
 {
-    const SPEC_URL = 'https://raw.githubusercontent.com/jgm/CommonMark/master/spec.txt';
+    public const SPEC_URL = 'https://raw.githubusercontent.com/jgm/CommonMark/master/spec.txt';
 
     protected $parsedown;
 
-    protected function setUp() : void
+    protected function setUp(): void
     {
         $this->parsedown = new TestParsedownExtended();
         $this->parsedown->setUrlsLinked(false);
@@ -48,10 +48,10 @@ class CommonMarkTestStrict extends TestCase
         $spec = str_replace("\r\n", "\n", $spec);
         $spec = strstr($spec, '<!-- END TESTS -->', true);
 
-        $matches = array();
+        $matches = [];
         preg_match_all('/^`{32} example\n((?s).*?)\n\.\n(?:|((?s).*?)\n)`{32}$|^#{1,6} *(.*?)$/m', $spec, $matches, PREG_SET_ORDER);
 
-        $data = array();
+        $data = [];
         $currentId = 0;
         $currentSection = '';
         foreach ($matches as $match) {
@@ -62,12 +62,12 @@ class CommonMarkTestStrict extends TestCase
                 $markdown = str_replace('→', "\t", $match[1]);
                 $expectedHtml = isset($match[2]) ? str_replace('→', "\t", $match[2]) : '';
 
-                $data[$currentId] = array(
+                $data[$currentId] = [
                     'id' => $currentId,
                     'section' => $currentSection,
                     'markdown' => $markdown,
-                    'expectedHtml' => $expectedHtml
-                );
+                    'expectedHtml' => $expectedHtml,
+                ];
             }
         }
 

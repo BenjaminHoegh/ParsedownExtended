@@ -21,13 +21,13 @@ use PHPUnit\Framework\TestCase;
 /** @group commonmark */
 class CommonMarkComparisonTest extends TestCase
 {
-    const SPEC_URL = 'https://raw.githubusercontent.com/jgm/CommonMark/master/spec.txt';
+    public const SPEC_URL = 'https://raw.githubusercontent.com/jgm/CommonMark/master/spec.txt';
 
     protected $parsedownExtended;
     protected $parsedownExtra;
     protected $differences = [];
 
-    protected function setUp() : void
+    protected function setUp(): void
     {
         $this->parsedownExtended = new ParsedownExtended();
         $this->parsedownExtended->setUrlsLinked(false);
@@ -103,10 +103,10 @@ class CommonMarkComparisonTest extends TestCase
         $spec = str_replace("\r\n", "\n", $spec);
         $spec = strstr($spec, '<!-- END TESTS -->', true);
 
-        $matches = array();
+        $matches = [];
         preg_match_all('/^`{32} example\n((?s).*?)\n\.\n(?:|((?s).*?)\n)`{32}$|^#{1,6} *(.*?)$/m', $spec, $matches, PREG_SET_ORDER);
 
-        $data = array();
+        $data = [];
         $currentId = 0;
         $currentSection = '';
         foreach ($matches as $match) {
@@ -117,12 +117,12 @@ class CommonMarkComparisonTest extends TestCase
                 $markdown = str_replace('→', "\t", $match[1]);
                 $expectedHtml = isset($match[2]) ? str_replace('→', "\t", $match[2]) : '';
 
-                $data[$currentId] = array(
+                $data[$currentId] = [
                     'id' => $currentId,
                     'section' => $currentSection,
                     'markdown' => $markdown,
-                    'expectedHtml' => $expectedHtml
-                );
+                    'expectedHtml' => $expectedHtml,
+                ];
             }
         }
 

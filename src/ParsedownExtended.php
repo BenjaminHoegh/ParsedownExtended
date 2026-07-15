@@ -22,7 +22,6 @@ class ParsedownExtended extends \ParsedownExtra
     public const VERSION = '3.0.0';
     public const VERSION_PARSEDOWN_REQUIRED = '1.8.0';
     public const VERSION_PARSEDOWN_EXTRA_REQUIRED = '0.9.0';
-    public const MIN_PHP_VERSION = '8.2';
 
     /** Parsedown-compatible punctuation that is always backslash-escapable. */
     private const PARSEDOWN_ESCAPABLE_SPECIAL_CHARACTERS = [
@@ -91,26 +90,21 @@ class ParsedownExtended extends \ParsedownExtra
     /**
      * Constructor for ParsedownExtended.
      *
-     * Initializes the class and performs version checks for PHP and Parsedown dependencies.
+     * Initializes the class and performs version checks for Parsedown dependencies.
      */
     public function __construct(array $overrides = [])
     {
-        // Check if the current PHP version meets the minimum requirement
-        $this->checkVersion('PHP', PHP_VERSION, self::MIN_PHP_VERSION);
-
         // Check if the installed Parsedown version meets the minimum requirement
         $this->checkVersion('Parsedown', \Parsedown::version, self::VERSION_PARSEDOWN_REQUIRED);
 
-        if (class_exists('ParsedownExtra')) {
-            // Ensure ParsedownExtra meets the version requirement
-            $this->checkVersion('ParsedownExtra', \ParsedownExtra::version, self::VERSION_PARSEDOWN_EXTRA_REQUIRED);
-            parent::__construct();
-        }
+        // Ensure ParsedownExtra meets the version requirement
+        $this->checkVersion('ParsedownExtra', \ParsedownExtra::version, self::VERSION_PARSEDOWN_EXTRA_REQUIRED);
+        parent::__construct();
 
         $this->configurationValues = Configuration::defaults();
 
         // Apply overrides if provided
-        if ($overrides) {
+        if ($overrides !== []) {
             $this->applyOverrides($overrides);
         }
 
@@ -120,12 +114,12 @@ class ParsedownExtended extends \ParsedownExtra
     /**
      * Check version compatibility for a specific component.
      *
-     * Verifies if the current version of a component (e.g., PHP or Parsedown) meets the required version.
+     * Verifies that an installed Parsedown dependency meets the required version.
      * Throws an exception if the version is not sufficient.
      *
      * @since 1.3.0
      *
-     * @param string $component The name of the component being checked (e.g., 'PHP', 'Parsedown')
+     * @param string $component The name of the dependency being checked
      * @param string $currentVersion The current version of the component installed
      * @param string $requiredVersion The minimum required version of the component
      *
@@ -167,9 +161,7 @@ class ParsedownExtended extends \ParsedownExtra
         if ($this->configHandler === null) {
             $this->configHandler = new Configuration(
                 $this->configurationValues,
-                function (): void {
-                    $this->configurationChanged();
-                }
+                $this->configurationChanged(...)
             );
         }
         return $this->configHandler;
@@ -190,18 +182,12 @@ class ParsedownExtended extends \ParsedownExtra
         return array_key_exists($key, $this->runtimeValueCache);
     }
 
-    /**
-     * @return mixed
-     */
-    protected function runtimeCacheValue(string $key)
+    protected function runtimeCacheValue(string $key): mixed
     {
         return $this->runtimeValueCache[$key] ?? null;
     }
 
-    /**
-     * @param mixed $value
-     */
-    protected function storeRuntimeCacheValue(string $key, $value): void
+    protected function storeRuntimeCacheValue(string $key, mixed $value): void
     {
         $this->runtimeValueCache[$key] = $value;
     }
@@ -209,7 +195,7 @@ class ParsedownExtended extends \ParsedownExtra
     /**
      * Reads an internal payload config value without creating or rebinding the public config handler.
      */
-    protected function configValue(string $path)
+    protected function configValue(string $path): mixed
     {
         return $this->configurationValues[$path] ?? null;
     }
@@ -293,10 +279,10 @@ class ParsedownExtended extends \ParsedownExtra
     /**
      * Builds block handler maps from currently enabled handlers only.
      */
-    private function getActiveBlockTypes(): array
+    private function initializeActiveBlockTypes(): void
     {
         if ($this->activeBlockTypes !== null) {
-            return $this->activeBlockTypes;
+            return;
         }
 
         $activeBlockTypes = [];
@@ -323,8 +309,6 @@ class ParsedownExtended extends \ParsedownExtra
         $this->activeBlockTypes = $activeBlockTypes;
         $this->activeUnmarkedBlockTypes = $activeUnmarkedBlockTypes;
         $this->activeBlockCandidateTypes = $activeBlockCandidateTypes;
-
-        return $this->activeBlockTypes;
     }
 
     /**
@@ -360,8 +344,7 @@ class ParsedownExtended extends \ParsedownExtra
      * @param string $text Markdown source.
      * @return array Parsed element tree.
      */
-    #[\Override]
-    protected function textElements($text)
+    protected function textElements($text): array
     {
         $this->beginDocument();
 
@@ -380,12 +363,11 @@ class ParsedownExtended extends \ParsedownExtra
      * @param array $lines Markdown source lines.
      * @return array Parsed block elements.
      */
-    #[\Override]
     protected function linesElements(array $lines): array
     {
         $Elements = [];
         $CurrentBlock = null;
-        $this->getActiveBlockTypes();
+        $this->initializeActiveBlockTypes();
         $activeBlockTypes = $this->activeBlockCandidateTypes;
         $activeUnmarkedBlockTypes = $this->activeUnmarkedBlockTypes;
 
@@ -496,8 +478,7 @@ class ParsedownExtended extends \ParsedownExtra
      * @param array $nonNestables Array of inline types that should not be nested.
      * @return string The parsed HTML markup for the given line.
      */
-    #[\Override]
-    public function line($text, $nonNestables = [])
+    public function line($text, $nonNestables = []): string
     {
         $this->initializePredefinedAbbreviations();
         return $this->elements($this->lineElements($text, $nonNestables));
@@ -517,7 +498,6 @@ class ParsedownExtended extends \ParsedownExtra
      *
      * @return array An array of parsed elements representing the structure of the given text.
      */
-    #[\Override]
     protected function lineElements($text, $nonNestables = []): array
     {
         // Standardize line breaks.

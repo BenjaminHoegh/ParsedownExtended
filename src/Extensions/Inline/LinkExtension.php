@@ -18,7 +18,7 @@ trait LinkExtension
      */
     protected function inlineLink($Excerpt)
     {
-        if (strpos($Excerpt['text'], ']') === false || !$this->configEnabled('links')) {
+        if (!str_contains($Excerpt['text'], ']') || !$this->configEnabled('links')) {
             return null;
         }
 
@@ -56,7 +56,7 @@ trait LinkExtension
      */
     protected function inlineUrlTag($Excerpt)
     {
-        if (strpos($Excerpt['text'], '>') === false || !$this->configEnabled('links')) {
+        if (!str_contains($Excerpt['text'], '>') || !$this->configEnabled('links')) {
             return null;
         }
 
@@ -76,7 +76,7 @@ trait LinkExtension
     protected function inlineEmailTag($Excerpt)
     {
         if (
-            strpos($Excerpt['text'], '>') === false ||
+            !str_contains($Excerpt['text'], '>') ||
             !$this->configEnabled('links') ||
             !$this->configEnabled('links.email_links')
         ) {
@@ -203,7 +203,7 @@ trait LinkExtension
         }
 
         $host = strtolower($host);
-        if (strpos($host, 'www.') === 0) {
+        if (str_starts_with($host, 'www.')) {
             return substr($host, 4);
         }
 

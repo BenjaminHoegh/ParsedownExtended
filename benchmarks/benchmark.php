@@ -161,15 +161,14 @@ function benchmarkParser(
     bool $includeMemory,
     string $mode,
     bool $verifyOutputStability
-): array
-{
+): array {
     $parser = $mode === 'reuse' ? $factory() : null;
     $expected = null;
 
     for ($i = 0; $i < $warmup; $i++) {
         $warmupParser = $mode === 'reuse' ? $parser : $factory();
         $output = parseMarkdown($warmupParser, $markdown);
-        $expected = $expected ?? $output;
+        $expected ??= $output;
         if ($verifyOutputStability) {
             assertStableOutput($expected, $output);
         }
@@ -190,7 +189,7 @@ function benchmarkParser(
         $output = parseMarkdown($iterationParser, $markdown);
         $samples[] = (hrtime(true) - $start) / 1000000000;
 
-        $expected = $expected ?? $output;
+        $expected ??= $output;
         if ($verifyOutputStability) {
             assertStableOutput($expected, $output);
         }

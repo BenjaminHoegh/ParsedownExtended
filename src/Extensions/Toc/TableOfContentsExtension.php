@@ -39,20 +39,13 @@ trait TableOfContentsExtension
      */
     public function contentsList(string $type_return = 'string'): string
     {
-
-        switch (strtolower($type_return)) {
-            case 'string':
-                $contentsListString = $this->getContentsListString();
-                return $contentsListString;
-            case 'json':
-                $json = json_encode($this->contentsList);
-                return is_string($json) ? $json : '[]';
-            default:
-                $backtrace = debug_backtrace(DEBUG_BACKTRACE_IGNORE_ARGS, 2);
-                $caller = $backtrace[1] ?? $backtrace[0];
-                $errorMessage = "Unknown return type '{$type_return}' given while parsing ToC. Called in " . ($caller['file'] ?? 'unknown') . " on line " . ($caller['line'] ?? 'unknown');
-                throw new \InvalidArgumentException($errorMessage);
-        }
+        return match (strtolower($type_return)) {
+            'string' => $this->getContentsListString(),
+            'json' => $this->contentsListJson(),
+            default => throw new \InvalidArgumentException(
+                "Unknown return type '{$type_return}' given while parsing ToC."
+            ),
+        };
     }
 
     /**
@@ -73,7 +66,7 @@ trait TableOfContentsExtension
         $tag_hashed = hash('sha256', $salt . $tag_origin); // Generate the hashed version of the ToC tag
 
         // If the hashed tag is not found, return the original text
-        if (strpos($text, $tag_hashed) === false) {
+        if (!str_contains($text, $tag_hashed)) {
             return $text;
         }
 
@@ -99,7 +92,7 @@ trait TableOfContentsExtension
         $tag_origin = $this->configValue('toc.tag'); // Get the original ToC tag
 
         // If the original tag is not found, return the original text
-        if (strpos($text, $tag_origin) === false) {
+        if (!str_contains($text, $tag_origin)) {
             return $text;
         }
 
@@ -298,7 +291,7 @@ trait TableOfContentsExtension
 
         // Get the original ToC tag and check if it is in the input text
         $tag_origin = $this->configValue('toc.tag');
-        if (strpos($text, $tag_origin) === false) {
+        if (!str_contains($text, $tag_origin)) {
             return $html; // Return HTML if the ToC tag is not found
         }
 
@@ -316,5 +309,12 @@ trait TableOfContentsExtension
     private function escapeTocHtmlValue(string $value): string
     {
         return htmlspecialchars($value, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+    }
+
+    private function contentsListJson(): string
+    {
+        $json = json_encode($this->contentsList);
+
+        return is_string($json) ? $json : '[]';
     }
 }

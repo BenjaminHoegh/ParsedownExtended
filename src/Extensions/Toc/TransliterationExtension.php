@@ -18,7 +18,7 @@ trait TransliterationExtension
      * @param string $text The input string to be normalized.
      * @return string The normalized string.
      */
-    protected function normalizeString(string $text)
+    protected function normalizeString(string $text): string
     {
         static $mbstringLoaded = null;
 
@@ -37,9 +37,9 @@ trait TransliterationExtension
             }
 
             return mb_convert_encoding($text, 'UTF-8', $encoding);
-        } else {
-            return $text; // Return raw text as there is no good alternative for mb_convert_encoding
         }
+
+        return $text; // Return raw text as there is no good alternative for mb_convert_encoding
     }
 
     /**
@@ -67,7 +67,10 @@ trait TransliterationExtension
         }
 
         if ($transliterator instanceof \Transliterator) {
-            return $transliterator->transliterate($text);
+            $transliterated = $transliterator->transliterate($text);
+            if (is_string($transliterated)) {
+                return $transliterated;
+            }
         }
 
         return $this->manualTransliterate($text); // Use manual transliteration if `Transliterator` is not available

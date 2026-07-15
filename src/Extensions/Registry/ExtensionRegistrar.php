@@ -45,7 +45,7 @@ trait ExtensionRegistrar
                     $this->specialCharacters[] = $marker;
                 }
 
-                if ($group === 'inline' && strpos($this->inlineMarkerList, $marker) === false) {
+                if ($group === 'inline' && !str_contains($this->inlineMarkerList, $marker)) {
                     $this->inlineMarkerList .= $marker;
                 }
             }

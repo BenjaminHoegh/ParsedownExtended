@@ -57,23 +57,14 @@ trait EscapeSequenceExtension
             return true;
         }
 
-        switch ($character) {
-            case '=':
-                return $this->configEnabled('emphasis') && $this->configEnabled('emphasis.mark');
-            case '$':
-                return $this->configEnabled('math');
-            case '^':
-                return $this->configEnabled('emphasis') && $this->configEnabled('emphasis.superscript');
-            case ':':
-                return $this->configEnabled('emojis');
-            case '"':
-            case "'":
-            case '<':
-                return $this->configEnabled('smartypants');
-            case '?':
-                return $this->configEnabled('typographer');
-            default:
-                return false;
-        }
+        return match ($character) {
+            '=' => $this->configEnabled('emphasis') && $this->configEnabled('emphasis.mark'),
+            '$' => $this->configEnabled('math'),
+            '^' => $this->configEnabled('emphasis') && $this->configEnabled('emphasis.superscript'),
+            ':' => $this->configEnabled('emojis'),
+            '"', "'", '<' => $this->configEnabled('smartypants'),
+            '?' => $this->configEnabled('typographer'),
+            default => false,
+        };
     }
 }
