@@ -6,9 +6,6 @@ namespace BenjaminHoegh\ParsedownExtended\Extensions\Block;
 
 trait AbbreviationExtension
 {
-    /** @var bool $predefinedAbbreviationsAdded Tracks whether predefined abbreviations have been merged */
-    private bool $predefinedAbbreviationsAdded = false;
-
     /**
      * Processes abbreviation blocks.
      *

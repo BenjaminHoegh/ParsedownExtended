@@ -81,6 +81,8 @@ class FootnotesTest extends TestCase
 
     public function testFootnoteNumbersResetBetweenParses(): void
     {
+        $this->parsedownExtended->config()->set('toc', false);
+
         $markdown = "Text[^first] and more[^second].\n\n"
             . "[^first]: First footnote.\n\n"
             . "[^second]: Second footnote.";

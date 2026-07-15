@@ -32,6 +32,8 @@
     }
   },
   "scripts": {
-    "benchmark": "php benchmarks/benchmark.php"
+    "benchmark": "php benchmarks/benchmark.php",
+    "docs:configuration": "php bin/generate-configuration-docs.php",
+    "docs:check": "php bin/generate-configuration-docs.php --check"
   }
 }

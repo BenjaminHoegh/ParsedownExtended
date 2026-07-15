@@ -6,9 +6,6 @@ namespace BenjaminHoegh\ParsedownExtended\Extensions\Block;
 
 trait HeadingAnchorExtension
 {
-    /** @var array $anchorRegister Registry for anchors generated during parsing */
-    private array $anchorRegister = [];
-
     /** @var callable|null $createAnchorIDCallback Callback function for anchor creation */
     private $createAnchorIDCallback = null;
 
@@ -26,11 +23,6 @@ trait HeadingAnchorExtension
     public function setCreateAnchorIDCallback(callable $callback): void
     {
         $this->createAnchorIDCallback = $callback;
-    }
-
-    protected function resetAnchorRegister(): void
-    {
-        $this->anchorRegister = [];
     }
 
     /**
@@ -107,18 +99,21 @@ trait HeadingAnchorExtension
      */
     protected function sanitizeAnchor(string $text): string
     {
-        static $lastDelimiter = null;
-        static $collapseDelimiterPattern = null;
-
         // Get the delimiter used to replace non-alphanumeric characters (e.g., '-')
         $delimiter = $this->configValue('headings.auto_anchors.delimiter');
 
         // Replace any character that is not a letter or number with the delimiter
         $text = preg_replace('/[^\p{L}\p{Nd}]+/u', $delimiter, $text);
 
-        if ($lastDelimiter !== $delimiter) {
-            $lastDelimiter = $delimiter;
+        $cacheKey = 'headings.auto_anchors.collapse_pattern';
+        if (!$this->hasRuntimeCacheValue($cacheKey)) {
+            $this->storeRuntimeCacheValue($cacheKey, '/(' . preg_quote($delimiter, '/') . '){2,}/');
+        }
+
+        $collapseDelimiterPattern = $this->runtimeCacheValue($cacheKey);
+        if (!is_string($collapseDelimiterPattern)) {
             $collapseDelimiterPattern = '/(' . preg_quote($delimiter, '/') . '){2,}/';
+            $this->storeRuntimeCacheValue($cacheKey, $collapseDelimiterPattern);
         }
 
         // Collapse consecutive delimiters into a single delimiter
@@ -144,17 +139,18 @@ trait HeadingAnchorExtension
         // Store the original text to use as the base for creating unique variants
         $originalText = $text;
 
-        // Initialize or increment the counter for this specific anchor text
-        if (!isset($this->anchorRegister[$text])) {
-            $this->anchorRegister[$text] = 0;
+        if (!array_key_exists($text, $this->anchorCounts)) {
+            $this->anchorCounts[$text] = 0;
         } else {
-            $this->anchorRegister[$text]++;
+            ++$this->anchorCounts[$text];
         }
+
+        $count = $this->anchorCounts[$text];
 
         // Adjust the anchor ID to ensure it is unique and not in the blacklist
         while (true) {
             // Generate the potential anchor ID with the count as suffix (if needed)
-            $potentialId = $originalText . ($this->anchorRegister[$text] > 0 ? '-' . $this->anchorRegister[$text] : '');
+            $potentialId = $originalText . ($count > 0 ? '-' . $count : '');
 
             // Check if the potential ID is not blacklisted
             if (!$this->configValueSetContains('headings.auto_anchors.blacklist', $potentialId)) {
@@ -162,15 +158,15 @@ trait HeadingAnchorExtension
             }
 
             // Increment the counter to generate the next potential ID
-            $this->anchorRegister[$text]++;
+            $count = ++$this->anchorCounts[$text];
         }
 
         // If no suffix is required, return the original anchor text
-        if ($this->anchorRegister[$text] === 0) {
+        if ($count === 0) {
             return $originalText;
         }
 
         // Return the unique anchor ID with the appropriate suffix
-        return $originalText . '-' . $this->anchorRegister[$text];
+        return $originalText . '-' . $count;
     }
 }

@@ -182,17 +182,18 @@ trait AlertExtension
      */
     private function buildAlertTypesPattern(): ?string
     {
-        static $cacheKey = '';
-        static $cachedPattern = null;
+        $cacheKey = 'alerts.types.pattern';
+        if ($this->hasRuntimeCacheValue($cacheKey)) {
+            $cachedPattern = $this->runtimeCacheValue($cacheKey);
+
+            return is_string($cachedPattern) ? $cachedPattern : null;
+        }
 
         $alertTypes = $this->configValue('alerts.types');
         if (!is_array($alertTypes) || $alertTypes === []) {
-            return null;
-        }
+            $this->storeRuntimeCacheValue($cacheKey, null);
 
-        $newCacheKey = implode("\0", $alertTypes);
-        if ($cacheKey === $newCacheKey) {
-            return $cachedPattern;
+            return null;
         }
 
         $escapedTypes = [];
@@ -205,14 +206,14 @@ trait AlertExtension
         }
 
         if ($escapedTypes === []) {
-            $cacheKey = $newCacheKey;
-            $cachedPattern = null;
+            $this->storeRuntimeCacheValue($cacheKey, null);
+
             return null;
         }
 
-        $cacheKey = $newCacheKey;
-        $cachedPattern = implode('|', $escapedTypes);
+        $pattern = implode('|', $escapedTypes);
+        $this->storeRuntimeCacheValue($cacheKey, $pattern);
 
-        return $cachedPattern;
+        return $pattern;
     }
 }

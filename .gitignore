@@ -3,7 +3,8 @@ vendor/
 lab/
 tools/
 build/
-docs/
+docs/*
+!docs/configuration.md
 
 # PHP-CS-Fixer
 .php_cs.cache

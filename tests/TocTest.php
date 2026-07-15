@@ -334,9 +334,9 @@ class TocTest extends TestCase
 
     public function testContentsListJsonFallbackOnEncodingFailure()
     {
-        $reflection = new ReflectionProperty(ParsedownExtended::class, 'contentsListArray');
-        $reflection->setAccessible(true);
-        $reflection->setValue($this->parsedownExtended, [NAN]);
+        $contentsProperty = new ReflectionProperty(ParsedownExtended::class, 'contentsList');
+        $contentsProperty->setAccessible(true);
+        $contentsProperty->setValue($this->parsedownExtended, [NAN]);
 
         $actual = $this->parsedownExtended->contentsList('json');
 

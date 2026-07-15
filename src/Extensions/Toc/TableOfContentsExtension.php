@@ -6,18 +6,6 @@ namespace BenjaminHoegh\ParsedownExtended\Extensions\Toc;
 
 trait TableOfContentsExtension
 {
-    /** @var array $contentsListArray List of contents generated during parsing */
-    private array $contentsListArray = [];
-
-    /** @var int $firstHeadLevel The level of the first header parsed */
-    private int $firstHeadLevel = 0;
-
-    /** @var string $contentsListString String representation of the table of contents */
-    private string $contentsListString = '';
-
-    /** @var bool $contentsListStringDirty Whether the string representation needs rebuilding. */
-    private bool $contentsListStringDirty = false;
-
     /**
      * Parses the provided text and handles escaping/unescaping of ToC tags.
      *
@@ -32,44 +20,9 @@ trait TableOfContentsExtension
      */
     public function body(string $text): string
     {
-        /**
-         * Reset the internal state for Table of Contents to avoid data persisting
-         * when the same instance parses multiple markdown strings.
-         */
-        $this->resetAnchorRegister();
-        $this->contentsListArray = [];
-        $this->contentsListString = '';
-        $this->contentsListStringDirty = false;
-        $this->firstHeadLevel = 0;
-
         $text = $this->encodeTag($text); // Escapes ToC tag temporarily
         $html = parent::text($text);     // Parses the markdown text
         return $this->decodeTag($html);  // Unescapes the ToC tag
-    }
-
-    /**
-     * Parses markdown input into block elements while preloading predefined abbreviations.
-     *
-     * Parsedown clears definition data at the start of each parse, so predefined abbreviations
-     * must be re-applied immediately after that reset and before block parsing begins.
-     *
-     * @param string $text Markdown source.
-     * @return array Parsed element tree.
-     */
-    protected function textElements($text)
-    {
-        // Ensure definitions are reset per parse, then re-apply predefined abbreviations.
-        $this->DefinitionData = [];
-        $this->resetDocumentFootnoteCount();
-        $this->predefinedAbbreviationsAdded = false;
-        $this->initializePredefinedAbbreviations();
-
-        // Standardize and normalize input before delegating to block parsing.
-        $text = str_replace(["\r\n", "\r"], "\n", $text);
-        $text = trim($text, "\n");
-        $lines = explode("\n", $text);
-
-        return $this->linesElements($lines);
     }
 
     /**
@@ -92,7 +45,7 @@ trait TableOfContentsExtension
                 $contentsListString = $this->getContentsListString();
                 return $contentsListString;
             case 'json':
-                $json = json_encode($this->contentsListArray);
+                $json = json_encode($this->contentsList);
                 return is_string($json) ? $json : '[]';
             default:
                 $backtrace = debug_backtrace(DEBUG_BACKTRACE_IGNORE_ARGS, 2);
@@ -206,16 +159,13 @@ trait TableOfContentsExtension
      */
     protected function setContentsList(array $Content): void
     {
-        // Stores content as an array
         $this->setContentsListAsArray($Content);
-        $this->contentsListStringDirty = true;
     }
 
     /**
      * Stores the given content entry in the Table of Contents array.
      *
-     * This function adds the content entry to the `contentsListArray`, which is used to hold a structured
-     * representation of all ToC entries.
+     * Adds the content entry to the current document state.
      *
      * @since 1.0.0
      *
@@ -224,7 +174,8 @@ trait TableOfContentsExtension
      */
     protected function setContentsListAsArray(array $Content): void
     {
-        $this->contentsListArray[] = $Content; // Append content to the contents list array
+        $this->contentsList[] = $Content;
+        $this->contentsListHtmlDirty = true;
     }
 
     /**
@@ -240,16 +191,15 @@ trait TableOfContentsExtension
      */
     protected function getContentsListString(): string
     {
-        if (!$this->contentsListStringDirty) {
-            return $this->contentsListString;
+        if (!$this->contentsListHtmlDirty) {
+            return $this->contentsListHtml;
         }
 
-        $this->contentsListString = $this->renderContentsListHtml();
-        $this->firstHeadLevel = 0;
+        $this->contentsListHtml = $this->renderContentsListHtml();
+        $this->contentsListHtmlDirty = false;
+        $this->firstContentsHeadingLevel = 0;
 
-        $this->contentsListStringDirty = false;
-
-        return $this->contentsListString;
+        return $this->contentsListHtml;
     }
 
     /**
@@ -257,14 +207,14 @@ trait TableOfContentsExtension
      */
     protected function renderContentsListHtml(): string
     {
-        if ($this->contentsListArray === []) {
+        if ($this->contentsList === []) {
             return '';
         }
 
         $html = '';
         $currentLevel = 0;
 
-        foreach ($this->contentsListArray as $Content) {
+        foreach ($this->contentsList as $Content) {
             $level = $this->normalizedContentsLevel($Content);
             $level = min($level, $currentLevel + 1);
 
@@ -307,11 +257,11 @@ trait TableOfContentsExtension
     {
         $level = (int) trim((string) $Content['level'], 'h');
 
-        if ($this->firstHeadLevel === 0) {
-            $this->firstHeadLevel = $level;
+        if ($this->firstContentsHeadingLevel === 0) {
+            $this->firstContentsHeadingLevel = $level;
         }
 
-        return max(1, $level - ($this->firstHeadLevel - 1));
+        return max(1, $level - ($this->firstContentsHeadingLevel - 1));
     }
 
     protected function contentsListLink(array $Content): string

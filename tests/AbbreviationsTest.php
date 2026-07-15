@@ -67,6 +67,7 @@ class AbbreviationsTest extends TestCase
         $expectedHtml = "<p><abbr title=\"HyperText Markup Language\">HTML</abbr> is an abbreviation.</p>";
 
         $this->parsedownExtended->config()->set('abbreviations', true);
+        $this->parsedownExtended->config()->set('toc', false);
         $this->parsedownExtended->config()->set('abbreviations.predefined', ['HTML' => 'HyperText Markup Language']);
 
         $this->assertEquals($expectedHtml, $this->parsedownExtended->text($markdown));

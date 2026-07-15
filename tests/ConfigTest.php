@@ -79,6 +79,55 @@ class ConfigTest extends TestCase
         $this->assertFalse($parsedownExtended->config()->get('links.external_links.noopener'), 'Nested noopener config should be false');
     }
 
+    public function testExactArrayOptionIsStoredAsALeafValue(): void
+    {
+        $parsedownExtended = new ParsedownExtended();
+        $delimiters = [
+            ['left' => '$', 'right' => '$'],
+            ['left' => '\\(', 'right' => '\\)'],
+        ];
+
+        $parsedownExtended->config()->set('math.inline.delimiters', $delimiters);
+
+        $this->assertSame($delimiters, $parsedownExtended->config()->get('math.inline.delimiters'));
+    }
+
+    public function testGroupedConfigCanContainAnArrayLeafValue(): void
+    {
+        $parsedownExtended = new ParsedownExtended();
+        $delimiters = [['left' => '\\(', 'right' => '\\)']];
+
+        $parsedownExtended->config()->set('math.inline', [
+            'enabled' => false,
+            'delimiters' => $delimiters,
+        ]);
+
+        $this->assertFalse($parsedownExtended->config()->get('math.inline'));
+        $this->assertSame($delimiters, $parsedownExtended->config()->get('math.inline.delimiters'));
+    }
+
+    public function testValueOnlyGroupCanBeSetWithoutBecomingAFeature(): void
+    {
+        $parsedownExtended = new ParsedownExtended();
+
+        $parsedownExtended->config()->set('smartypants.substitutions', [
+            'mdash' => '[em-dash]',
+            'ndash' => '[en-dash]',
+        ]);
+
+        $this->assertSame('[em-dash]', $parsedownExtended->config()->get('smartypants.substitutions.mdash'));
+        $this->assertSame('[en-dash]', $parsedownExtended->config()->get('smartypants.substitutions.ndash'));
+        $this->assertArrayNotHasKey('smartypants.substitutions.enabled', $parsedownExtended->getFlatSchema());
+    }
+
+    public function testValueOnlyGroupCannotBeReadAsAFeature(): void
+    {
+        $this->expectException(InvalidArgumentException::class);
+        $this->expectExceptionMessage('Invalid config path: smartypants.substitutions');
+
+        (new ParsedownExtended())->config()->get('smartypants.substitutions');
+    }
+
     /**
      * Test constructor override application
      */
@@ -97,6 +146,20 @@ class ConfigTest extends TestCase
 
         $this->assertFalse($parsedownExtended->config()->get('links.external_links.nofollow'), 'Constructor override should update nested boolean config');
         $this->assertEquals('contents', $parsedownExtended->config()->get('toc.id'), 'Constructor override should update nested payload config');
+    }
+
+    public function testConstructorOverridesPreserveNestedArrayLeaves(): void
+    {
+        $delimiters = [['left' => '\\[', 'right' => '\\]']];
+        $parsedownExtended = new ParsedownExtended([
+            'math' => [
+                'inline' => [
+                    'delimiters' => $delimiters,
+                ],
+            ],
+        ]);
+
+        $this->assertSame($delimiters, $parsedownExtended->config()->get('math.inline.delimiters'));
     }
 
     /**
@@ -214,8 +277,18 @@ class ConfigTest extends TestCase
         $this->assertIsArray($schema);
         $this->assertArrayHasKey('code.enabled', $schema);
         $this->assertArrayHasKey('toc.id', $schema);
-        $this->assertEquals(['type' => 'boolean', 'default' => true], $schema['code.enabled']);
-        $this->assertEquals(['type' => 'string', 'default' => 'toc'], $schema['toc.id']);
+        $this->assertSame('boolean', $schema['code.enabled']['type']);
+        $this->assertTrue($schema['code.enabled']['default']);
+        $this->assertSame('Enables code parsing.', $schema['code.enabled']['description']);
+        $this->assertNull($schema['code.enabled']['validationRule']);
+        $this->assertSame('code', $schema['code.enabled']['alias']);
+
+        $this->assertSame('string', $schema['toc.id']['type']);
+        $this->assertSame('toc', $schema['toc.id']['default']);
+        $this->assertNull($schema['toc.id']['alias']);
+
+        $this->assertSame('delimiter_pairs', $schema['math.inline.delimiters']['validationRule']);
+        $this->assertArrayNotHasKey('smartypants.substitutions.enabled', $schema);
     }
 
     /**

@@ -6,9 +6,6 @@ namespace BenjaminHoegh\ParsedownExtended\Extensions\Inline;
 
 trait SmartypantsExtension
 {
-    /** @var array<string, string> */
-    private array $smartypantsSubstitutionCache = [];
-
     /**
      * Processes inline Smartypants substitutions.
      *
@@ -175,8 +172,11 @@ trait SmartypantsExtension
      */
     private function getSmartypantsSubstitutions(): array
     {
-        if ($this->smartypantsSubstitutionCache !== []) {
-            return $this->smartypantsSubstitutionCache;
+        $cacheKey = 'smartypants.substitutions';
+        if ($this->hasRuntimeCacheValue($cacheKey)) {
+            $substitutions = $this->runtimeCacheValue($cacheKey);
+
+            return is_array($substitutions) ? $substitutions : [];
         }
 
         $substitutionValues = [
@@ -191,15 +191,13 @@ trait SmartypantsExtension
             'ellipses' => $this->configValue('smartypants.substitutions.ellipses'),
         ];
 
+        $substitutions = [];
         foreach ($substitutionValues as $name => $value) {
-            $this->smartypantsSubstitutionCache[$name] = html_entity_decode($value);
+            $substitutions[$name] = html_entity_decode($value);
         }
 
-        return $this->smartypantsSubstitutionCache;
-    }
+        $this->storeRuntimeCacheValue($cacheKey, $substitutions);
 
-    private function clearSmartypantsSubstitutionCache(): void
-    {
-        $this->smartypantsSubstitutionCache = [];
+        return $substitutions;
     }
 }

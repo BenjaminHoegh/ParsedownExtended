@@ -6,12 +6,6 @@ namespace BenjaminHoegh\ParsedownExtended\Extensions\Inline;
 
 trait LinkExtension
 {
-    /** @var array|null $internalHostsSet Cached set of internal hosts for link processing */
-    private ?array $internalHostsSet = null;
-
-    /** @var string $internalHostsCacheKey Hash key for the current cached internal host set */
-    private string $internalHostsCacheKey = '';
-
     /**
      * Processes inline links.
      *
@@ -233,16 +227,14 @@ trait LinkExtension
      */
     private function getInternalHostsSet(): array
     {
+        $cacheKey = 'links.internal_hosts';
+        if ($this->hasRuntimeCacheValue($cacheKey)) {
+            $internalHosts = $this->runtimeCacheValue($cacheKey);
+
+            return is_array($internalHosts) ? $internalHosts : [];
+        }
+
         $internalHosts = $this->configValue('links.external_links.internal_hosts');
-        $cacheKey = json_encode($internalHosts);
-        if (!is_string($cacheKey)) {
-            $cacheKey = md5(print_r($internalHosts, true));
-        }
-
-        if ($this->internalHostsSet !== null && $this->internalHostsCacheKey === $cacheKey) {
-            return $this->internalHostsSet;
-        }
-
         $hostSet = [];
         foreach ($internalHosts as $host) {
             $normalizedHost = $this->normalizeHost((string) $host);
@@ -251,9 +243,8 @@ trait LinkExtension
             }
         }
 
-        $this->internalHostsSet = $hostSet;
-        $this->internalHostsCacheKey = $cacheKey;
+        $this->storeRuntimeCacheValue($cacheKey, $hostSet);
 
-        return $this->internalHostsSet;
+        return $hostSet;
     }
 }

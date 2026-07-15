@@ -6,9 +6,6 @@ namespace BenjaminHoegh\ParsedownExtended\Extensions\Inline;
 
 trait InlineMathExtension
 {
-    /** @var array $inlineMathPatternCache Cached regex patterns for inline math delimiters */
-    private array $inlineMathPatternCache = ['key' => '', 'patterns' => []];
-
     /**
      * Processes inline math notation elements.
      *
@@ -62,13 +59,11 @@ trait InlineMathExtension
      */
     private function getInlineMathPatterns(array $delimiters): array
     {
-        $cacheKey = json_encode($delimiters);
-        if (!is_string($cacheKey)) {
-            $cacheKey = md5(print_r($delimiters, true));
-        }
+        $cacheKey = 'math.inline.patterns';
+        if ($this->hasRuntimeCacheValue($cacheKey)) {
+            $patterns = $this->runtimeCacheValue($cacheKey);
 
-        if ($this->inlineMathPatternCache['key'] === $cacheKey) {
-            return $this->inlineMathPatternCache['patterns'];
+            return is_array($patterns) ? $patterns : [];
         }
 
         $patterns = [];
@@ -95,11 +90,8 @@ trait InlineMathExtension
             $patterns[] = '/^(?<!\S)' . $leftMarker . '(?![\r\n])((?:\\\\' . $rightMarker . '|\\\\' . $leftMarker . '|[^' . $rightMarker . '\r\n])+?)' . $rightMarker . '(?!\w)/s';
         }
 
-        $this->inlineMathPatternCache = [
-            'key' => $cacheKey,
-            'patterns' => $patterns,
-        ];
+        $this->storeRuntimeCacheValue($cacheKey, $patterns);
 
-        return $this->inlineMathPatternCache['patterns'];
+        return $patterns;
     }
 }

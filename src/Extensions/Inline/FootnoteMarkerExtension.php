@@ -6,14 +6,6 @@ namespace BenjaminHoegh\ParsedownExtended\Extensions\Inline;
 
 trait FootnoteMarkerExtension
 {
-    /** @var int Footnote number assigned within the current document. */
-    private int $documentFootnoteCount = 0;
-
-    private function resetDocumentFootnoteCount(): void
-    {
-        $this->documentFootnoteCount = 0;
-    }
-
     /**
      * Parses a footnote reference using document-local numbering.
      *
@@ -38,7 +30,7 @@ trait FootnoteMarkerExtension
         ++$this->DefinitionData['Footnote'][$name]['count'];
 
         if (!isset($this->DefinitionData['Footnote'][$name]['number'])) {
-            $this->DefinitionData['Footnote'][$name]['number'] = ++$this->documentFootnoteCount;
+            $this->DefinitionData['Footnote'][$name]['number'] = ++$this->footnoteCount;
         }
 
         return [

@@ -5,8 +5,6 @@ declare(strict_types=1);
 namespace BenjaminHoegh\ParsedownExtended;
 
 use BenjaminHoegh\ParsedownExtended\Configuration\Configuration;
-use BenjaminHoegh\ParsedownExtended\Configuration\ConfigurationSchema;
-use BenjaminHoegh\ParsedownExtended\Configuration\SchemaCompiler;
 
 class_alias(class_exists('ParsedownExtra') ? 'ParsedownExtra' : 'Parsedown', 'ParsedownExtendedParentAlias');
 
@@ -20,9 +18,7 @@ class_alias(class_exists('ParsedownExtra') ? 'ParsedownExtra' : 'Parsedown', 'Pa
 // @psalm-suppress UndefinedClass
 class ParsedownExtended extends \ParsedownExtendedParentAlias
 {
-    use Extensions\Registry\ExtensionRegistration;
-    use Extensions\Registry\InlineExtensions;
-    use Extensions\Registry\BlockExtensions;
+    use Extensions\Registry\ExtensionRegistrar;
     use Extensions\Toc\TocExtensions;
 
     public const VERSION = '3.0.0';
@@ -52,53 +48,47 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
         '~' => true,
     ];
 
-    /** @var object|null $configHandler Cached configuration handler */
-    private ?object $configHandler = null;
+    /** Cached configuration handler. */
+    private ?Configuration $configHandler = null;
 
-    /** @var array $BOOLEAN_PATHS Stores a set of boolean config paths. */
-    private static array $BOOLEAN_PATHS = [];
+    /** @var array<string, mixed> */
+    private array $configurationValues;
 
-    /** @var array $FLAT_SCHEMA Stores a flat schema of configuration options for easy access. */
-    private static array $FLAT_SCHEMA   = [];
+    /** @var array<string, int> */
+    private array $anchorCounts = [];
 
-    /** @var array $DEFAULT_FEATURES Stores default boolean settings keyed by path. */
-    private static array $DEFAULT_FEATURES = [];
+    /** @var list<array<string, mixed>> */
+    private array $contentsList = [];
 
-    /** @var array $DEFAULT_PAYLOAD Stores default non-boolean settings for the configuration. */
-    private static array $DEFAULT_PAYLOAD = [];
+    private string $contentsListHtml = '';
 
-    /** @var bool $COMPILED Indicates whether the schema has been compiled. */
-    private static bool  $COMPILED = false;
+    private bool $contentsListHtmlDirty = false;
 
-    /** @var array $features Stores boolean feature flags for the instance. */
-    private array $features;
+    private int $firstContentsHeadingLevel = 0;
 
-    /** @var array $payload Stores non-boolean settings for the instance. */
-    private array $payload;   // non‑boolean settings
+    private int $footnoteCount = 0;
 
-    /** @var array<string, list<string>> Cached inline handlers for currently enabled features. */
-    private array $activeInlineTypes = [];
+    private bool $predefinedAbbreviationsAdded = false;
 
-    /** @var string $activeInlineMarkerList Cached marker list for currently enabled inline handlers. */
+    /** @var array<string, list<string>>|null */
+    private ?array $activeInlineTypes = null;
+
     private string $activeInlineMarkerList = '';
 
-    /** @var bool $activeInlineTypesValid Whether the active inline handler cache reflects current config. */
-    private bool $activeInlineTypesValid = false;
+    /** @var array<string, list<string>>|null */
+    private ?array $activeBlockTypes = null;
 
-    /** @var array<string, list<string>> Cached block handlers for currently enabled features. */
-    private array $activeBlockTypes = [];
-
-    /** @var list<string> Cached unmarked block handlers for currently enabled features. */
+    /** @var list<string> */
     private array $activeUnmarkedBlockTypes = [];
 
-    /** @var array<string, list<string>> Cached block dispatch candidates keyed by marker. */
+    /** @var array<string, list<string>> */
     private array $activeBlockCandidateTypes = [];
 
-    /** @var bool $activeBlockTypesValid Whether the active block handler cache reflects current config. */
-    private bool $activeBlockTypesValid = false;
-
-    /** @var array<string, array<string, true>> Cached lookup sets for list-like config payloads. */
+    /** @var array<string, array<string, true>> */
     private array $configValueSetCache = [];
+
+    /** @var array<string, mixed> */
+    private array $runtimeValueCache = [];
 
     /**
      * Constructor for ParsedownExtended.
@@ -119,21 +109,7 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
             parent::__construct();
         }
 
-        // Initialize the configuration schema
-        if (!self::$COMPILED) {
-            $compiled = (new SchemaCompiler())->compile(ConfigurationSchema::DEFAULT);
-
-            self::$BOOLEAN_PATHS = $compiled['booleanPaths'];
-            self::$FLAT_SCHEMA = $compiled['flatSchema'];
-            self::$DEFAULT_FEATURES = $compiled['defaultFeatures'];
-            self::$DEFAULT_PAYLOAD = $compiled['defaultPayload'];
-
-            self::$COMPILED = true;
-        }
-
-        // Initialize features and payload
-        $this->features = self::$DEFAULT_FEATURES;
-        $this->payload  = self::$DEFAULT_PAYLOAD;
+        $this->configurationValues = Configuration::defaults();
 
         // Apply overrides if provided
         if ($overrides) {
@@ -141,7 +117,6 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
         }
 
         $this->registerExtensions();
-        $this->warmRuntimeCaches();
     }
 
     /**
@@ -183,36 +158,21 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
      */
     public function getFlatSchema(): array
     {
-        return self::$FLAT_SCHEMA;
+        return Configuration::definitions();
     }
 
     /**
-     * Returns a singleton configuration handler object for managing boolean settings and payload values.
-     *
-     * The handler provides methods to get, set, and export configuration values, supporting both
-     * boolean path-based settings and arbitrary payload data. The configuration schema and boolean-path
-     * mapping are provided statically. The handler validates types and throws exceptions for invalid
-     * paths or types.
-     *
-     * @return object Configuration handler with the following public methods:
-     *                - get(string $path): mixed
-     *                - set(string|array $path, mixed $value = null): self
-     *                - export(): array
-     *                - bind(array &$features, array &$payload): void
-     *
-     * @throws \InvalidArgumentException If an invalid config path or type is provided to set().
+     * Returns the configuration handler bound to this parser instance.
      */
-    public function config(): object
+    public function config(): Configuration
     {
         if ($this->configHandler === null) {
             $this->configHandler = new Configuration(
-                self::$BOOLEAN_PATHS,
-                self::$FLAT_SCHEMA,
+                $this->configurationValues,
                 function (): void {
                     $this->configurationChanged();
                 }
             );
-            $this->configHandler->bind($this->features, $this->payload);
         }
         return $this->configHandler;
     }
@@ -222,12 +182,30 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
      */
     protected function configEnabled(string $path): bool
     {
-        if (isset($this->features[$path])) {
-            return $this->features[$path];
-        }
+        $path = Configuration::resolve($path);
 
-        $enabledPath = $path . '.enabled';
-        return $this->features[$enabledPath] ?? false;
+        return (bool) ($this->configurationValues[$path] ?? false);
+    }
+
+    protected function hasRuntimeCacheValue(string $key): bool
+    {
+        return array_key_exists($key, $this->runtimeValueCache);
+    }
+
+    /**
+     * @return mixed
+     */
+    protected function runtimeCacheValue(string $key)
+    {
+        return $this->runtimeValueCache[$key] ?? null;
+    }
+
+    /**
+     * @param mixed $value
+     */
+    protected function storeRuntimeCacheValue(string $key, $value): void
+    {
+        $this->runtimeValueCache[$key] = $value;
     }
 
     /**
@@ -235,7 +213,7 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
      */
     protected function configValue(string $path)
     {
-        return $this->payload[$path] ?? null;
+        return $this->configurationValues[$path] ?? null;
     }
 
     protected function configValueSetContains(string $path, string $value): bool
@@ -247,11 +225,11 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
 
     private function configValueSet(string $path): array
     {
-        if (isset($this->configValueSetCache[$path])) {
+        if (array_key_exists($path, $this->configValueSetCache)) {
             return $this->configValueSetCache[$path];
         }
 
-        $values = $this->payload[$path] ?? [];
+        $values = $this->configurationValues[$path] ?? [];
         if (!is_array($values)) {
             return $this->configValueSetCache[$path] = [];
         }
@@ -271,24 +249,14 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
      */
     private function configurationChanged(): void
     {
-        $this->activeInlineTypes = [];
+        $this->activeInlineTypes = null;
         $this->activeInlineMarkerList = '';
-        $this->activeInlineTypesValid = false;
-        $this->activeBlockTypes = [];
+        $this->activeBlockTypes = null;
         $this->activeUnmarkedBlockTypes = [];
         $this->activeBlockCandidateTypes = [];
-        $this->activeBlockTypesValid = false;
         $this->configValueSetCache = [];
+        $this->runtimeValueCache = [];
         $this->clearExtensionEnabledCache();
-        $this->clearSmartypantsSubstitutionCache();
-    }
-
-    private function warmRuntimeCaches(): void
-    {
-        $this->getActiveInlineTypes();
-        $this->getActiveBlockTypes();
-        $this->configValueSet('headings.allowed_levels');
-        $this->configValueSet('toc.levels');
     }
 
     /**
@@ -296,7 +264,7 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
      */
     private function getActiveInlineTypes(): array
     {
-        if ($this->activeInlineTypesValid) {
+        if ($this->activeInlineTypes !== null) {
             return $this->activeInlineTypes;
         }
 
@@ -320,7 +288,6 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
 
         $this->activeInlineTypes = $activeInlineTypes;
         $this->activeInlineMarkerList = $markerList;
-        $this->activeInlineTypesValid = true;
 
         return $this->activeInlineTypes;
     }
@@ -330,7 +297,7 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
      */
     private function getActiveBlockTypes(): array
     {
-        if ($this->activeBlockTypesValid) {
+        if ($this->activeBlockTypes !== null) {
             return $this->activeBlockTypes;
         }
 
@@ -358,45 +325,52 @@ class ParsedownExtended extends \ParsedownExtendedParentAlias
         $this->activeBlockTypes = $activeBlockTypes;
         $this->activeUnmarkedBlockTypes = $activeUnmarkedBlockTypes;
         $this->activeBlockCandidateTypes = $activeBlockCandidateTypes;
-        $this->activeBlockTypesValid = true;
 
         return $this->activeBlockTypes;
     }
 
     /**
-     * Recursively applies configuration overrides.
-     *
-     * Traverses the provided associative array of overrides, building dot-notated
-     * paths for nested configuration keys. If a value is an array and the computed
-     * path is not defined as a flat schema entry, the method recurses into that
-     * array. Otherwise, it sets the value on the provided configuration handler.
-     *
-     * @param array $ovr The associative array of configuration overrides.
-     * @param string $prefix The prefix for nested configuration keys.
-     * @param object|null $configHandler The configuration handler to apply values to.
-     *
-     * @return void
+     * Applies constructor overrides through the same rules as the public handler.
      */
-    private function applyOverrides(array $ovr, string $prefix = '', ?object $configHandler = null): void
+    private function applyOverrides(array $overrides): void
     {
-        if ($configHandler === null) {
-            $configHandler = new Configuration(self::$BOOLEAN_PATHS, self::$FLAT_SCHEMA);
-            $configHandler->bind($this->features, $this->payload);
-        }
-
-        foreach ($ovr as $k => $v) {
-            $path = $prefix === '' ? $k : $prefix . '.' . $k;
-
-            if (is_array($v) && !isset(self::$FLAT_SCHEMA[$path])) {
-                $this->applyOverrides($v, $path, $configHandler);
-                continue;
-            }
-            $configHandler->set($path, $v);
-        }
+        $this->config()->set($overrides);
     }
 
     // Overwriting core Parsedown functions
     // -------------------------------------------------------------------------
+
+    /**
+     * Resets all state that belongs to the document about to be parsed.
+     */
+    protected function beginDocument(): void
+    {
+        $this->anchorCounts = [];
+        $this->contentsList = [];
+        $this->contentsListHtml = '';
+        $this->contentsListHtmlDirty = false;
+        $this->firstContentsHeadingLevel = 0;
+        $this->footnoteCount = 0;
+        $this->predefinedAbbreviationsAdded = false;
+        $this->DefinitionData = [];
+        $this->initializePredefinedAbbreviations();
+    }
+
+    /**
+     * Parses a complete Markdown document through the explicit lifecycle entry point.
+     *
+     * @param string $text Markdown source.
+     * @return array Parsed element tree.
+     */
+    protected function textElements($text)
+    {
+        $this->beginDocument();
+
+        $text = str_replace(["\r\n", "\r"], "\n", $text);
+        $text = trim($text, "\n");
+
+        return $this->linesElements(explode("\n", $text));
+    }
 
     /**
      * Parses Markdown lines into block elements while honoring extension metadata.

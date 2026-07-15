@@ -91,6 +91,7 @@ class HeadingsTest extends TestCase
     public function testDuplicateAnchorStateResetsBetweenParses()
     {
         $this->parsedownExtended->config()->set('headings.auto_anchors', true);
+        $this->parsedownExtended->config()->set('toc', false);
 
         $this->parsedownExtended->text("# Title\n# Title");
 
