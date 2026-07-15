@@ -360,6 +360,7 @@ class ParsedownExtended extends \ParsedownExtra
      * @param string $text Markdown source.
      * @return array Parsed element tree.
      */
+    #[\Override]
     protected function textElements($text)
     {
         $this->beginDocument();
@@ -379,6 +380,7 @@ class ParsedownExtended extends \ParsedownExtra
      * @param array $lines Markdown source lines.
      * @return array Parsed block elements.
      */
+    #[\Override]
     protected function linesElements(array $lines): array
     {
         $Elements = [];
@@ -494,6 +496,7 @@ class ParsedownExtended extends \ParsedownExtra
      * @param array $nonNestables Array of inline types that should not be nested.
      * @return string The parsed HTML markup for the given line.
      */
+    #[\Override]
     public function line($text, $nonNestables = [])
     {
         $this->initializePredefinedAbbreviations();
@@ -514,6 +517,7 @@ class ParsedownExtended extends \ParsedownExtra
      *
      * @return array An array of parsed elements representing the structure of the given text.
      */
+    #[\Override]
     protected function lineElements($text, $nonNestables = []): array
     {
         // Standardize line breaks.
