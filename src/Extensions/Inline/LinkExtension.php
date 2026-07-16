@@ -6,6 +6,22 @@ namespace BenjaminHoegh\ParsedownExtended\Extensions\Inline;
 
 trait LinkExtension
 {
+    private bool $parsingImageLink = false;
+
+    /**
+     * Parses an image without applying link-only configuration to its target.
+     */
+    protected function inlineImage($Excerpt)
+    {
+        $this->parsingImageLink = true;
+
+        try {
+            return parent::inlineImage($Excerpt);
+        } finally {
+            $this->parsingImageLink = false;
+        }
+    }
+
     /**
      * Processes inline links.
      *
@@ -18,11 +34,16 @@ trait LinkExtension
      */
     protected function inlineLink($Excerpt)
     {
-        if (!str_contains($Excerpt['text'], ']') || !$this->configEnabled('links')) {
+        if (
+            !str_contains($Excerpt['text'], ']')
+            || (!$this->parsingImageLink && !$this->configEnabled('links'))
+        ) {
             return null;
         }
 
-        return $this->processLinkElement(parent::inlineLink($Excerpt));
+        $Link = parent::inlineLink($Excerpt);
+
+        return $this->parsingImageLink ? $Link : $this->processLinkElement($Link);
     }
 
     /**
