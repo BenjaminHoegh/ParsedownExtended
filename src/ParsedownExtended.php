@@ -54,6 +54,9 @@ class ParsedownExtended extends \ParsedownExtra
     /** @var array<string, int> */
     private array $anchorCounts = [];
 
+    /** @var array<string, true> */
+    private array $usedAnchorIds = [];
+
     /** @var list<array<string, mixed>> */
     private array $contentsList = [];
 
@@ -252,14 +255,29 @@ class ParsedownExtended extends \ParsedownExtra
             return $this->activeInlineTypes;
         }
 
+        $inlineTypes = $this->InlineTypes;
+        $inlineMarkerList = $this->inlineMarkerList;
+
+        foreach ($this->configuredDelimiterMarkers('math.inline.delimiters') as $marker) {
+            $inlineTypes[$marker] ??= [];
+
+            if (!in_array('MathNotation', $inlineTypes[$marker], true)) {
+                array_unshift($inlineTypes[$marker], 'MathNotation');
+            }
+
+            if (!str_contains($inlineMarkerList, $marker)) {
+                $inlineMarkerList .= $marker;
+            }
+        }
+
         $activeInlineTypes = [];
         $markerList = '';
-        foreach (str_split($this->inlineMarkerList) as $marker) {
-            if (!isset($this->InlineTypes[$marker])) {
+        foreach (str_split($inlineMarkerList) as $marker) {
+            if (!isset($inlineTypes[$marker])) {
                 continue;
             }
 
-            foreach ($this->InlineTypes[$marker] as $inlineType) {
+            foreach ($inlineTypes[$marker] as $inlineType) {
                 if ($this->inlineTypeEnabled($inlineType)) {
                     $activeInlineTypes[$marker][] = $inlineType;
                 }
@@ -285,9 +303,18 @@ class ParsedownExtended extends \ParsedownExtra
             return;
         }
 
+        $blockTypes = $this->BlockTypes;
+        foreach ($this->configuredDelimiterMarkers('math.block.delimiters') as $marker) {
+            $blockTypes[$marker] ??= [];
+
+            if (!in_array('MathNotation', $blockTypes[$marker], true)) {
+                array_unshift($blockTypes[$marker], 'MathNotation');
+            }
+        }
+
         $activeBlockTypes = [];
-        foreach ($this->BlockTypes as $marker => $blockTypes) {
-            foreach ($blockTypes as $blockType) {
+        foreach ($blockTypes as $marker => $markerBlockTypes) {
+            foreach ($markerBlockTypes as $blockType) {
                 if ($this->blockTypeEnabled($blockType)) {
                     $activeBlockTypes[$marker][] = $blockType;
                 }
@@ -312,6 +339,29 @@ class ParsedownExtended extends \ParsedownExtra
     }
 
     /**
+     * Returns the first byte used to dispatch each configured delimiter pair.
+     *
+     * @return list<string>
+     */
+    private function configuredDelimiterMarkers(string $path): array
+    {
+        $delimiters = $this->configValue($path);
+        if (!is_array($delimiters)) {
+            return [];
+        }
+
+        $markers = [];
+        foreach ($delimiters as $delimiter) {
+            $left = is_array($delimiter) ? ($delimiter['left'] ?? null) : null;
+            if (is_string($left) && $left !== '') {
+                $markers[$left[0]] = true;
+            }
+        }
+
+        return array_keys($markers);
+    }
+
+    /**
      * Applies constructor overrides through the same rules as the public handler.
      */
     private function applyOverrides(array $overrides): void
@@ -328,6 +378,7 @@ class ParsedownExtended extends \ParsedownExtra
     protected function beginDocument(): void
     {
         $this->anchorCounts = [];
+        $this->usedAnchorIds = [];
         $this->contentsList = [];
         $this->contentsListHtml = '';
         $this->contentsListHtmlDirty = false;
