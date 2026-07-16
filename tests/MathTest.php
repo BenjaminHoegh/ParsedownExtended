@@ -40,6 +40,24 @@ class MathTest extends TestCase
         $this->assertEquals($expectedHtml, $result);
     }
 
+    public function testInlineMathSupportsConfiguredDelimiterMarkers(): void
+    {
+        $this->parsedownExtended->config()
+            ->set('math', true)
+            ->set('math.inline.delimiters', [['left' => '%', 'right' => '%']]);
+
+        $this->assertSame('<p>%*x*%</p>', $this->parsedownExtended->text('%*x*%'));
+    }
+
+    public function testBlockMathSupportsConfiguredDelimiterMarkers(): void
+    {
+        $this->parsedownExtended->config()
+            ->set('math', true)
+            ->set('math.block.delimiters', [['left' => 'BEGIN', 'right' => 'END']]);
+
+        $this->assertSame('x', $this->parsedownExtended->text('BEGINxEND'));
+    }
+
     public function testSingleLineBlockMathDoesNotConsumeFollowingMarkdown()
     {
         $markdown = '$$E=mc^2$$' . "\nnext";
