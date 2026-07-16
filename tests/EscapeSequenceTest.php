@@ -37,4 +37,11 @@ class EscapeSequenceTest extends TestCase
 
         $this->assertEquals($expectedHtml, trim($result));
     }
+
+    public function testEscapedLessThanIsNotDoubleEncodedInSafeMode(): void
+    {
+        $this->parsedownExtended->config()->set('smartypants', true);
+
+        $this->assertSame('<p>&lt;</p>', $this->parsedownExtended->text('\\<'));
+    }
 }
