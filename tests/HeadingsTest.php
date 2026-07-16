@@ -88,6 +88,23 @@ class HeadingsTest extends TestCase
         $this->assertEquals($expected, $actual);
     }
 
+    public function testHeadingIdsRemainUniqueWhenASuffixedSlugOccursNaturally(): void
+    {
+        $markdown = <<<MARKDOWN
+            # Foo
+            # Foo
+            # Foo 1
+            MARKDOWN;
+
+        $expected = <<<HTML
+            <h1 id="foo">Foo</h1>
+            <h1 id="foo-1">Foo</h1>
+            <h1 id="foo-1-1">Foo 1</h1>
+            HTML;
+
+        $this->assertSame($expected, $this->parsedownExtended->text($markdown));
+    }
+
     public function testDuplicateAnchorStateResetsBetweenParses()
     {
         $this->parsedownExtended->config()->set('headings.auto_anchors', true);
@@ -125,6 +142,16 @@ class HeadingsTest extends TestCase
         $expected = '<h1 id="heading-1-1">Heading 1</h1>';
         $actual = $this->parsedownExtended->text($markdown);
         $this->assertEquals($expected, $actual);
+    }
+
+    public function testHeadingDelimiterIsUsedAsLiteralReplacementText(): void
+    {
+        $this->parsedownExtended->config()->set('headings.auto_anchors.delimiter', '$1');
+
+        $this->assertSame(
+            '<h1 id="a$1b">A B</h1>',
+            $this->parsedownExtended->text('# A B')
+        );
     }
 
     /**
