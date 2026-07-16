@@ -46,4 +46,26 @@ class ImageTest extends TestCase
 
         $this->assertEquals($expectedHtml, trim($result));
     }
+
+    public function testImageRemainsEnabledWhenLinksAreDisabled(): void
+    {
+        $this->parsedownExtended->config()->set('links', false);
+
+        $this->assertSame(
+            '<p><img src="/image.png" alt="alt" /></p>',
+            $this->parsedownExtended->text('![alt](/image.png)')
+        );
+    }
+
+    public function testExternalImageRemainsEnabledWhenExternalLinksAreDisabled(): void
+    {
+        $this->parsedownExtended->config()
+            ->set('links.current_host', 'example.test')
+            ->set('links.external_links', false);
+
+        $this->assertSame(
+            '<p><img src="https://cdn.example.test/image.png" alt="alt" /></p>',
+            $this->parsedownExtended->text('![alt](https://cdn.example.test/image.png)')
+        );
+    }
 }
