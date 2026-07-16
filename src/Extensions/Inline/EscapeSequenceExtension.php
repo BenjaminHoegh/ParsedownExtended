@@ -36,7 +36,9 @@ trait EscapeSequenceExtension
         if (is_string($escapedCharacter) && $this->isEscapableSpecialCharacter($escapedCharacter)) {
             // Return the escaped character
             return [
-                'element' => ['rawHtml' => $escapedCharacter === '<' ? '&lt;' : $escapedCharacter],
+                'element' => $escapedCharacter === '<'
+                    ? ['text' => $escapedCharacter]
+                    : ['rawHtml' => $escapedCharacter],
                 'extent' => 2, // The length of the escape sequence (backslash + character)
             ];
         }
