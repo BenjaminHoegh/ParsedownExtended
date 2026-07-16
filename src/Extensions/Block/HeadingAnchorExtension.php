@@ -103,7 +103,11 @@ trait HeadingAnchorExtension
         $delimiter = $this->configValue('headings.auto_anchors.delimiter');
 
         // Replace any character that is not a letter or number with the delimiter
-        $text = preg_replace('/[^\p{L}\p{Nd}]+/u', $delimiter, $text);
+        $text = preg_replace_callback(
+            '/[^\p{L}\p{Nd}]+/u',
+            static fn(): string => $delimiter,
+            $text
+        );
 
         $cacheKey = 'headings.auto_anchors.collapse_pattern';
         if (!$this->hasRuntimeCacheValue($cacheKey)) {
@@ -136,37 +140,25 @@ trait HeadingAnchorExtension
      */
     protected function uniquifyAnchorID(string $text): string
     {
-        // Store the original text to use as the base for creating unique variants
-        $originalText = $text;
-
-        if (!array_key_exists($text, $this->anchorCounts)) {
-            $this->anchorCounts[$text] = 0;
-        } else {
-            ++$this->anchorCounts[$text];
-        }
-
-        $count = $this->anchorCounts[$text];
+        $count = $this->anchorCounts[$text] ?? 0;
 
         // Adjust the anchor ID to ensure it is unique and not in the blacklist
         while (true) {
             // Generate the potential anchor ID with the count as suffix (if needed)
-            $potentialId = $originalText . ($count > 0 ? '-' . $count : '');
+            $potentialId = $text . ($count > 0 ? '-' . $count : '');
 
-            // Check if the potential ID is not blacklisted
-            if (!$this->configValueSetContains('headings.auto_anchors.blacklist', $potentialId)) {
-                break; // The ID is valid and not blacklisted, so we can use it
+            if (
+                !isset($this->usedAnchorIds[$potentialId])
+                && !$this->configValueSetContains('headings.auto_anchors.blacklist', $potentialId)
+            ) {
+                $this->anchorCounts[$text] = $count + 1;
+                $this->usedAnchorIds[$potentialId] = true;
+
+                return $potentialId;
             }
 
             // Increment the counter to generate the next potential ID
-            $count = ++$this->anchorCounts[$text];
+            ++$count;
         }
-
-        // If no suffix is required, return the original anchor text
-        if ($count === 0) {
-            return $originalText;
-        }
-
-        // Return the unique anchor ID with the appropriate suffix
-        return $originalText . '-' . $count;
     }
 }
